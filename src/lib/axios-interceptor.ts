@@ -26,13 +26,18 @@ axiosInstance.interceptors.request.use(
     }
 );
 
+
 axiosInstance.interceptors.response.use(
-    (response: AxiosResponse) => {
-        return response;
+    (resposne)=>{
+        return resposne;
     },
-    (error: AxiosError) => {
-        return Promise.reject(error);
+    (error)=>{
+        if(error.response && error.response.data && error.response.data.api_error){
+            throw error.response.data.api_error;
+        }
+        throw error;
     }
+    
 );
 
 export default axiosInstance;
