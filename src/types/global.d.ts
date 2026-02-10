@@ -1,6 +1,6 @@
 interface ApiResponse<T> {
     localDate: string,
-    data?: T,
+    data: T,
     apiError: ApiError
 } 
 
