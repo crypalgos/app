@@ -1,4 +1,4 @@
-import { Footer } from "./_components/base/footer";
+import Footer from "./_components/base/footer";
 import { NavbarWrapper } from "./_components/base/navbar-wrapper";
 
 
