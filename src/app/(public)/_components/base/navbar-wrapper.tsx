@@ -41,7 +41,9 @@ export function NavbarWrapper() {
         <NavItems items={navItems} />
         <div className="flex items-center gap-4">
           <ThemeToggle />
-          <NavbarButton variant="shimmer">Login</NavbarButton>
+          <NavbarButton variant="shimmer" href="/login">
+            Login
+          </NavbarButton>
         </div>
       </NavBody>
 
@@ -50,8 +52,8 @@ export function NavbarWrapper() {
         <MobileNavHeader>
           <NavbarLogo />
           <div className="flex items-center gap-2">
-             <ThemeToggle className="mr-2" />
-             <MobileNavToggle
+            <ThemeToggle className="mr-2" />
+            <MobileNavToggle
               isOpen={isMobileMenuOpen}
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             />
@@ -77,6 +79,7 @@ export function NavbarWrapper() {
               onClick={() => setIsMobileMenuOpen(false)}
               variant="primary"
               className="w-full"
+              href="/login"
             >
               Login
             </NavbarButton>
