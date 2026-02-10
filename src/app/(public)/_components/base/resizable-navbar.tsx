@@ -246,20 +246,10 @@ export const NavbarLogo = () => {
       href="#"
       className="relative z-20 mr-4 flex items-center space-x-2 px-2 py-1 text-sm font-normal"
     >
-      <img
-        src="/logo_light.svg"
-        alt="CrypAlgos Logo"
-        width={150}
-        height={150}
-        className="block dark:hidden"
-      />
-      <img
-        src="/logo_dark.svg"
-        alt="CrypAlgos Logo"
-        width={150}
-        height={150}
-        className="hidden dark:block"
-      />
+      <img src="./logo.svg" alt="logo" width={35} height={35} />
+      <span className="font-bold text-2xl text-black dark:text-white">
+        CrypAlgos
+      </span>
     </a>
   );
 };
