@@ -1,116 +1,147 @@
-"use client";
+'use client';
 
-import { motion } from "motion/react";
-import { IconBrandTwitter, IconBrandGithub, IconBrandLinkedin, IconBrandDiscord } from "@tabler/icons-react";
-import { cn } from "@/lib/utils";
+import React from 'react';
+import { Twitter, Github, MessageCircle, Send, Linkedin } from 'lucide-react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { useTheme } from 'next-themes';
 
-const footerLinks = [
-  {
-    title: "Product",
-    links: [
-      { name: "Features", href: "#" },
-      { name: "Pricing", href: "#" },
-      { name: "Integrations", href: "#" },
-      { name: "Changelog", href: "#" },
-    ],
-  },
-  {
-    title: "Resources",
-    links: [
-      { name: "Documentation", href: "#" },
-      { name: "API Reference", href: "#" },
-      { name: "Blog", href: "#" },
-      { name: "Community", href: "#" },
-    ],
-  },
-  {
-    title: "Company",
-    links: [
-      { name: "About", href: "#" },
-      { name: "Careers", href: "#" },
-      { name: "Legal", href: "#" },
-      { name: "Contact", href: "#" },
-    ],
-  },
-];
+const Footer: React.FC = () => {
+  const { theme } = useTheme();
+  const [mounted, setMounted] = React.useState(false);
 
-const socialLinks = [
-  { icon: IconBrandTwitter, href: "#", label: "Twitter" },
-  { icon: IconBrandGithub, href: "#", label: "GitHub" },
-  { icon: IconBrandLinkedin, href: "#", label: "LinkedIn" },
-  { icon: IconBrandDiscord, href: "#", label: "Discord" },
-];
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
-export function Footer() {
+  const footerSections = [
+    {
+      title: 'PLATFORM',
+      links: [
+        { href: '/about', label: 'About CrypAlgos' },
+        { href: '/pricing', label: 'Pricing Plans' },
+        { href: '/docs', label: 'Documentation' },
+        { href: '/contact', label: 'Contact Us' }
+      ]
+    },
+    {
+      title: 'TRADING',
+      links: [
+        { href: '#', label: 'Algorithm Library' },
+        { href: '#', label: 'Backtesting Tools' },
+        { href: '#', label: 'Strategy Builder' },
+        { href: '#', label: 'Portfolio Analytics' }
+      ]
+    },
+    {
+      title: 'RESOURCES',
+      links: [
+        { href: '/docs', label: 'API Documentation' },
+        { href: '#', label: 'Trading Guides' },
+        { href: '#', label: 'Community Forum' },
+        { href: '#', label: 'Video Tutorials' }
+      ]
+    },
+    {
+      title: 'LEGAL',
+      links: [
+        { href: '/privacy-policy', label: 'Privacy Policy' },
+        { href: '/terms-and-condition', label: 'Terms of Service' },
+        { href: '/risk-disclosure', label: 'Risk Disclosure' },
+        { href: '/return-policy', label: 'Return Policy' }
+      ]
+    }
+  ];
+
+  const socialLinks = [
+    { href: '#', label: 'Twitter', icon: Twitter },
+    { href: '#', label: 'Discord', icon: MessageCircle },
+    { href: '#', label: 'Telegram', icon: Send },
+    { href: '#', label: 'GitHub', icon: Github },
+    { href: '#', label: 'LinkedIn', icon: Linkedin }
+  ];
+
   return (
-    <footer className="relative w-full overflow-hidden bg-background pt-20 pb-10">
-      {/* Gradient Top Border */}
-      <div className="absolute top-0 left-0 h-px w-full bg-linear-to-r from-transparent via-primary/50 to-transparent" />
-      
-      {/* Background Glow */}
-      <div className="absolute top-0 left-1/2 h-64 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/10 blur-[100px]" />
+    <footer className="relative bg-background border-t border-border/50 overflow-hidden min-h-[500px]">
+      {/* Antigravity Text Background - Full Width Corner to Corner */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
+        <h2 className="text-[18vw] sm:text-[16vw] md:text-[14vw] lg:text-[12vw] xl:text-[20vw] font-black text-foreground/4 whitespace-nowrap leading-none tracking-tighter">
+          CrypAlgos
+        </h2>
+      </div>
 
-      <div className="container relative z-10 mx-auto px-4 md:px-6">
-        <div className="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-5 lg:gap-8">
-          {/* Brand Column */}
-          <div className="lg:col-span-2">
-            <div className="flex items-center space-x-2">
-              <img src="/logo.svg" alt="GroqChat Logo" className="h-8 w-8" />
-              <span className="text-xl font-bold bg-clip-text text-transparent bg-linear-to-br from-foreground to-muted-foreground">
-                GroqChat
-              </span>
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Top Section with Logo */}
+        <div className="pt-16 pb-12">
+          <div className="flex flex-col items-start space-y-4 mb-12">
+            <div className="flex items-center space-x-3">
+              {mounted && (
+                <Image
+                  src={theme === 'light' ? "/logo_light.svg" : "/logo_dark.svg"}
+                  alt="CrypAlgos Logo"
+                  width={40}
+                  height={40}
+                  className="h-10 w-auto"
+                />
+              )}
             </div>
-            <p className="mt-4 max-w-xs text-sm text-muted-foreground">
-              Empowering the next generation of AI applications with lightning-fast inference and futuristic design.
+            <p className="text-muted-foreground text-sm max-w-md">
+              Professional algorithmic trading platform for cryptocurrency markets. 
+              Execute strategies with institutional-grade infrastructure.
             </p>
-            <div className="mt-6 flex space-x-4">
-              {socialLinks.map((social, idx) => (
-                <motion.a
-                  key={idx}
-                  href={social.href}
-                  whileHover={{ y: -3, scale: 1.1 }}
-                  className="rounded-full bg-accent/50 p-2 text-muted-foreground transition-colors hover:bg-primary/20 hover:text-primary"
-                  aria-label={social.label}
-                >
-                  <social.icon size={20} />
-                </motion.a>
-              ))}
-            </div>
           </div>
 
-          {/* Links Columns */}
-          {footerLinks.map((column, idx) => (
-            <div key={idx} className="flex flex-col space-y-4">
-              <h3 className="text-sm font-semibold tracking-wider text-foreground uppercase">
-                {column.title}
-              </h3>
-              <ul className="space-y-3 text-sm">
-                {column.links.map((link, linkIdx) => (
-                  <li key={linkIdx}>
-                    <a
-                      href={link.href}
-                      className="text-muted-foreground transition-all hover:text-primary hover:pl-1"
-                    >
-                      {link.name}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
+          {/* Footer Links Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-12 mb-16">
+            {footerSections.map((section) => (
+              <div key={section.title}>
+                <h3 className="font-bold text-xs mb-5 tracking-wider text-foreground/90">
+                  {section.title}
+                </h3>
+                <ul className="space-y-3.5">
+                  {section.links.map(({ href, label }) => (
+                    <li key={label}>
+                      <Link
+                        href={href}
+                        className="text-muted-foreground hover:text-primary text-sm transition-colors duration-200 inline-block hover:translate-x-1 transform"
+                      >
+                        {label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
 
-        {/* Bottom Section */}
-        <div className="mt-16 flex flex-col items-center justify-between border-t border-border/40 pt-8 sm:flex-row">
-          <p className="text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} GroqChat Inc. All rights reserved.
-          </p>
-          <div className="mt-4 flex space-x-6 sm:mt-0">
-             <a href="#" className="text-xs text-muted-foreground hover:text-foreground">Privacy Policy</a>
-             <a href="#" className="text-xs text-muted-foreground hover:text-foreground">Terms of Service</a>
+          {/* Bottom Section */}
+          <div className="flex flex-col-reverse md:flex-row justify-between items-center gap-6 pt-8 border-t border-border/50">
+            {/* Copyright */}
+            <div className="flex flex-col md:flex-row items-center gap-2 text-muted-foreground text-sm">
+              <p>© {new Date().getFullYear()} CrypAlgos.</p>
+              <p className="hidden md:inline">•</p>
+              <p>All rights reserved.</p>
+            </div>
+
+            {/* Social Links */}
+            <div className="flex items-center gap-3">
+              {socialLinks.map(({ href, label, icon: IconComponent }) => (
+                <Link
+                  key={label}
+                  href={href}
+                  aria-label={label}
+                  className="group relative w-10 h-10 rounded-lg bg-muted/50 hover:bg-primary/10 flex items-center justify-center text-muted-foreground hover:text-primary transition-all duration-300 hover:scale-110 hover:-translate-y-1"
+                >
+                  <IconComponent className="w-4 h-4 relative z-10" />
+                  <div className="absolute inset-0 rounded-lg bg-primary/0 group-hover:bg-primary/5 transition-colors duration-300" />
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
       </div>
     </footer>
   );
-}
+};
+
+export default Footer;
