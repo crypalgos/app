@@ -56,8 +56,6 @@ export const Navbar = ({ children, className }: NavbarProps) => {
   const { scrollRef } = useScrollContext();
   const { scrollY } = useScroll({
     container: scrollRef,
-    target: ref,
-    offset: ["start start", "end start"],
   });
   const [visible, setVisible] = useState<boolean>(false);
 
@@ -238,15 +236,22 @@ export const NavbarLogo = () => {
   return (
     <a
       href="#"
-      className="relative z-20 mr-4 flex items-center space-x-2 px-2 py-1 text-sm font-normal text-black"
+      className="relative z-20 mr-4 flex items-center space-x-2 px-2 py-1 text-sm font-normal"
     >
       <img
-        src="./logo.svg"
-        alt="logo"
-        width={35}
-        height={35}
+        src="/logo_light.svg"
+        alt="CrypAlgos Logo"
+        width={150}
+        height={150}
+        className="block dark:hidden"
       />
-      <span className="font-bold text-2xl text-black dark:text-white">GroqChat</span>
+      <img
+        src="/logo_dark.svg"
+        alt="CrypAlgos Logo"
+        width={150}
+        height={150}
+        className="hidden dark:block"
+      />
     </a>
   );
 };
