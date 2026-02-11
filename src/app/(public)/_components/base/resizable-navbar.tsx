@@ -71,11 +71,7 @@ export const Navbar = ({ children, className }: NavbarProps) => {
     <motion.div
       ref={ref}
       // IMPORTANT: Change this to class of `fixed` if you want the navbar to be fixed
-      className={cn(
-        "fixed inset-x-0 top-0 z-50 w-full group",
-        visible && "navbar-visible",
-        className,
-      )}
+      className={cn("fixed inset-x-0 top-0 z-50 w-full group", visible && "navbar-visible", className)}
     >
       {React.Children.map(children, (child) =>
         React.isValidElement(child)
@@ -110,9 +106,7 @@ export const NavBody = ({ children, className, visible }: NavBodyProps) => {
       }}
       className={cn(
         "relative z-60 mx-auto hidden w-full max-w-[95%] flex-row items-center justify-between self-start rounded-xl px-4 py-3.5 lg:flex transition-colors duration-200 border border-transparent",
-        visible
-          ? "bg-background/90 shadow-lg"
-          : "bg-transparent dark:bg-transparent",
+        visible ? "bg-background/90 shadow-lg" : "bg-transparent dark:bg-transparent",
         className,
       )}
     >
@@ -174,9 +168,7 @@ export const MobileNav = ({ children, className, visible }: MobileNavProps) => {
       }}
       className={cn(
         "relative z-50 mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col items-center justify-between px-0 py-2 lg:hidden transition-colors duration-200 border border-transparent",
-        visible
-          ? "bg-background/90 shadow-lg"
-          : "bg-transparent dark:bg-transparent",
+        visible ? "bg-background/90 shadow-lg" : "bg-transparent dark:bg-transparent",
         className,
       )}
     >
@@ -246,10 +238,20 @@ export const NavbarLogo = () => {
       href="#"
       className="relative z-20 mr-4 flex items-center space-x-2 px-2 py-1 text-sm font-normal"
     >
-      <img src="./logo.svg" alt="logo" width={35} height={35} />
-      <span className="font-bold text-2xl text-black dark:text-white">
-        CrypAlgos
-      </span>
+      <img
+        src="/logo_light.svg"
+        alt="CrypAlgos Logo"
+        width={150}
+        height={150}
+        className="block dark:hidden"
+      />
+      <img
+        src="/logo_dark.svg"
+        alt="CrypAlgos Logo"
+        width={150}
+        height={150}
+        className="hidden dark:block"
+      />
     </a>
   );
 };
@@ -273,9 +275,9 @@ export const NavbarButton = ({
     "px-4 py-2 text-sm rounded-md font-bold relative cursor-pointer hover:-translate-y-0.5 transition duration-200 inline-block text-center";
 
   const variantStyles = {
-    primary: "bg-primary text-primary-foreground shadow-lg hover:bg-primary/90",
-    secondary:
-      "bg-transparent text-foreground hover:bg-accent hover:text-accent-foreground",
+    primary:
+      "bg-primary text-primary-foreground shadow-lg hover:bg-primary/90",
+    secondary: "bg-transparent text-foreground hover:bg-accent hover:text-accent-foreground",
     dark: "bg-foreground text-background shadow-lg",
     shimmer:
       "animate-shimmer bg-[linear-gradient(110deg,var(--color-primary),45%,color-mix(in_srgb,var(--color-primary),white_25%),55%,var(--color-primary))] bg-[length:200%_100%] text-primary-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-slate-50 hover:bg-[length:200%_100%] dark:bg-[linear-gradient(110deg,var(--color-primary),45%,color-mix(in_srgb,var(--color-primary),white_25%),55%,var(--color-primary))] dark:text-primary-foreground",
