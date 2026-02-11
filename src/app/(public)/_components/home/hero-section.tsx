@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import Image from 'next/image'
 import { TextEffect } from '@/components/ui/text-effect'
 import { AnimatedGroup } from '@/components/ui/animated-group'
-import { Cta } from '@/components/ui/cta'
+import StartBuilding from '@/components/ui/cta'
 import Features from '@/components/features-10'
 
 const transitionVariants = {
@@ -282,6 +282,7 @@ export default function HeroSection() {
                         </div>
                     </div>
                 </section>
+                <StartBuilding />
             </main>
         </>
     )
