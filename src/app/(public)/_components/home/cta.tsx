@@ -10,9 +10,9 @@ interface StartBuildingProps {
 }
 
 const StartBuilding: React.FC<StartBuildingProps> = ({
-  title = "Start Exploring",
-  subtitle = "Animations, Components, Backgrounds - One Click Away",
-  buttonText = "Browse Components",
+  title = "Start Trading Smarter",
+  subtitle = "Automated Strategies, Real-Time Insights, Effortless Crypto Trading — All in One Place",
+  buttonText = "Get Started",
   linkTo = "/get-started/index",
   className = "",
 }) => {
@@ -22,7 +22,7 @@ const StartBuilding: React.FC<StartBuildingProps> = ({
         <div
           className="
             relative w-full max-w-[1200px] mx-auto
-            rounded-[50px] py-16 px-12 md:p-10
+            rounded-[50px] py-22 px-12 md:px-10 md:py-22
             bg-[linear-gradient(135deg,#7c3aed,rgba(24,47,255,0.6))]
             bg-[length:200%_200%]
             shadow-[0_8px_32px_0_rgba(31,38,135,0.5)]
