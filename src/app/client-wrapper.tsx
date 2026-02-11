@@ -4,7 +4,7 @@ import GlobalProviders from "@/components/providers";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ScrollProvider } from "@/components/providers/scroll-provider";
 import { useRef, useEffect } from "react";
-import { Toaster } from "@/components/ui/sonner"
+import { Toaster } from "@/components/ui/sonner";
 import Lenis from "lenis";
 
 export default function ClientWrapper({
@@ -43,7 +43,7 @@ export default function ClientWrapper({
   return (
     <GlobalProviders>
       <ScrollProvider scrollRef={viewportRef}>
-        <ScrollArea viewportRef={viewportRef} className="h-screen w-full">
+        <ScrollArea viewportRef={viewportRef} className="h-dvh w-full">
           {children}
           <Toaster />
         </ScrollArea>
