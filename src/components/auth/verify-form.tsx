@@ -18,11 +18,7 @@ import {
 } from "@/components/ui/form";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from "@/components/ui/input-otp";
+import { AnimatedOTPInput } from "@/components/ui/animated-otp-input";
 
 export function VerifyForm() {
   const router = useRouter();
@@ -120,16 +116,7 @@ export function VerifyForm() {
               <FormItem>
                 <FormLabel>Verification Code</FormLabel>
                 <FormControl>
-                  <InputOTP maxLength={6} {...field}>
-                    <InputOTPGroup>
-                      <InputOTPSlot index={0} />
-                      <InputOTPSlot index={1} />
-                      <InputOTPSlot index={2} />
-                      <InputOTPSlot index={3} />
-                      <InputOTPSlot index={4} />
-                      <InputOTPSlot index={5} />
-                    </InputOTPGroup>
-                  </InputOTP>
+                  <AnimatedOTPInput maxLength={6} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
