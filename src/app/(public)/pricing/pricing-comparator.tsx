@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { Cpu, Sparkles } from 'lucide-react'
+import { Cpu, X } from 'lucide-react'
 import Link from 'next/link'
 
 const tableData = [
@@ -73,15 +73,16 @@ export default function PricingComparator() {
 
                                     <Button
                                         asChild
-                                        variant="outline"
+                                        className="bg-foreground text-background hover:bg-foreground/90"
                                         size="sm">
                                         <Link href="#">Get Started</Link>
                                     </Button>
                                 </th>
-                                <th className="bg-muted rounded-t-(--radius) space-y-3 px-4">
+                                <th className="rounded-t-lg border-2 border-blue-500 border-b-0 space-y-3 px-4 dark:border-blue-400">
                                     <span className="block">Premium</span>
                                     <Button
                                         asChild
+                                        className="bg-foreground text-background hover:bg-foreground/90"
                                         size="sm">
                                         <Link href="#">Get Started</Link>
                                     </Button>
@@ -90,7 +91,7 @@ export default function PricingComparator() {
                                     <span className="block">Enterprise</span>
                                     <Button
                                         asChild
-                                        variant="outline"
+                                        className="bg-foreground text-background hover:bg-foreground/90"
                                         size="sm">
                                         <Link href="#">Contact Sales</Link>
                                     </Button>
@@ -104,7 +105,7 @@ export default function PricingComparator() {
                                     <span>Trading Features</span>
                                 </td>
                                 <td></td>
-                                <td className="bg-muted border-none px-4"></td>
+                                <td className="border-l-2 border-r-2 border-l-blue-500 border-r-blue-500 dark:border-l-blue-400 dark:border-r-blue-400 px-4"></td>
                                 <td></td>
                             </tr>
                             {tableData.map((row, index) => (
@@ -128,13 +129,15 @@ export default function PricingComparator() {
                                                 </svg>
                                             </div>
                                         ) : row.free === false ? (
-                                            <span className="text-muted-foreground">-</span>
+                                            <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-muted">
+                                                <X className="h-3 w-3 text-red-500" />
+                                            </div>
                                         ) : (
                                             row.free
                                         )}
                                     </td>
-                                    <td className="bg-muted border-none px-4">
-                                        <div className="-mb-3 border-b py-3">
+                                    <td className="border-l-2 border-r-2 border-b border-l-blue-500 border-r-blue-500 dark:border-l-blue-400 dark:border-r-blue-400 px-4">
+                                        <div className="-mb-3 py-3">
                                             {row.pro === true ? (
                                                 <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-600">
                                                     <svg
@@ -150,7 +153,9 @@ export default function PricingComparator() {
                                                     </svg>
                                                 </div>
                                             ) : row.pro === false ? (
-                                                <span className="text-muted-foreground">-</span>
+                                                <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-muted">
+                                                    <X className="h-3 w-3 text-red-500" />
+                                                </div>
                                             ) : (
                                                 row.pro
                                             )}
@@ -172,7 +177,9 @@ export default function PricingComparator() {
                                                 </svg>
                                             </div>
                                         ) : row.startup === false ? (
-                                            <span className="text-muted-foreground">-</span>
+                                            <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-muted">
+                                                <X className="h-3 w-3 text-red-500" />
+                                            </div>
                                         ) : (
                                             row.startup
                                         )}
@@ -182,7 +189,7 @@ export default function PricingComparator() {
                             <tr className="*:py-6">
                                 <td></td>
                                 <td></td>
-                                <td className="bg-muted rounded-b-(--radius) border-none px-4"></td>
+                                <td className="rounded-b-lg border-2 border-blue-500 border-t-0 px-4 dark:border-blue-400"></td>
                                 <td></td>
                             </tr>
                         </tbody>
