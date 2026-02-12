@@ -120,14 +120,25 @@ export function PricingModern() {
   const [isAnnual, setIsAnnual] = useState(true);
 
   return (
-    <section>
-      <div className="relative bg-muted/50 py-16 md:py-32">
+    <section className="relative overflow-hidden">
+      {/* Grid Background */}
+      <div
+        className={cn(
+          "absolute inset-0",
+          "bg-size-[40px_40px] pointer-events-none",
+          "bg-[linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)]",
+        )}
+      />
+      {/* Radial Gradient Overlay */}
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background mask-[radial-gradient(ellipse_at_center,transparent_20%,black)] dark:bg-background"></div>
+
+      <div className="relative py-16 md:py-32">
         <div className="mx-auto max-w-5xl px-6">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-balance font-bold text-3xl md:text-4xl lg:text-5xl lg:tracking-tight">
               Choose your perfect plan
             </h2>
-            <p className="mx-auto mt-4 max-w-xl text-balance text-foreground/70 text-lg">
+            <p className="mx-auto mt-4 max-w-xl text-balance text-muted-foreground text-lg">
               Modern pricing plans designed for teams of all sizes. Scale your
               business with confidence.
             </p>
@@ -138,12 +149,11 @@ export function PricingModern() {
               >
                 <div
                   aria-hidden="true"
-                  className={`pointer-events-none absolute inset-1 w-1/2 rounded-full border border-transparent bg-brand shadow ring-1 ring-foreground/5 transition-transform duration-500 ease-in-out ${
-                    isAnnual ? "translate-x-full" : "translate-x-0"
-                  }`}
+                  className={`pointer-events-none absolute inset-1 w-1/2 rounded-full border border-transparent bg-primary shadow ring-1 ring-primary/20 transition-transform duration-500 ease-in-out ${isAnnual ? "translate-x-full" : "translate-x-0"
+                    }`}
                 />
                 <button
-                  className="relative duration-500 data-[active=true]:font-medium data-[active=true]:text-white"
+                  className="relative duration-500 data-[active=true]:font-medium data-[active=true]:text-primary-foreground"
                   data-active={!isAnnual}
                   onClick={() => setIsAnnual(false)}
                   type="button"
@@ -151,7 +161,7 @@ export function PricingModern() {
                   Monthly
                 </button>
                 <button
-                  className="relative duration-500 data-[active=true]:font-medium data-[active=true]:text-white"
+                  className="relative duration-500 data-[active=true]:font-medium data-[active=true]:text-primary-foreground"
                   data-active={isAnnual}
                   onClick={() => setIsAnnual(true)}
                   type="button"
@@ -217,10 +227,10 @@ export function PricingModern() {
                             className="flex items-center gap-3 text-foreground text-sm"
                             key={item}
                           >
-                            <div className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-foreground">
+                            <div className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-chart-2">
                               <svg
                                 aria-hidden="true"
-                                className="h-2 w-2 text-background"
+                                className="h-2 w-2 text-white"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
                               >
@@ -241,7 +251,7 @@ export function PricingModern() {
                 {/* Pro Plan (Featured) */}
                 <motion.div
                   animate={{ opacity: 1, y: 0 }}
-                  className="group relative flex h-[650px] cursor-pointer flex-col overflow-hidden rounded-2xl border bg-primary p-8"
+                  className="group relative flex h-[650px] cursor-pointer flex-col overflow-hidden rounded-2xl border-2 border-primary/50 bg-card p-8 shadow-lg shadow-primary/10"
                   data-animate-card
                   initial={{ opacity: 0, y: 40 }}
                   transition={{
@@ -257,7 +267,7 @@ export function PricingModern() {
                     {/* Title */}
                     <h3 className="mb-4 flex items-center gap-2 font-bold text-2xl text-foreground">
                       Pro{" "}
-                      <div className="rounded-full bg-brand px-2 py-1 font-bold text-white text-xs">
+                      <div className="rounded-full bg-primary px-2 py-1 font-bold text-primary-foreground text-xs">
                         Most Popular
                       </div>
                     </h3>
@@ -301,10 +311,10 @@ export function PricingModern() {
                             className="flex items-center gap-3 text-foreground text-sm"
                             key={item}
                           >
-                            <div className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-foreground">
+                            <div className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-blue-600">
                               <svg
                                 aria-hidden="true"
-                                className="h-2 w-2 text-background"
+                                className="h-2 w-2 text-white"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
                               >
@@ -381,10 +391,10 @@ export function PricingModern() {
                             className="flex items-center gap-3 text-foreground text-sm"
                             key={item}
                           >
-                            <div className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-foreground">
+                            <div className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-chart-2">
                               <svg
                                 aria-hidden="true"
-                                className="h-2 w-2 text-background"
+                                className="h-2 w-2 text-white"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
                               >
