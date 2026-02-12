@@ -14,6 +14,7 @@ import {
 } from "./resizable-navbar";
 
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { IconLogin2 } from "@tabler/icons-react";
 
 export function NavbarWrapper() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -43,6 +44,7 @@ export function NavbarWrapper() {
           <ThemeToggle />
           <NavbarButton variant="shimmer" href="/login">
             Login
+            <IconLogin2 size={18} stroke={2} />
           </NavbarButton>
         </div>
       </NavBody>
@@ -82,6 +84,7 @@ export function NavbarWrapper() {
               href="/login"
             >
               Login
+              <IconLogin2 size={18} stroke={2} />
             </NavbarButton>
           </div>
         </MobileNavMenu>
