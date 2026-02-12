@@ -30,7 +30,7 @@ export function NavbarWrapper() {
     },
     {
       name: "Contact",
-      link: "#contact",
+      link: "/contact",
     },
   ];
 

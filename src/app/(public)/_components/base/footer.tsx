@@ -145,7 +145,7 @@ const Footer: React.FC = () => {
       {/* Large Bottom Text */}
       <div className="w-full flex justify-center overflow-hidden select-none pointer-events-none pb-4">
         <p
-          className={`text-center text-5xl md:text-8xl lg:text-[12rem] xl:text-[14rem] 2xl:text-[16rem] font-bold bg-clip-text text-transparent bg-gradient-to-b from-neutral-100 dark:from-neutral-800 to-neutral-300 dark:to-neutral-900/80 leading-none tracking-tight`}
+          className={`text-center text-5xl md:text-8xl lg:text-[14rem] xl:text-[14rem] 2xl:text-[14rem] font-bold bg-clip-text text-transparent bg-gradient-to-b from-neutral-100 dark:from-neutral-800 to-neutral-300 dark:to-neutral-900/80 leading-none tracking-tight`}
         >
           CRYPALOGS
         </p>
