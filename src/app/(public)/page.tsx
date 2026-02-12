@@ -3,6 +3,7 @@ import TestimonialsSection from "./_components/home/testimonials-section";
 import FeaturesSection from "./_components/home/features-10";
 import StartBuilding from "./_components/home/cta";
 import { GridView } from "./_components/home/grid-view";
+import FAQsThree from "./_components/home/faq-section";
 
 export default function page() {
   return (
@@ -11,6 +12,7 @@ export default function page() {
       <FeaturesSection />
       <GridView />
       <TestimonialsSection />
+      <FAQsThree />
       <StartBuilding />
     </div>
   );

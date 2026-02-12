@@ -28,7 +28,7 @@ const StartBuilding: React.FC<StartBuildingProps> = ({
             shadow-[0_8px_32px_0_rgba(31,38,135,0.5)]
             overflow-hidden
             transition-all duration-300 ease-in-out
-            flex flex-col items-center justify-center text-center gap-6
+            flex flex-col items-center justify-center text-center gap-8
             select-none
             hover:shadow-[0_12px_48px_0_rgba(31,38,135,0.6)]
             group
