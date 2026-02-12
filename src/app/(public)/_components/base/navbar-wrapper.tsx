@@ -26,7 +26,7 @@ export function NavbarWrapper() {
     },
     {
       name: "Pricing",
-      link: "#pricing",
+      link: "/pricing",
     },
     {
       name: "Contact",
