@@ -10,7 +10,6 @@ import {
 
 import React, { useRef, useState } from "react";
 
-
 interface NavbarProps {
   children: React.ReactNode;
   className?: string;
@@ -71,7 +70,11 @@ export const Navbar = ({ children, className }: NavbarProps) => {
     <motion.div
       ref={ref}
       // IMPORTANT: Change this to class of `fixed` if you want the navbar to be fixed
-      className={cn("fixed inset-x-0 top-0 z-50 w-full group", visible && "navbar-visible", className)}
+      className={cn(
+        "fixed inset-x-0 top-0 z-50 w-full group",
+        visible && "navbar-visible",
+        className,
+      )}
     >
       {React.Children.map(children, (child) =>
         React.isValidElement(child)
@@ -105,8 +108,10 @@ export const NavBody = ({ children, className, visible }: NavBodyProps) => {
         minWidth: "800px",
       }}
       className={cn(
-        "relative z-60 mx-auto hidden w-full max-w-[95%] flex-row items-center justify-between self-start rounded-xl px-4 py-3.5 lg:flex transition-colors duration-200 border border-transparent",
-        visible ? "bg-background/90 shadow-lg" : "bg-transparent dark:bg-transparent",
+        "relative z-60 mx-auto hidden w-full max-w-[95%] flex-row items-center justify-between self-start rounded-xl px-4 py-4 lg:flex transition-colors duration-200",
+        visible
+          ? "bg-background/95 dark:bg-neutral-900 shadow-lg border border-border/40"
+          : "bg-transparent dark:bg-transparent border border-transparent",
         className,
       )}
     >
@@ -137,7 +142,7 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
           {hovered === idx && (
             <motion.div
               layoutId="hovered"
-              className="absolute inset-0 h-full w-full rounded-full bg-accent"
+              className="absolute inset-0 h-full w-full rounded-full bg-neutral-100 dark:bg-neutral-800"
             />
           )}
           <span className="relative z-20">{item.name}</span>
@@ -168,7 +173,9 @@ export const MobileNav = ({ children, className, visible }: MobileNavProps) => {
       }}
       className={cn(
         "relative z-50 mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col items-center justify-between px-0 py-2 lg:hidden transition-colors duration-200 border border-transparent",
-        visible ? "bg-background/90 shadow-lg" : "bg-transparent dark:bg-transparent",
+        visible
+          ? "bg-background/90 shadow-lg"
+          : "bg-transparent dark:bg-transparent",
         className,
       )}
     >
@@ -241,15 +248,15 @@ export const NavbarLogo = () => {
       <img
         src="/logo_light.svg"
         alt="CrypAlgos Logo"
-        width={150}
-        height={150}
+        width={190}
+        height={190}
         className="block dark:hidden"
       />
       <img
         src="/logo_dark.svg"
         alt="CrypAlgos Logo"
-        width={150}
-        height={150}
+        width={190}
+        height={190}
         className="hidden dark:block"
       />
     </a>
@@ -272,12 +279,12 @@ export const NavbarButton = ({
   [key: string]: any;
 }) => {
   const baseStyles =
-    "px-4 py-2 text-sm rounded-md font-bold relative cursor-pointer hover:-translate-y-0.5 transition duration-200 inline-block text-center";
+    "px-4 py-2 text-sm rounded-md font-bold relative cursor-pointer hover:-translate-y-0.5 transition duration-200 inline-flex items-center justify-center gap-2 text-center";
 
   const variantStyles = {
-    primary:
-      "bg-primary text-primary-foreground shadow-lg hover:bg-primary/90",
-    secondary: "bg-transparent text-foreground hover:bg-accent hover:text-accent-foreground",
+    primary: "bg-primary text-primary-foreground shadow-lg hover:bg-primary/90",
+    secondary:
+      "bg-transparent text-foreground hover:bg-accent hover:text-accent-foreground",
     dark: "bg-foreground text-background shadow-lg",
     shimmer:
       "animate-shimmer bg-[linear-gradient(110deg,var(--color-primary),45%,color-mix(in_srgb,var(--color-primary),white_25%),55%,var(--color-primary))] bg-[length:200%_100%] text-primary-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-slate-50 hover:bg-[length:200%_100%] dark:bg-[linear-gradient(110deg,var(--color-primary),45%,color-mix(in_srgb,var(--color-primary),white_25%),55%,var(--color-primary))] dark:text-primary-foreground",
