@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 export default function HeroSection() {
   return (
-    <div className="flex flex-col min-h-screen pt-20 md:pt-40 relative overflow-hidden bg-white dark:bg-black">
+    <div className="flex flex-col min-h-screen pt-20 md:pt-40 relative overflow-hidden bg-background dark:bg-background">
       <div
         className={cn(
           "absolute inset-0",
@@ -13,7 +13,7 @@ export default function HeroSection() {
           "dark:bg-[linear-gradient(to_right,#262626_1px,transparent_1px),linear-gradient(to_bottom,#262626_1px,transparent_1px)]",
         )}
       />
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-white mask-[radial-gradient(ellipse_at_center,transparent_20%,black)] dark:bg-black"></div>
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background mask-[radial-gradient(ellipse_at_center,transparent_20%,black)] dark:bg-background"></div>
       <div
         className="flex justify-center"
         style={{ opacity: 1, transform: "none" }}
@@ -22,8 +22,8 @@ export default function HeroSection() {
           <span className="absolute inset-0 overflow-hidden rounded-full">
             <span className="absolute inset-0 rounded-full opacity-0 transition-opacity duration-500 group-hover:opacity-100"></span>
           </span>
-          <div className="relative flex space-x-2 items-center z-10 rounded-full bg-neutral-100 dark:bg-neutral-800 py-1.5 px-4 ring-1 ring-white/10">
-            <span>Total Volume Secured: $10B+</span>
+          <div className="relative flex space-x-2 items-center z-10 rounded-full bg-neutral-100 dark:bg-background py-1.5 px-4 ring-1 ring-white/10">
+            <span>Trusted by 5,000+ Algo Traders</span>
             <svg
               fill="none"
               height="16"
@@ -55,7 +55,7 @@ export default function HeroSection() {
             textWrap: "balance",
           }}
         >
-          The Future of Decentralized Trading
+          AI-Powered Crypto Trading, Built for Everyone
         </span>
       </h1>
       <p
@@ -70,8 +70,8 @@ export default function HeroSection() {
             textWrap: "balance",
           }}
         >
-          Trade, stake, and earn with low fees and deep liquidity. Experience
-          the next generation of DeFi on a secure and scalable platform.
+          Create strategies visually or with code, backtest instantly, and
+          deploy live with confidence.
         </span>
       </p>
       <div
@@ -79,13 +79,13 @@ export default function HeroSection() {
         style={{ opacity: 1, transform: "none" }}
       >
         <button className="bg-neutral-900 relative z-10 hover:bg-black/90 border border-transparent text-white text-sm md:text-sm transition font-medium duration-200 rounded-full px-4 py-2 flex items-center justify-center shadow-[0px_-1px_0px_0px_#FFFFFF40_inset,0px_1px_0px_0px_#FFFFFF40_inset]">
-          Connect Wallet
+          Start Building Strategies
         </button>
         <Link
-          href="/markets"
+          href="#features"
           className="relative z-10 bg-transparent hover:bg-gray-100 border border-transparent text-black text-sm md:text-sm transition font-medium duration-200 rounded-full px-4 py-2 justify-center dark:text-white dark:hover:bg-neutral-800 dark:hover:shadow-xl flex space-x-2 items-center group"
         >
-          <span>Explore Markets</span>
+          <span>See How It Works</span>
           <svg
             stroke="currentColor"
             fill="currentColor"
@@ -106,8 +106,8 @@ export default function HeroSection() {
         </Link>
       </div>
       <div className="p-4 border border-neutral-200 bg-neutral-100 dark:bg-neutral-800 dark:border-neutral-700 rounded-[32px] mt-20 relative align-center mx-auto max-w-7xl">
-        <div className="absolute inset-x-0 bottom-0 h-40 w-full bg-linear-to-b from-transparent via-white to-white dark:via-black/50 dark:to-black scale-[1.1] pointer-events-none"></div>
-        <div className="p-2 bg-white dark:bg-black dark:border-neutral-700 border border-neutral-200 rounded-[24px]">
+        <div className="absolute inset-x-0 bottom-0 h-40 w-full bg-linear-to-b from-transparent via-white to-white dark:via-background/50 dark:to-background scale-[1.1] pointer-events-none"></div>
+        <div className="p-2 bg-white dark:bg-background dark:border-neutral-700 border border-neutral-200 rounded-[24px]">
           <Image
             className="rounded-[20px]"
             src="https://placehold.co/1920x1080/png?text=Crypto+Dashboard"
