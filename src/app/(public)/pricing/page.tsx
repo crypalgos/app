@@ -1,10 +1,10 @@
-"use client";
 import PricingModern from ".";
 import PricingComparator from "./pricing-comparator";
-const Example = () => (
+
+const Page = () => (
   <div className="h-full w-full">
     <PricingModern/>
     <PricingComparator/>
   </div>
 );
-export default Example;
+export default Page;
