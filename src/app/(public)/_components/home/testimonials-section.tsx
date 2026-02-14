@@ -12,7 +12,7 @@ export default function TestimonialsSection() {
   }));
 
   return (
-    <section className="w-full py-12 overflow-hidden relative z-10">
+    <section className="w-full py-8 md:py-12 overflow-hidden relative z-10">
       <div className="container mx-auto px-4">
         <div className="text-center mb-8">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
