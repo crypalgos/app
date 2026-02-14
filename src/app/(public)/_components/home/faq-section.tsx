@@ -49,7 +49,7 @@ export default function FAQsThree() {
   ];
 
   return (
-    <section className="bg-background dark:bg-background py-24 border-y border-border/40">
+    <section className="bg-background dark:bg-background py-12 md:py-24 border-y border-border/40">
       <div className="mx-auto max-w-4xl px-4 md:px-6">
         <div className="flex flex-col items-center gap-12 text-center">
           <div className="max-w-2xl">
