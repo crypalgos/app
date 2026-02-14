@@ -1,201 +1,235 @@
-import { Button } from '@/components/ui/button'
-import { Cpu, X } from 'lucide-react'
-import Link from 'next/link'
+"use client";
 
-const tableData = [
+import { useState, Fragment } from "react";
+import { Check, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+
+const featureCategories = [
     {
-        feature: 'Exchange Connections',
-        free: '1',
-        pro: '3',
-        startup: 'Unlimited',
+        id: "trading",
+        name: "Trading Features",
+        features: [
+            {
+                name: "Exchange Connections",
+                free: "1",
+                starter: "3",
+                pro: "10",
+                power: "Unlimited",
+            },
+            {
+                name: "Live Trading Bots",
+                free: "1",
+                starter: "5",
+                pro: "20",
+                power: "Unlimited",
+            },
+            {
+                name: "Backtesting Strategy",
+                free: "Daily Limit",
+                starter: "Priority",
+                pro: "Unlimited",
+                power: "Unlimited",
+            },
+            {
+                name: "Paper Trading",
+                free: true,
+                starter: true,
+                pro: true,
+                power: true,
+            },
+        ],
     },
     {
-        feature: 'Live Trading Bots',
-        free: '1',
-        pro: '10',
-        startup: 'Unlimited',
+        id: "advanced",
+        name: "Advanced Tools",
+        features: [
+            {
+                name: "AI Strategy Optimization",
+                free: false,
+                starter: true,
+                pro: true,
+                power: true,
+            },
+            {
+                name: "Technical Indicators",
+                free: "Standard",
+                starter: "All + Custom",
+                pro: "All + Proprietary",
+                power: "All + Proprietary",
+            },
+            {
+                name: "Portfolio Analytics",
+                free: "Basic",
+                starter: "Advanced",
+                pro: "Real-time",
+                power: "Real-time + AI",
+            },
+            {
+                name: "Webhook Alerts",
+                free: "5",
+                starter: "20",
+                pro: "100",
+                power: "Unlimited",
+            },
+        ],
     },
     {
-        feature: 'Backtesting Strategy',
-        free: 'Daily Limit',
-        pro: 'Unlimited',
-        startup: 'Priority Execution',
+        id: "support",
+        name: "Support & Security",
+        features: [
+            {
+                name: "Customer Support",
+                free: "Email",
+                starter: "Priority Email",
+                pro: "Live Chat",
+                power: "24/7 Dedicated",
+            },
+            {
+                name: "MFA Security",
+                free: true,
+                starter: true,
+                pro: true,
+                power: true,
+            },
+            {
+                name: "API Access",
+                free: false,
+                starter: "Read-only",
+                pro: "Full Access",
+                power: "Full Access",
+            },
+        ],
     },
-    {
-        feature: 'AI Strategy Optimization',
-        free: false,
-        pro: true,
-        startup: true,
-    },
-    {
-        feature: 'Technical Indicators',
-        free: 'Standard',
-        pro: 'All + Custom',
-        startup: 'All + Proprietary',
-    },
-    {
-        feature: 'Portfolio Analytics',
-        free: 'Basic',
-        pro: 'Advanced',
-        startup: 'Real-time',
-    },
-    {
-        feature: 'Webhook Alerts',
-        free: '5',
-        pro: '50',
-        startup: 'Unlimited',
-    },
-    {
-        feature: 'Paper Trading',
-        free: true,
-        pro: true,
-        startup: true,
-    },
-    {
-        feature: 'Priority Support',
-        free: false,
-        pro: true,
-        startup: true,
-    },
-]
+];
 
 export default function PricingComparator() {
-    return (
-        <section className="py-16 md:py-32">
-            <div className="mx-auto max-w-5xl px-6">
-                <div className="w-full overflow-auto lg:overflow-visible">
-                    <table className="w-[200vw] border-separate border-spacing-x-3 md:w-full dark:[--color-muted:var(--color-zinc-900)]">
-                        <thead className="bg-background sticky top-0">
-                            <tr className="*:py-4 *:text-left *:font-medium">
-                                <th className="lg:w-2/5"></th>
-                                <th className="space-y-3">
-                                    <span className="block">Basic</span>
+    const [selectedCategory, setSelectedCategory] = useState("all");
 
-                                    <Button
-                                        asChild
-                                        className="bg-foreground text-background hover:bg-foreground/90"
-                                        size="sm">
-                                        <Link href="#">Get Started</Link>
-                                    </Button>
-                                </th>
-                                <th className="rounded-t-lg border-2 border-blue-500 border-b-0 space-y-3 px-4 dark:border-blue-400">
-                                    <span className="block">Premium</span>
-                                    <Button
-                                        asChild
-                                        className="bg-foreground text-background hover:bg-foreground/90"
-                                        size="sm">
-                                        <Link href="#">Get Started</Link>
-                                    </Button>
-                                </th>
-                                <th className="space-y-3">
-                                    <span className="block">Enterprise</span>
-                                    <Button
-                                        asChild
-                                        className="bg-foreground text-background hover:bg-foreground/90"
-                                        size="sm">
-                                        <Link href="#">Contact Sales</Link>
-                                    </Button>
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="text-caption text-sm">
-                            <tr className="*:py-3">
-                                <td className="flex items-center gap-2 font-medium">
-                                    <Cpu className="size-4" />
-                                    <span>Trading Features</span>
-                                </td>
-                                <td></td>
-                                <td className="border-l-2 border-r-2 border-l-blue-500 border-r-blue-500 dark:border-l-blue-400 dark:border-r-blue-400 px-4"></td>
-                                <td></td>
-                            </tr>
-                            {tableData.map((row, index) => (
-                                <tr
-                                    key={index}
-                                    className="*:border-b *:py-3">
-                                    <td className="text-muted-foreground">{row.feature}</td>
-                                    <td>
-                                        {row.free === true ? (
-                                            <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-chart-2">
-                                                <svg
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    viewBox="0 0 24 24"
-                                                    fill="currentColor"
-                                                    className="h-2 w-2 text-white">
-                                                    <path
-                                                        fillRule="evenodd"
-                                                        d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.74a.75.75 0 0 1 1.04-.207Z"
-                                                        clipRule="evenodd"
-                                                    />
-                                                </svg>
-                                            </div>
-                                        ) : row.free === false ? (
-                                            <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-muted">
-                                                <X className="h-3 w-3 text-red-500" />
-                                            </div>
-                                        ) : (
-                                            row.free
-                                        )}
-                                    </td>
-                                    <td className="border-l-2 border-r-2 border-b border-l-blue-500 border-r-blue-500 dark:border-l-blue-400 dark:border-r-blue-400 px-4">
-                                        <div className="-mb-3 py-3">
-                                            {row.pro === true ? (
-                                                <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-600">
-                                                    <svg
-                                                        xmlns="http://www.w3.org/2000/svg"
-                                                        viewBox="0 0 24 24"
-                                                        fill="currentColor"
-                                                        className="h-2 w-2 text-white">
-                                                        <path
-                                                            fillRule="evenodd"
-                                                            d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.74a.75.75 0 0 1 1.04-.207Z"
-                                                            clipRule="evenodd"
-                                                        />
-                                                    </svg>
-                                                </div>
-                                            ) : row.pro === false ? (
-                                                <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-muted">
-                                                    <X className="h-3 w-3 text-red-500" />
-                                                </div>
-                                            ) : (
-                                                row.pro
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        {row.startup === true ? (
-                                            <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-chart-2">
-                                                <svg
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    viewBox="0 0 24 24"
-                                                    fill="currentColor"
-                                                    className="h-2 w-2 text-white">
-                                                    <path
-                                                        fillRule="evenodd"
-                                                        d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.74a.75.75 0 0 1 1.04-.207Z"
-                                                        clipRule="evenodd"
-                                                    />
-                                                </svg>
-                                            </div>
-                                        ) : row.startup === false ? (
-                                            <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-muted">
-                                                <X className="h-3 w-3 text-red-500" />
-                                            </div>
-                                        ) : (
-                                            row.startup
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
-                            <tr className="*:py-6">
-                                <td></td>
-                                <td></td>
-                                <td className="rounded-b-lg border-2 border-blue-500 border-t-0 px-4 dark:border-blue-400"></td>
-                                <td></td>
-                            </tr>
-                        </tbody>
-                    </table>
+    const renderFeatureValue = (value: string | boolean) => {
+        if (typeof value === "boolean") {
+            return (
+                <div className="flex justify-center">
+                    {value ? (
+                        <div className="w-5 h-5 rounded-full border border-emerald-700 bg-emerald-700/10 flex items-center justify-center">
+                            <Check className="w-3 h-3 text-emerald-700" />
+                        </div>
+                    ) : (
+                        <div className="w-5 h-5 rounded-full border border-red-400 bg-red-500/10 flex items-center justify-center">
+                            <X className="w-3 h-3 text-red-400" />
+                        </div>
+                    )}
                 </div>
+            );
+        }
+        return (
+            <div className="text-center">
+                <span className="text-sm font-medium">{value}</span>
             </div>
-        </section>
-    )
+        );
+    };
+
+    const filteredCategories =
+        selectedCategory === "all"
+            ? featureCategories
+            : featureCategories.filter((cat) => cat.id === selectedCategory);
+
+    return (
+        <div className="py-16 md:py-24 container mx-auto max-w-6xl px-4">
+            <div className="text-center mb-8">
+                <h3 className="text-2xl font-bold mb-2">
+                    Compare features across plans
+                </h3>
+                <p className="text-muted-foreground text-sm">
+                    Detailed breakdown of what's included in each plan
+                </p>
+            </div>
+
+            {/* Category Filter */}
+            <div className="flex flex-wrap gap-2 justify-center mb-6">
+                <Button
+                    variant={selectedCategory === "all" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSelectedCategory("all")}
+                    className={
+                        selectedCategory === "all"
+                            ? "h-9 bg-foreground text-background hover:bg-foreground/90"
+                            : "h-9 bg-transparent hover:bg-muted text-muted-foreground"
+                    }
+                >
+                    All Features
+                </Button>
+                {featureCategories.map((category) => (
+                    <Button
+                        key={category.id}
+                        variant={selectedCategory === category.id ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setSelectedCategory(category.id)}
+                        className={
+                            selectedCategory === category.id
+                                ? "h-9 bg-foreground text-background hover:bg-foreground/90"
+                                : "h-9 bg-transparent hover:bg-muted text-muted-foreground"
+                        }
+                    >
+                        {category.name}
+                    </Button>
+                ))}
+            </div>
+
+            {/* Shadcn Table */}
+            <div className="border rounded-lg overflow-hidden">
+                <Table>
+                    <TableHeader>
+                        <TableRow className="hover:bg-transparent">
+                            <TableHead className="w-[300px] font-semibold">Feature</TableHead>
+                            <TableHead className="text-center font-semibold">Free</TableHead>
+                            <TableHead className="text-center font-semibold">Starter</TableHead>
+                            <TableHead className="text-center font-semibold">Pro</TableHead>
+                            <TableHead className="text-center font-semibold">Power</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {filteredCategories.map((category) => (
+                            <Fragment key={category.id}>
+                                {/* Category Header Row */}
+                                <TableRow className="hover:bg-transparent bg-muted/50">
+                                    <TableCell colSpan={5} className="font-semibold text-sm py-3">
+                                        {category.name}
+                                    </TableCell>
+                                </TableRow>
+                                {/* Feature Rows */}
+                                {category.features.map((feature, index) => (
+                                    <TableRow
+                                        key={`${category.id}-${index}`}
+                                        className="hover:bg-muted/30 transition-colors"
+                                    >
+                                        <TableCell className="font-medium">{feature.name}</TableCell>
+                                        <TableCell className="text-center py-4">
+                                            {renderFeatureValue(feature.free)}
+                                        </TableCell>
+                                        <TableCell className="text-center py-4">
+                                            {renderFeatureValue(feature.starter)}
+                                        </TableCell>
+                                        <TableCell className="text-center py-4">
+                                            {renderFeatureValue(feature.pro)}
+                                        </TableCell>
+                                        <TableCell className="text-center py-4">
+                                            {renderFeatureValue(feature.power)}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </Fragment>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
+        </div>
+    );
 }
