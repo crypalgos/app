@@ -7,8 +7,8 @@ import { ReactNode } from "react";
 export default function FeaturesSection() {
   return (
     <section className="bg-zinc-50 py-16 md:py-32 dark:bg-transparent">
-      <div className="mx-auto max-w-[1200px] px-5 lg:px-8">
-        <div className="mx-auto grid gap-4 lg:grid-cols-2">
+      <div className="mx-auto max-w-[1200px] px-4 sm:px-5 lg:px-8">
+        <div className="mx-auto grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-2">
           <FeatureCard>
             <CardHeader className="pb-3">
               <CardHeading
@@ -61,13 +61,13 @@ export default function FeaturesSection() {
             </CardContent>
           </FeatureCard>
 
-          <FeatureCard className="p-6 lg:col-span-2">
-            <p className="mx-auto my-6 max-w-md text-balance text-center text-2xl font-semibold">
+          <FeatureCard className="p-4 sm:p-6 sm:col-span-2 lg:col-span-2">
+            <p className="mx-auto my-4 sm:my-6 max-w-md text-balance text-center text-lg sm:text-2xl font-semibold">
               From idea to live trading in minutes — powered by AI insights and
               real-time data.
             </p>
 
-            <div className="flex justify-center gap-6 overflow-hidden">
+            <div className="flex justify-center gap-3 sm:gap-6 overflow-hidden">
               <CircularUI
                 label="Build"
                 circles={[{ pattern: "border" }, { pattern: "border" }]}
@@ -103,7 +103,12 @@ interface FeatureCardProps {
 
 const FeatureCard = ({ children, className }: FeatureCardProps) => (
   <Card
-    className={cn("group relative rounded-none shadow-zinc-950/5", className)}
+    className={cn(
+      "group relative rounded-none shadow-zinc-950/5 transition-all duration-300 ease-out",
+      "active:scale-[0.98] active:shadow-lg",
+      "hover:shadow-xl hover:shadow-blue-500/10",
+      className
+    )}
   >
     <CardDecorator />
     {children}
@@ -126,12 +131,12 @@ interface CardHeadingProps {
 }
 
 const CardHeading = ({ icon: Icon, title, description }: CardHeadingProps) => (
-  <div className="p-6">
+  <div className="p-4 sm:p-6">
     <span className="text-muted-foreground flex items-center gap-2">
       <Icon className="size-4" />
       {title}
     </span>
-    <p className="mt-8 text-2xl font-semibold">{description}</p>
+    <p className="mt-6 sm:mt-8 text-xl sm:text-2xl font-semibold">{description}</p>
   </div>
 );
 
