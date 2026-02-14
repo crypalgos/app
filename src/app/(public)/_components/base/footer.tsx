@@ -62,11 +62,11 @@ const Footer: React.FC = () => {
   ];
 
   return (
-    <footer className="relative bg-background border-t border-border/40 overflow-hidden pt-24">
-      <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8">
-        <div className="flex flex-col lg:flex-row justify-between gap-12 lg:gap-20 mb-20">
+    <footer className="relative bg-background border-t border-border/40 overflow-hidden pt-12 sm:pt-16 md:pt-24">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col lg:flex-row justify-between gap-8 sm:gap-10 lg:gap-20 mb-10 sm:mb-14 md:mb-20">
           {/* Brand Column */}
-          <div className="lg:w-1/3 space-y-8">
+          <div className="lg:w-1/3 space-y-4 sm:space-y-6 md:space-y-8">
             <div className="flex items-center space-x-3">
               {mounted && (
                 <Image
@@ -83,13 +83,13 @@ const Footer: React.FC = () => {
               markets. Execute strategies with institutional-grade
               infrastructure and real-time analytics.
             </p>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               {socialLinks.map(({ href, label, icon: IconComponent }) => (
                 <Link
                   key={label}
                   href={href}
                   aria-label={label}
-                  className="group relative w-10 h-10 rounded-full border border-border/50 bg-background/50 hover:bg-primary hover:border-primary flex items-center justify-center text-muted-foreground hover:text-primary-foreground transition-all duration-300"
+                  className="group relative w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-border/50 bg-background/50 hover:bg-primary hover:border-primary flex items-center justify-center text-muted-foreground hover:text-primary-foreground transition-all duration-300"
                 >
                   <IconComponent className="w-4 h-4" />
                 </Link>
@@ -98,13 +98,13 @@ const Footer: React.FC = () => {
           </div>
 
           {/* Links Grid */}
-          <div className="lg:w-2/3 grid grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="lg:w-2/3 grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
             {footerSections.map((section) => (
-              <div key={section.title} className="space-y-6">
+              <div key={section.title} className="space-y-3 sm:space-y-4 md:space-y-6">
                 <h3 className="font-semibold text-xs tracking-widest text-foreground uppercase">
                   {section.title}
                 </h3>
-                <ul className="space-y-4">
+                <ul className="space-y-2 sm:space-y-3 md:space-y-4">
                   {section.links.map(({ href, label }) => (
                     <li key={label}>
                       <Link
@@ -122,13 +122,13 @@ const Footer: React.FC = () => {
         </div>
 
         {/* Bottom Bar */}
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4 py-8 border-t border-border/40 text-xs text-muted-foreground/60">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-3 sm:gap-4 py-6 sm:py-8 border-t border-border/40 text-xs text-muted-foreground/60">
           <div className="flex items-center gap-2">
             <p>© {new Date().getFullYear()} CrypAlgos.</p>
             <span className="hidden md:inline">•</span>
             <p>All rights reserved.</p>
           </div>
-          <div className="flex gap-6">
+          <div className="flex gap-4 sm:gap-6">
             <Link href="#" className="hover:text-foreground transition-colors">
               Privacy
             </Link>
@@ -143,9 +143,9 @@ const Footer: React.FC = () => {
       </div>
 
       {/* Large Bottom Text */}
-      <div className="w-full flex justify-center overflow-hidden select-none pointer-events-none pb-4">
+      <div className="w-full flex justify-center overflow-hidden select-none pointer-events-none pb-2 sm:pb-4">
         <p
-          className={`text-center text-5xl md:text-8xl lg:text-[14rem] xl:text-[14rem] 2xl:text-[14rem] font-bold bg-clip-text text-transparent bg-gradient-to-b from-neutral-100 dark:from-neutral-800 to-neutral-300 dark:to-neutral-900/80 leading-none tracking-tight`}
+          className={`text-center text-4xl sm:text-5xl md:text-8xl lg:text-[10rem] xl:text-[12rem] 2xl:text-[14rem] font-bold bg-clip-text text-transparent bg-gradient-to-b from-neutral-100 dark:from-neutral-800 to-neutral-300 dark:to-neutral-900/80 leading-none tracking-tight`}
         >
           CRYPALOGS
         </p>
