@@ -157,12 +157,12 @@ export default function ContactPage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="text-center mb-16"
+            className="text-center mb-0"
           >
             <Badge variant="outline" className="mb-4">
               Get in Touch
             </Badge>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">
+            <h2 className="text-3xl md:text-4xl font-bold mb-0 text-foreground">
               Contact Our Team
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
@@ -396,56 +396,7 @@ export default function ContactPage() {
         </div>
       </section>
 
-      {/* Enhanced FAQ Section */}
-      <section className="py-16 md:py-24">
-        <div className="max-w-4xl mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-            className="text-center"
-          >
-            <Badge variant="outline" className="mb-4">
-              Need More Help?
-            </Badge>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">
-              Frequently Asked Questions
-            </h2>
-            <p className="text-lg text-muted-foreground mb-8">
-              Can't find what you're looking for? Check out our comprehensive
-              FAQ section or reach out to our support team for personalized
-              assistance.
-            </p>
 
-            <div className="grid md:grid-cols-2 gap-4 max-w-2xl mx-auto">
-              <Button size="lg" variant="outline" className="h-12">
-                Browse FAQ
-                <ArrowRight className="ml-2 w-4 h-4" />
-              </Button>
-              <Button
-                size="lg"
-                className="bg-primary hover:bg-primary/90 text-primary-foreground h-12"
-              >
-                Join Community
-                <MessageCircle className="ml-2 w-4 h-4" />
-              </Button>
-            </div>
-
-            <div className="mt-8 pt-8 border-t border-border">
-              <p className="text-sm text-muted-foreground">
-                For urgent technical issues, email us directly at{" "}
-                <a
-                  href="mailto:support@crypalgos.com"
-                  className="text-blue-600 dark:text-blue-400 hover:underline"
-                >
-                  support@crypalgos.com
-                </a>
-              </p>
-            </div>
-          </motion.div>
-        </div>
-      </section>
     </div>
   );
 }
