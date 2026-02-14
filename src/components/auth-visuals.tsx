@@ -43,7 +43,7 @@ export function AuthVisuals() {
       <div className="absolute bottom-1/4 right-1/4 size-96 rounded-full bg-cyan-500/5 blur-[120px]" />
 
       {/* Content */}
-      <div className="relative max-w-xl w-full space-y-8">
+      <div className="relative w-full max-w-4xl space-y-8">
         {/* Header */}
         <div className="space-y-4 text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 backdrop-blur-sm">
@@ -100,34 +100,42 @@ export function AuthVisuals() {
           <h3 className="text-sm font-semibold text-white/60 text-center">
             Integrated Exchanges
           </h3>
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            {exchanges.map((exchange) => (
-              <div
-                key={exchange}
-                className="rounded-lg border border-white/[0.08] bg-white/[0.03] backdrop-blur-sm px-4 py-2 hover:bg-white/[0.06] hover:border-white/15 transition-all duration-200"
-              >
-                <span className="text-sm font-medium text-white/70">
-                  {exchange}
-                </span>
-              </div>
-            ))}
+          <div className="flex justify-center">
+            <div className="relative w-full max-w-5xl mt-9">
+              <Image
+                src="/crypto-icons/integrated-exchanges.png"
+                alt="Integrated Exchanges"
+                width={800}
+                height={240}
+                className="w-full h-auto"
+                priority
+              />
+            </div>
           </div>
         </div>
 
         {/* Features */}
-        <div className="grid grid-cols-3 gap-4 pt-2">
+        <div className="grid grid-cols-3 gap-4 pt-8">
           {features.map((feature) => (
-            <div key={feature.title} className="text-center space-y-2">
-              <div className="mx-auto w-fit rounded-lg bg-blue-500/10 p-2.5">
-                <feature.icon className="size-5 text-blue-400/80" />
-              </div>
-              <div>
-                <h4 className="text-sm font-semibold text-white/90">
-                  {feature.title}
-                </h4>
-                <p className="text-xs text-white/40 leading-relaxed mt-1">
-                  {feature.description}
-                </p>
+            <div
+              key={feature.title}
+              className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-4 text-center transition-all duration-300 hover:bg-white/10 hover:border-white/20 hover:-translate-y-1 hover:shadow-lg hover:shadow-cyan-500/10"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+              <div className="relative z-10 flex flex-col items-center gap-3">
+                <div className="rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 p-3 group-hover:scale-110 transition-transform duration-300">
+                  <feature.icon className="size-6 text-blue-400 group-hover:text-cyan-300 transition-colors" />
+                </div>
+
+                <div className="space-y-1">
+                  <h4 className="text-sm font-bold text-white/90 group-hover:text-white transition-colors">
+                    {feature.title}
+                  </h4>
+                  <p className="text-xs text-white/50 leading-relaxed group-hover:text-white/70 transition-colors">
+                    {feature.description}
+                  </p>
+                </div>
               </div>
             </div>
           ))}
