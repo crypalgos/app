@@ -51,40 +51,40 @@ export function RegisterForm() {
   };
 
   return (
-    <div className="mx-auto w-full min-w-lg px-6">
-      <div className="rounded-2xl border border-border/50 bg-card p-8 sm:p-10 shadow-xl shadow-black/5 dark:shadow-black/20 backdrop-blur-sm">
-        <div className="grid gap-3 text-center mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">
-            Create Your Account
+    <div className="mx-auto w-full max-w-[450px] px-4">
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <div className="flex flex-col space-y-2 text-center mb-6">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Create an Account
           </h1>
           <p className="text-sm text-muted-foreground">
-            Start building automated trading strategies today
+            Enter your details below to create your account
           </p>
         </div>
 
         {/* Google OAuth */}
         <Button
           variant="outline"
-          className="w-full h-11 font-medium mb-6 rounded-xl"
+          className="w-full h-10 font-medium mb-4 rounded-lg"
           type="button"
         >
-          <IconBrandGoogle className="mr-2 h-5 w-5" />
+          <IconBrandGoogle className="mr-2 h-4 w-4" />
           Continue with Google
         </Button>
 
-        <div className="relative mb-6">
+        <div className="relative mb-4">
           <div className="absolute inset-0 flex items-center">
             <span className="w-full border-t" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-3 text-muted-foreground">
-              or sign up with email
+            <span className="bg-card px-2 text-muted-foreground">
+              Or continue with
             </span>
           </div>
         </div>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-5">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -97,7 +97,7 @@ export function RegisterForm() {
                     <FormControl>
                       <Input
                         placeholder="John Doe"
-                        className="h-11 rounded-xl bg-muted/50 border-border/50 focus:bg-background transition-colors"
+                        className="h-10 rounded-lg bg-background"
                         {...field}
                         disabled={isLoading}
                       />
@@ -117,7 +117,7 @@ export function RegisterForm() {
                     <FormControl>
                       <Input
                         placeholder="johndoe"
-                        className="h-11 rounded-xl bg-muted/50 border-border/50 focus:bg-background transition-colors"
+                        className="h-10 rounded-lg bg-background"
                         {...field}
                         disabled={isLoading}
                       />
@@ -135,8 +135,8 @@ export function RegisterForm() {
                   <FormLabel className="text-sm font-medium">Email</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="m@example.com"
-                      className="h-11 rounded-xl bg-muted/50 border-border/50 focus:bg-background transition-colors"
+                      placeholder="name@example.com"
+                      className="h-10 rounded-lg bg-background"
                       {...field}
                       disabled={isLoading}
                     />
@@ -156,7 +156,7 @@ export function RegisterForm() {
                   <FormControl>
                     <Input
                       type="password"
-                      className="h-11 rounded-xl bg-muted/50 border-border/50 focus:bg-background transition-colors"
+                      className="h-10 rounded-lg bg-background"
                       {...field}
                       disabled={isLoading}
                     />
@@ -167,7 +167,7 @@ export function RegisterForm() {
             />
             <Button
               type="submit"
-              className="w-full h-11 mt-1 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-medium shadow-lg shadow-violet-500/25 transition-all duration-200 hover:shadow-violet-500/40 hover:-translate-y-0.5"
+              className="w-full h-10 mt-2 rounded-lg font-medium transition-all hover:opacity-90"
               disabled={isLoading}
             >
               {isLoading ? "Creating account..." : "Create Account"}
@@ -175,11 +175,11 @@ export function RegisterForm() {
           </form>
         </Form>
 
-        <p className="mt-6 text-center text-sm text-muted-foreground">
+        <p className="mt-4 text-center text-sm text-muted-foreground">
           Already have an account?{" "}
           <Link
             href="/login"
-            className="font-medium text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 transition-colors"
+            className="font-medium text-primary hover:underline hover:text-primary/80 transition-colors"
           >
             Sign in
           </Link>

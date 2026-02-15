@@ -87,9 +87,9 @@ export const Navbar = ({ children, className }: NavbarProps) => {
       {React.Children.map(children, (child) =>
         React.isValidElement(child)
           ? React.cloneElement(
-              child as React.ReactElement<{ visible?: boolean }>,
-              { visible },
-            )
+            child as React.ReactElement<{ visible?: boolean }>,
+            { visible },
+          )
           : child,
       )}
     </motion.div>
@@ -295,7 +295,7 @@ export const NavbarButton = ({
       "bg-transparent text-foreground hover:bg-accent hover:text-accent-foreground",
     dark: "bg-foreground text-background shadow-lg",
     shimmer:
-      "animate-shimmer bg-[linear-gradient(110deg,var(--color-primary),45%,color-mix(in_srgb,var(--color-primary),white_25%),55%,var(--color-primary))] bg-[length:200%_100%] text-primary-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-slate-50 hover:bg-[length:200%_100%] dark:bg-[linear-gradient(110deg,var(--color-primary),45%,color-mix(in_srgb,var(--color-primary),white_25%),55%,var(--color-primary))] dark:text-primary-foreground",
+      "animate-shimmer bg-[linear-gradient(110deg,var(--color-primary),45%,color-mix(in_srgb,var(--color-primary),white_25%),55%,var(--color-primary))] bg-[length:200%_100%] text-primary-foreground transition-colors focus:outline-none hover:bg-[length:200%_100%] dark:bg-[linear-gradient(110deg,var(--color-primary),45%,color-mix(in_srgb,var(--color-primary),white_25%),55%,var(--color-primary))] dark:text-primary-foreground",
     gradient:
       "bg-gradient-to-b from-blue-500 to-blue-700 text-white shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset]",
   };
