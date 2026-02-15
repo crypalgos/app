@@ -8,7 +8,8 @@ import {
   useMotionValueEvent,
 } from "motion/react";
 
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
+import Link from "next/link";
 
 interface NavbarProps {
   children: React.ReactNode;
@@ -48,15 +49,22 @@ interface MobileNavMenuProps {
   onClose: () => void;
 }
 
-import { useScrollContext } from "@/components/providers/scroll-provider";
-
 export const Navbar = ({ children, className }: NavbarProps) => {
   const ref = useRef<HTMLDivElement>(null);
-  const { scrollRef } = useScrollContext();
+  const [container, setContainer] = React.useState<HTMLElement | null>(null);
   const { scrollY } = useScroll({
-    container: scrollRef,
+    container: container ? { current: container } : undefined,
   });
   const [visible, setVisible] = useState<boolean>(false);
+
+  React.useEffect(() => {
+    const viewport = document.querySelector(
+      '[data-slot="scroll-area-viewport"]',
+    );
+    if (viewport instanceof HTMLElement) {
+      setContainer(viewport);
+    }
+  }, []);
 
   useMotionValueEvent(scrollY, "change", (latest) => {
     if (latest > 100) {
@@ -108,7 +116,7 @@ export const NavBody = ({ children, className, visible }: NavBodyProps) => {
         minWidth: "800px",
       }}
       className={cn(
-        "relative z-60 mx-auto hidden w-full max-w-[95%] flex-row items-center justify-between self-start rounded-xl px-4 py-4 lg:flex transition-colors duration-200",
+        "relative z-60 mx-auto hidden w-full max-w-[95%] flex-row items-center justify-between self-start rounded-4xl px-4 py-4 lg:flex transition-colors duration-200",
         visible
           ? "bg-background/95 dark:bg-neutral-900 shadow-lg border border-border/40"
           : "bg-transparent dark:bg-transparent border border-transparent",
@@ -127,12 +135,12 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
     <motion.div
       onMouseLeave={() => setHovered(null)}
       className={cn(
-        "absolute inset-0 hidden flex-1 flex-row items-center justify-center space-x-2 text-sm font-medium text-zinc-600 transition duration-200 hover:text-zinc-800 lg:flex lg:space-x-2",
+        "absolute inset-0 hidden flex-1 flex-row items-center justify-center space-x-2 text-l font-medium text-zinc-600 transition duration-200 hover:text-zinc-800 lg:flex lg:space-x-2",
         className,
       )}
     >
       {items.map((item, idx) => (
-        <a
+        <Link
           onMouseEnter={() => setHovered(idx)}
           onClick={onItemClick}
           className="relative px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
@@ -146,7 +154,7 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
             />
           )}
           <span className="relative z-20">{item.name}</span>
-        </a>
+        </Link>
       ))}
     </motion.div>
   );
@@ -160,7 +168,7 @@ export const MobileNav = ({ children, className, visible }: MobileNavProps) => {
         boxShadow: visible
           ? "0 0 24px rgba(34, 42, 53, 0.06), 0 1px 1px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(34, 42, 53, 0.04), 0 0 4px rgba(34, 42, 53, 0.08), 0 16px 68px rgba(47, 48, 55, 0.05), 0 1px 0 rgba(255, 255, 255, 0.1) inset"
           : "none",
-        width: visible ? "90%" : "100%",
+        width: visible ? "80%" : "100%",
         paddingRight: visible ? "12px" : "0px",
         paddingLeft: visible ? "12px" : "0px",
         borderRadius: visible ? "4px" : "2rem",
@@ -241,7 +249,7 @@ export const MobileNavToggle = ({
 
 export const NavbarLogo = () => {
   return (
-    <a
+    <Link
       href="/"
       className="relative z-20 mr-4 flex items-center space-x-2 px-2 py-1 text-sm font-normal"
     >
@@ -259,13 +267,13 @@ export const NavbarLogo = () => {
         height={190}
         className="hidden dark:block"
       />
-    </a>
+    </Link>
   );
 };
 
 export const NavbarButton = ({
   href,
-  as: Tag = "a",
+  as: Tag = Link,
   children,
   className,
   variant = "primary",
