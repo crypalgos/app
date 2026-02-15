@@ -6,7 +6,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Define protected routes (add more as needed)
-  const protectedRoutes = ["/dashboard", "/profile", "/settings"];
+  const protectedRoutes = ["/profile", "/settings"];
 
   // Define auth routes (redirect to home if already logged in)
   const authRoutes = ["/login", "/register", "/forgot-password"];

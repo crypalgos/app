@@ -25,6 +25,10 @@ export function NavbarWrapper() {
       link: "#features",
     },
     {
+      name: "Dashboard",
+      link: "/dashboard",
+    },
+    {
       name: "Pricing",
       link: "/pricing",
     },
