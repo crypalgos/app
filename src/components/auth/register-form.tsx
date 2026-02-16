@@ -52,7 +52,7 @@ export function RegisterForm() {
   };
 
   return (
-    <div className="w-full max-w-md space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="w-full max-w-md space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="space-y-2 text-left">
         <h1 className="text-4xl font-extrabold tracking-tight text-foreground">
           Create <span className="text-primary">Account</span>
@@ -62,7 +62,7 @@ export function RegisterForm() {
         </p>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-4">
         <Button
           variant="outline"
           className="w-full h-12 font-bold rounded-xl border-border bg-background transition-all hover:bg-muted/50 hover:border-primary/50 group"
@@ -82,7 +82,7 @@ export function RegisterForm() {
         </div>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -185,7 +185,7 @@ export function RegisterForm() {
         </Form>
       </div>
 
-      <div className="pt-8 space-y-6">
+      <div className="pt-3 space-y-3">
         <div className="flex items-center justify-center gap-4 opacity-20">
           <div className="h-px grow bg-border" />
           <span className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap">

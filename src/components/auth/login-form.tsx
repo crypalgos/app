@@ -50,7 +50,7 @@ export function LoginForm() {
   };
 
   return (
-    <div className="w-full max-w-sm space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="w-full max-w-sm space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="space-y-2 text-left">
         <h1 className="text-4xl font-extrabold tracking-tight text-foreground">
           Welcome <span className="text-primary">Back</span>
@@ -149,7 +149,7 @@ export function LoginForm() {
         </Form>
       </div>
 
-      <div className="pt-8 space-y-6">
+      <div className="pt-4 space-y-4">
         <div className="flex items-center justify-center gap-4 opacity-20">
           <div className="h-px grow bg-border" />
           <span className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap">
