@@ -62,7 +62,7 @@ function PriceFlow({ value, className = "" }: PriceFlowProps) {
             nextOnes.classList.remove("slide-in-up", "slide-in-down");
             prevOnes.removeEventListener(
               "animationend",
-              handleOnesAnimationEnd
+              handleOnesAnimationEnd,
             );
           };
 
@@ -120,27 +120,18 @@ export function PricingModern() {
   const [isAnnual, setIsAnnual] = useState(true);
 
   return (
-    <section className="relative overflow-hidden">
-      {/* Grid Background */}
-      <div
-        className={cn(
-          "absolute inset-0",
-          "bg-size-[40px_40px] pointer-events-none",
-          "bg-[linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)]",
-        )}
-      />
-      {/* Radial Gradient Overlay */}
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background mask-[radial-gradient(ellipse_at_center,transparent_20%,black)] dark:bg-background"></div>
+    <section className="relative overflow-hidden w-full">
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background mask-[radial-gradient(ellipse_at_center,transparent_20%,black)] dark:bg-background" />
 
-      <div className="relative py-16 md:py-32">
+      <div className="relative py-12 md:py-20">
         <div className="mx-auto max-w-5xl px-6">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-balance font-bold text-3xl md:text-4xl lg:text-5xl lg:tracking-tight">
-              Choose your perfect plan
+            <h2 className="text-4xl md:text-5xl lg:text-7xl font-black italic uppercase tracking-tighter mb-4 text-foreground">
+              Choose your perfect <span className="text-primary">plan</span>
             </h2>
-            <p className="mx-auto mt-4 max-w-xl text-balance text-muted-foreground text-lg">
-              Modern pricing plans designed for teams of all sizes. Scale your
-              business with confidence.
+            <p className="mx-auto mt-4 max-w-xl text-balance text-muted-foreground text-lg font-medium opacity-80">
+              Modern pricing plans designed for traders of all sizes. Scale your
+              portfolio with confidence.
             </p>
             <div className="my-12">
               <div
@@ -149,8 +140,9 @@ export function PricingModern() {
               >
                 <div
                   aria-hidden="true"
-                  className={`pointer-events-none absolute inset-1 w-1/2 rounded-full border border-transparent bg-primary shadow ring-1 ring-primary/20 transition-transform duration-500 ease-in-out ${isAnnual ? "translate-x-full" : "translate-x-0"
-                    }`}
+                  className={`pointer-events-none absolute inset-1 w-1/2 rounded-full bg-primary shadow-sm transition-transform duration-500 ease-in-out ${
+                    isAnnual ? "translate-x-full" : "translate-x-0"
+                  }`}
                 />
                 <button
                   className="relative duration-500 data-[active=true]:font-medium data-[active=true]:text-primary-foreground"
@@ -177,7 +169,7 @@ export function PricingModern() {
                 {/* Basic Plan */}
                 <motion.div
                   animate={{ opacity: 1, y: 0 }}
-                  className="group relative flex h-[650px] cursor-pointer flex-col overflow-hidden rounded-2xl border bg-background p-8"
+                  className="group relative flex h-[650px] cursor-pointer flex-col overflow-hidden rounded-[2rem] border border-border bg-card/50 backdrop-blur-xl p-8 transition-all hover:border-primary/20"
                   data-animate-card
                   initial={{ opacity: 0, y: 40 }}
                   transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
@@ -205,7 +197,7 @@ export function PricingModern() {
                       Get Started
                     </button>
                     {/* Description */}
-                    <p className="mb-6 flex-grow text-foreground/70 text-sm leading-relaxed">
+                    <p className="mb-6 grow text-foreground/70 text-sm leading-relaxed">
                       Essential features for growing businesses. Get started
                       with everything you need to launch your project.
                     </p>
@@ -227,7 +219,7 @@ export function PricingModern() {
                             className="flex items-center gap-3 text-foreground text-sm"
                             key={item}
                           >
-                            <div className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-chart-2">
+                            <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-chart-2">
                               <svg
                                 aria-hidden="true"
                                 className="h-2 w-2 text-white"
@@ -251,7 +243,7 @@ export function PricingModern() {
                 {/* Pro Plan (Featured) */}
                 <motion.div
                   animate={{ opacity: 1, y: 0 }}
-                  className="group relative flex h-[650px] cursor-pointer flex-col overflow-hidden rounded-2xl border-2 border-primary/50 bg-card p-8 shadow-lg shadow-primary/10"
+                  className="group relative flex h-[650px] cursor-pointer flex-col overflow-hidden rounded-[2rem] border-2 border-primary/40 bg-card backdrop-blur-xl p-8 shadow-2xl shadow-primary/10"
                   data-animate-card
                   initial={{ opacity: 0, y: 40 }}
                   transition={{
@@ -261,7 +253,7 @@ export function PricingModern() {
                   }}
                 >
                   {/* Gradient Accent */}
-                  <div className="gradient-accent absolute top-0 right-0 h-4 w-32 rounded-bl-2xl bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400" />
+                  <div className="gradient-accent absolute top-0 right-0 h-4 w-32 rounded-bl-2xl bg-linear-to-r from-primary via-primary/50 to-accent" />
 
                   <div className="card-content relative z-10 flex h-full flex-col">
                     {/* Title */}
@@ -287,7 +279,7 @@ export function PricingModern() {
                       Get Started
                     </button>
                     {/* Description */}
-                    <p className="mb-6 flex-grow text-foreground/70 text-sm leading-relaxed">
+                    <p className="mb-6 grow text-foreground/70 text-sm leading-relaxed">
                       Advanced features for professional teams. Everything you
                       need to scale your business with confidence.
                     </p>
@@ -311,10 +303,10 @@ export function PricingModern() {
                             className="flex items-center gap-3 text-foreground text-sm"
                             key={item}
                           >
-                            <div className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-blue-600">
+                            <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/20 border border-primary/40">
                               <svg
                                 aria-hidden="true"
-                                className="h-2 w-2 text-white"
+                                className="h-2 w-2 text-primary"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
                               >
@@ -335,7 +327,7 @@ export function PricingModern() {
                 {/* Enterprise Plan */}
                 <motion.div
                   animate={{ opacity: 1, y: 0 }}
-                  className="group relative flex h-[650px] cursor-pointer flex-col overflow-hidden rounded-2xl border bg-background p-8"
+                  className="group relative flex h-[650px] cursor-pointer flex-col overflow-hidden rounded-[2rem] border border-border bg-card/50 backdrop-blur-xl p-8 transition-all hover:border-primary/20"
                   data-animate-card
                   initial={{ opacity: 0, y: 40 }}
                   transition={{
@@ -367,7 +359,7 @@ export function PricingModern() {
                       Contact Sales
                     </button>
                     {/* Description */}
-                    <p className="mb-6 flex-grow text-foreground/70 text-sm leading-relaxed">
+                    <p className="mb-6 grow text-foreground/70 text-sm leading-relaxed">
                       Custom solutions for large organizations. Get dedicated
                       support and tailored features for your enterprise needs.
                     </p>
@@ -391,7 +383,7 @@ export function PricingModern() {
                             className="flex items-center gap-3 text-foreground text-sm"
                             key={item}
                           >
-                            <div className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-chart-2">
+                            <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-chart-2">
                               <svg
                                 aria-hidden="true"
                                 className="h-2 w-2 text-white"

@@ -3,7 +3,7 @@ import Image from "next/image";
 
 export default function HeroSection() {
   return (
-    <div className="flex flex-col min-h-screen pt-20 md:pt-40 relative overflow-hidden bg-background dark:bg-background">
+    <div className="flex flex-col min-h-[85vh] pt-16 md:pt-32 pb-12 relative overflow-hidden bg-background dark:bg-background">
       {/* Ultra-Smooth Background Elements */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
         {/* Soft Ambient Wash - Top Center focusing Axis */}
@@ -110,7 +110,7 @@ export default function HeroSection() {
           </div>
 
           {/* Dashboard Preview */}
-          <div className="mt-20 w-full max-w-7xl mx-auto relative group">
+          <div className="mt-12 w-full max-w-7xl mx-auto relative group">
             <div className="absolute -inset-1 bg-linear-to-r from-primary/20 to-blue-600/20 rounded-[34px] blur-3xl opacity-5 group-hover:opacity-10 transition duration-1000 group-hover:duration-200"></div>
             <div className="relative p-2 border border-black/[0.03] dark:border-white/[0.05] bg-white/[0.1] dark:bg-black/[0.1] backdrop-blur-3xl rounded-[32px] overflow-hidden shadow-2xl">
               <div className="p-1 bg-white dark:bg-background rounded-[24px] overflow-hidden">

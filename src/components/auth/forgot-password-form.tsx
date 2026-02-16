@@ -1,6 +1,6 @@
 "use client";
-
 import { useForm } from "react-hook-form";
+import Image from "next/image";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ForgotPasswordSchema,
@@ -49,23 +49,25 @@ export function ForgotPasswordForm() {
 
   if (isSubmitted) {
     return (
-      <div className="mx-auto w-full max-w-md px-6">
-        <div className="rounded-2xl border border-border/50 bg-card p-8 shadow-xl shadow-black/5 dark:shadow-black/20 backdrop-blur-sm text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-violet-500/20 to-indigo-500/20 mb-6">
-            <IconMailCheck className="h-8 w-8 text-violet-600 dark:text-violet-400" />
+      <div className="w-full max-w-sm space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 text-left">
+        <div className="space-y-6">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20">
+            <IconMailCheck className="h-8 w-8 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight mb-3">
-            Check Your Email
-          </h1>
-          <p className="text-sm text-muted-foreground mb-6">
-            We&apos;ve sent a password reset link to your email address. Check
-            your inbox and follow the instructions.
-          </p>
+          <div className="space-y-2">
+            <h1 className="text-4xl font-extrabold tracking-tight text-foreground">
+              Check <span className="text-primary">Email</span>
+            </h1>
+            <p className="text-base text-muted-foreground font-medium opacity-70">
+              We&apos;ve sent a password reset link to your email address. Check
+              your inbox and follow the instructions.
+            </p>
+          </div>
           <Button
             asChild
-            className="w-full h-11 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-medium shadow-lg shadow-violet-500/25"
+            className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-black text-sm uppercase tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
-            <Link href="/login">Back to Sign In</Link>
+            <Link href="/login">Return to Login</Link>
           </Button>
         </div>
       </div>
@@ -73,58 +75,106 @@ export function ForgotPasswordForm() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-lg px-6">
-      <div className="rounded-2xl border border-border/50 bg-card p-8 sm:p-10 shadow-xl shadow-black/5 dark:shadow-black/20 backdrop-blur-sm">
-        <div className="grid gap-3 text-center mb-8">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-violet-500/20 to-indigo-500/20">
-            <IconLock className="h-7 w-7 text-violet-600 dark:text-violet-400" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            Forgot Password?
+    <div className="w-full max-w-sm space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="space-y-6">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20 mb-2 transition-transform hover:scale-110 duration-500">
+          <IconLock className="h-8 w-8 text-primary" />
+        </div>
+        <div className="space-y-2 text-left">
+          <h1 className="text-4xl font-extrabold tracking-tight text-foreground">
+            Forgot <span className="text-primary">Password?</span>
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-base text-muted-foreground font-medium opacity-70">
             No worries — enter your email and we&apos;ll send you a reset link
           </p>
         </div>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-5">
-            <FormField
-              control={form.control}
-              name="identifier"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium">
-                    Email or Username
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="m@example.com"
-                      className="h-11 rounded-xl bg-muted/50 border-border/50 focus:bg-background transition-colors"
-                      {...field}
-                      disabled={isLoading}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button
-              type="submit"
-              className="w-full h-11 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-medium shadow-lg shadow-violet-500/25 transition-all duration-200 hover:shadow-violet-500/40 hover:-translate-y-0.5"
-              disabled={isLoading}
-            >
-              {isLoading ? "Sending..." : "Send Reset Link"}
-            </Button>
-          </form>
-        </Form>
-        <div className="mt-6 text-center">
-          <Link
-            href="/login"
-            className="inline-flex items-center text-sm font-medium text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 transition-colors"
+      </div>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-5">
+          <FormField
+            control={form.control}
+            name="identifier"
+            render={({ field }) => (
+              <FormItem className="space-y-1.5">
+                <FormLabel className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">
+                  Email or Username
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="m@example.com"
+                    className="h-12 rounded-xl bg-muted/20 border-border focus:ring-primary/20 transition-all text-base placeholder:text-muted-foreground/50"
+                    {...field}
+                    disabled={isLoading}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button
+            type="submit"
+            className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-black text-sm uppercase tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 mt-2 overflow-hidden group relative"
+            disabled={isLoading}
           >
-            <IconChevronLeft className="mr-1 h-4 w-4" />
-            Back to Sign In
-          </Link>
+            <div className="absolute inset-0 bg-linear-to-r from-primary via-white/10 to-primary origin-left -translate-x-full group-hover:translate-x-full transition-transform duration-700 pointer-events-none" />
+            {isLoading ? (
+              <div className="flex items-center gap-3">
+                <div className="h-5 w-5 animate-spin rounded-full border-3 border-primary-foreground border-t-transparent" />
+                Sending...
+              </div>
+            ) : (
+              "Send Reset Link"
+            )}
+          </Button>
+        </form>
+      </Form>
+      <div className="pt-8 text-center">
+        <Link
+          href="/login"
+          className="inline-flex items-center text-sm font-bold text-primary hover:text-primary/80 transition-colors uppercase tracking-widest"
+        >
+          <IconChevronLeft className="mr-2 h-4 w-4" />
+          Back to login
+        </Link>
+
+        <div className="pt-8 space-y-6">
+          <div className="flex items-center justify-center gap-4 opacity-20">
+            <div className="h-px grow bg-border" />
+            <span className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap">
+              Terminal Recovery
+            </span>
+            <div className="h-px grow bg-border" />
+          </div>
+          <div className="flex justify-center gap-6 opacity-60 contrast-125 saturate-[0.8]">
+            <Image
+              src="/crypto-icons/bitcoin.png"
+              alt="BTC"
+              width={24}
+              height={24}
+              className="h-5 w-5"
+            />
+            <Image
+              src="/crypto-icons/ethereum.png"
+              alt="ETH"
+              width={24}
+              height={24}
+              className="h-5 w-5"
+            />
+            <Image
+              src="/crypto-icons/solana.png"
+              alt="SOL"
+              width={24}
+              height={24}
+              className="h-5 w-5"
+            />
+            <Image
+              src="/crypto-icons/usdt.png"
+              alt="USDT"
+              width={24}
+              height={24}
+              className="h-5 w-5"
+            />
+          </div>
         </div>
       </div>
     </div>
