@@ -67,13 +67,13 @@ export const ScrollStackItem: React.FC<ScrollStackItemProps> = ({
     >
       <div
         className={cn(
-          "w-full h-[90vh] rounded-[2.5rem] border border-border bg-card backdrop-blur-2xl shadow-2xl p-8 md:p-16 flex flex-col justify-center overflow-hidden transition-colors duration-500 hover:border-primary/20",
+          "w-full min-h-[60vh] md:h-[90vh] rounded-[2rem] md:rounded-[2.5rem] border border-border bg-card backdrop-blur-2xl shadow-2xl p-6 md:p-16 flex flex-col justify-center overflow-hidden transition-colors duration-500 hover:border-primary/20",
           itemClassName,
         )}
       >
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-[100px] pointer-events-none opacity-50" />
+        <div className="absolute top-0 right-0 w-32 h-32 md:w-64 md:h-64 bg-primary/10 rounded-full blur-[60px] md:blur-[100px] pointer-events-none opacity-50" />
         <div className="relative z-10 max-w-2xl">{children}</div>
-        <div className="absolute bottom-8 right-12 text-6xl md:text-8xl font-black italic opacity-[0.03] select-none pointer-events-none uppercase tracking-tighter">
+        <div className="absolute bottom-4 right-6 md:bottom-8 md:right-12 text-4xl md:text-8xl font-black italic opacity-[0.03] select-none pointer-events-none uppercase tracking-tighter">
           0{index + 1}
         </div>
       </div>
@@ -103,7 +103,7 @@ const ScrollStack: React.FC<ScrollStackProps> = ({
     <div
       ref={containerRef}
       className={cn("relative w-full", className)}
-      style={{ height: `${total * 100}vh` }}
+      style={{ height: `${total * 85}vh` }}
     >
       <div className="sticky top-0 h-screen w-full overflow-hidden px-4 md:px-8">
         <div className="max-w-6xl mx-auto h-full relative">

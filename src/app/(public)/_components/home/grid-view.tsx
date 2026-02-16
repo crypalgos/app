@@ -58,7 +58,7 @@ export function GridView() {
     },
   ];
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 relative z-10 py-10 md:py-16 border-y border-border/10 max-w-7xl mx-auto">
+    <div className="grid grid-cols-2 lg:grid-cols-4 relative z-10 py-10 md:py-16 border-y border-border/10 max-w-[1240px] mx-auto px-4 sm:px-5 lg:px-8">
       {features.map((feature, index) => (
         <Feature key={feature.title} {...feature} index={index} />
       ))}
