@@ -1,6 +1,7 @@
 "use client";
 
 import { useForm } from "react-hook-form";
+import Image from "next/image";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   UserRegistrationSchema,
@@ -21,7 +22,7 @@ import {
 import { toast } from "sonner";
 import { useState } from "react";
 import Link from "next/link";
-import { IconBrandGoogle } from "@tabler/icons-react";
+import { GoogleIcon } from "@/components/icons/google-icon";
 
 export function RegisterForm() {
   const router = useRouter();
@@ -51,53 +52,50 @@ export function RegisterForm() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-[450px] px-4">
-      <div className="rounded-xl border bg-card p-6 shadow-sm">
-        <div className="flex flex-col space-y-2 text-center mb-6">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Create an Account
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Enter your details below to create your account
-          </p>
-        </div>
+    <div className="w-full max-w-md space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="space-y-2 text-left">
+        <h1 className="text-4xl font-extrabold tracking-tight text-foreground">
+          Create <span className="text-primary">Account</span>
+        </h1>
+        <p className="text-base text-muted-foreground font-medium opacity-70">
+          Join the elite circle of technical traders
+        </p>
+      </div>
 
-        {/* Google OAuth */}
+      <div className="space-y-6">
         <Button
           variant="outline"
-          className="w-full h-10 font-medium mb-4 rounded-lg"
+          className="w-full h-12 font-bold rounded-xl border-border bg-background transition-all hover:bg-muted/50 hover:border-primary/50 group"
           type="button"
         >
-          <IconBrandGoogle className="mr-2 h-4 w-4" />
+          <GoogleIcon className="mr-3 transition-transform group-hover:scale-110" />
           Continue with Google
         </Button>
 
-        <div className="relative mb-4">
+        <div className="relative">
           <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
+            <span className="w-full border-t border-border" />
           </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">
-              Or continue with
-            </span>
+          <div className="relative flex justify-center text-xs uppercase font-bold tracking-widest text-muted-foreground">
+            <span className="bg-background px-4">Or sign up with email</span>
           </div>
         </div>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">
+                  <FormItem className="space-y-1.5">
+                    <FormLabel className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">
                       Full Name
                     </FormLabel>
                     <FormControl>
                       <Input
                         placeholder="John Doe"
-                        className="h-10 rounded-lg bg-background"
+                        className="h-12 rounded-xl bg-muted/20 border-border focus:ring-primary/20 transition-all text-sm placeholder:text-muted-foreground/50"
                         {...field}
                         disabled={isLoading}
                       />
@@ -110,14 +108,14 @@ export function RegisterForm() {
                 control={form.control}
                 name="username"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">
+                  <FormItem className="space-y-1.5">
+                    <FormLabel className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">
                       Username
                     </FormLabel>
                     <FormControl>
                       <Input
                         placeholder="johndoe"
-                        className="h-10 rounded-lg bg-background"
+                        className="h-12 rounded-xl bg-muted/20 border-border focus:ring-primary/20 transition-all text-sm placeholder:text-muted-foreground/50"
                         {...field}
                         disabled={isLoading}
                       />
@@ -131,12 +129,14 @@ export function RegisterForm() {
               control={form.control}
               name="email"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium">Email</FormLabel>
+                <FormItem className="space-y-1.5">
+                  <FormLabel className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">
+                    Email Address
+                  </FormLabel>
                   <FormControl>
                     <Input
                       placeholder="name@example.com"
-                      className="h-10 rounded-lg bg-background"
+                      className="h-12 rounded-xl bg-muted/20 border-border focus:ring-primary/20 transition-all text-base placeholder:text-muted-foreground/50"
                       {...field}
                       disabled={isLoading}
                     />
@@ -149,14 +149,15 @@ export function RegisterForm() {
               control={form.control}
               name="password"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium">
+                <FormItem className="space-y-1.5">
+                  <FormLabel className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">
                     Password
                   </FormLabel>
                   <FormControl>
                     <Input
                       type="password"
-                      className="h-10 rounded-lg bg-background"
+                      placeholder="••••••••"
+                      className="h-12 rounded-xl bg-muted/20 border-border focus:ring-primary/20 transition-all text-base"
                       {...field}
                       disabled={isLoading}
                     />
@@ -167,23 +168,72 @@ export function RegisterForm() {
             />
             <Button
               type="submit"
-              className="w-full h-10 mt-2 rounded-lg font-medium transition-all hover:opacity-90"
+              className="w-full h-12 rounded-xl font-black text-sm uppercase tracking-widest bg-primary text-primary-foreground shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 mt-4 overflow-hidden group relative"
               disabled={isLoading}
             >
-              {isLoading ? "Creating account..." : "Create Account"}
+              <div className="absolute inset-0 bg-linear-to-r from-primary via-white/10 to-primary origin-left -translate-x-full group-hover:translate-x-full transition-transform duration-700 pointer-events-none" />
+              {isLoading ? (
+                <div className="flex items-center gap-3">
+                  <div className="h-5 w-5 animate-spin rounded-full border-3 border-primary-foreground border-t-transparent" />
+                  Building Account...
+                </div>
+              ) : (
+                "Join the Network"
+              )}
             </Button>
           </form>
         </Form>
+      </div>
 
-        <p className="mt-4 text-center text-sm text-muted-foreground">
-          Already have an account?{" "}
-          <Link
-            href="/login"
-            className="font-medium text-primary hover:underline hover:text-primary/80 transition-colors"
-          >
-            Sign in
-          </Link>
-        </p>
+      <div className="pt-8 space-y-6">
+        <div className="flex items-center justify-center gap-4 opacity-20">
+          <div className="h-px grow bg-border" />
+          <span className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap">
+            Trade Leading Assets
+          </span>
+          <div className="h-px grow bg-border" />
+        </div>
+        <div className="flex justify-center gap-6 opacity-60 contrast-125 saturate-[0.8]">
+          <Image
+            src="/crypto-icons/bitcoin.png"
+            alt="BTC"
+            width={24}
+            height={24}
+            className="h-5 w-5"
+          />
+          <Image
+            src="/crypto-icons/ethereum.png"
+            alt="ETH"
+            width={24}
+            height={24}
+            className="h-5 w-5"
+          />
+          <Image
+            src="/crypto-icons/solana.png"
+            alt="SOL"
+            width={24}
+            height={24}
+            className="h-5 w-5"
+          />
+          <Image
+            src="/crypto-icons/usdt.png"
+            alt="USDT"
+            width={24}
+            height={24}
+            className="h-5 w-5"
+          />
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-medium text-muted-foreground opacity-70">
+            Already have a terminal account?{" "}
+            <Link
+              href="/login"
+              className="text-primary font-bold hover:underline underline-offset-4"
+            >
+              Login here
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

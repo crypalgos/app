@@ -6,8 +6,8 @@ import { ReactNode } from "react";
 
 export default function FeaturesSection() {
   return (
-    <section className="bg-zinc-50 py-16 md:py-32 dark:bg-transparent">
-      <div className="mx-auto max-w-[1200px] px-4 sm:px-5 lg:px-8">
+    <section className="bg-background py-10 md:py-16 border-y border-border/20">
+      <div className="mx-auto max-w-[1240px] px-4 sm:px-5 lg:px-8">
         <div className="mx-auto grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-2">
           <FeatureCard>
             <CardHeader className="pb-3">
@@ -18,12 +18,12 @@ export default function FeaturesSection() {
               />
             </CardHeader>
 
-            <div className="relative border-t border-dashed max-sm:mb-6">
+            <div className="relative border-t border-border border-dashed max-sm:mb-6">
               <div
                 aria-hidden
-                className="absolute inset-0 [background:radial-gradient(125%_125%_at_50%_0%,transparent_40%,var(--color-blue-600),var(--color-white)_100%)]"
+                className="absolute inset-0 [background:radial-gradient(125%_125%_at_50%_0%,transparent_40%,var(--color-primary),transparent_100%)] opacity-20"
               />
-              <div className="relative h-64 w-full px-6 pt-6 sm:h-80 lg:h-auto lg:aspect-76/59">
+              <div className="relative h-64 w-full px-6 pt-6 sm:h-80 lg:aspect-4/3">
                 <DualModeImage
                   darkSrc="/payments.png"
                   lightSrc="/payments-light.png"
@@ -47,7 +47,7 @@ export default function FeaturesSection() {
 
             <CardContent>
               <div className="mask-radial-at-right mask-radial-from-75% mask-radial-[75%_75%] relative max-sm:mb-6">
-                <div className="relative h-64 w-full overflow-hidden rounded-lg border sm:h-80 lg:h-auto lg:aspect-76/59">
+                <div className="relative h-64 w-full overflow-hidden rounded-2xl border border-border sm:h-80 lg:aspect-4/3">
                   <DualModeImage
                     darkSrc="/origin-cal-dark.png"
                     lightSrc="/origin-cal.png"
@@ -104,10 +104,9 @@ interface FeatureCardProps {
 const FeatureCard = ({ children, className }: FeatureCardProps) => (
   <Card
     className={cn(
-      "group relative rounded-none shadow-zinc-950/5 transition-all duration-300 ease-out",
-      "active:scale-[0.98] active:shadow-lg",
-      "hover:shadow-xl hover:shadow-blue-500/10",
-      className
+      "group relative rounded-[2rem] border-border bg-card/50 backdrop-blur-sm shadow-sm transition-all duration-300 ease-out overflow-hidden",
+      "hover:shadow-xl hover:shadow-primary/5 hover:border-primary/20",
+      className,
     )}
   >
     <CardDecorator />
@@ -136,7 +135,9 @@ const CardHeading = ({ icon: Icon, title, description }: CardHeadingProps) => (
       <Icon className="size-4" />
       {title}
     </span>
-    <p className="mt-6 sm:mt-8 text-xl sm:text-2xl font-semibold">{description}</p>
+    <p className="mt-6 sm:mt-8 text-xl sm:text-2xl font-semibold">
+      {description}
+    </p>
   </div>
 );
 
@@ -192,15 +193,18 @@ const CircularUI = ({ label, circles, className }: CircularUIProps) => (
         {circles.map((circle, i) => (
           <div
             key={i}
-            className={cn("size-7 rounded-full border sm:size-8", {
-              "border-primary": circle.pattern === "none",
-              "border-primary bg-[repeating-linear-gradient(-45deg,var(--color-border),var(--color-border)_1px,transparent_1px,transparent_4px)]":
-                circle.pattern === "border",
-              "border-primary bg-background bg-[repeating-linear-gradient(-45deg,var(--color-primary),var(--color-primary)_1px,transparent_1px,transparent_4px)]":
-                circle.pattern === "primary",
-              "bg-background z-1 border-blue-500 bg-[repeating-linear-gradient(-45deg,var(--color-blue-500),var(--color-blue-500)_1px,transparent_1px,transparent_4px)]":
-                circle.pattern === "blue",
-            })}
+            className={cn(
+              "size-7 rounded-full border sm:size-8 transition-colors duration-300",
+              {
+                "border-primary bg-primary/10": circle.pattern === "none",
+                "border-primary/40 bg-[repeating-linear-gradient(-45deg,var(--color-border),var(--color-border)_1px,transparent_1px,transparent_4px)]":
+                  circle.pattern === "border",
+                "border-primary bg-primary/20 bg-[repeating-linear-gradient(-45deg,var(--color-primary),var(--color-primary)_1px,transparent_1px,transparent_4px)]":
+                  circle.pattern === "primary",
+                "border-accent bg-accent/20 bg-[repeating-linear-gradient(-45deg,var(--color-accent),var(--color-accent)_1px,transparent_1px,transparent_4px)]":
+                  circle.pattern === "blue",
+              },
+            )}
           ></div>
         ))}
       </div>

@@ -50,7 +50,7 @@ export default function ContactPage() {
   ];
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -71,11 +71,11 @@ export default function ContactPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <section className="relative min-h-[70vh] flex items-center justify-center overflow-hidden">
+      <section className="relative min-h-[50vh] flex items-center justify-center overflow-hidden pt-20">
         <Spotlight
-          gradientFirst="radial-gradient(circle at 40% 60%, hsla(240, 80%, 70%, .08) 0%, hsla(240, 80%, 50%, .04) 40%, transparent 70%)"
-          gradientSecond="radial-gradient(circle at 60% 40%, hsla(320, 70%, 80%, .06) 0%, hsla(320, 70%, 60%, .03) 50%, transparent 80%)"
-          gradientThird="radial-gradient(circle at 80% 20%, hsla(280, 60%, 75%, .04) 0%, hsla(280, 60%, 55%, .02) 60%, transparent 90%)"
+          gradientFirst="radial-gradient(circle at 40% 60%, var(--color-primary-transparent) 0%, var(--color-primary-transparent-dark) 40%, transparent 70%)"
+          gradientSecond="radial-gradient(circle at 60% 40%, var(--color-accent-transparent) 0%, var(--color-accent-transparent-dark) 50%, transparent 80%)"
+          gradientThird="radial-gradient(circle at 80% 20%, var(--color-primary-transparent-light) 0%, var(--color-primary-transparent-dim) 60%, transparent 90%)"
           duration={15}
           xOffset={100}
         />
@@ -99,13 +99,11 @@ export default function ContactPage() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 text-foreground leading-tight"
+            className="text-5xl md:text-7xl lg:text-8xl font-black italic uppercase tracking-tighter mb-6 text-foreground leading-[0.9]"
           >
             We'd Love to
             <br />
-            <span className="bg-gradient-to-r from-primary via-chart-1 to-chart-2 bg-clip-text text-transparent">
-              Hear From You
-            </span>
+            <span className="text-primary italic">Hear From You</span>
           </motion.h1>
 
           <motion.p
@@ -149,23 +147,20 @@ export default function ContactPage() {
         </div>
       </section>
 
-      {/* Contact Form */}
-      <section className="py-16 md:py-24">
+      {/* Contact Form Header */}
+      <section className="py-10 md:py-16">
         <div className="max-w-7xl mx-auto px-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="text-center mb-0"
+            className="text-center"
           >
-            <Badge variant="outline" className="mb-4">
-              Get in Touch
-            </Badge>
-            <h2 className="text-3xl md:text-4xl font-bold mb-0 text-foreground">
-              Contact Our Team
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-black italic uppercase tracking-tighter mb-4 text-foreground">
+              Contact <span className="text-primary">Our Team</span>
             </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto font-medium opacity-80 leading-relaxed">
               Send us a message using the form below and we'll get back to you
               soon.
             </p>
@@ -174,8 +169,8 @@ export default function ContactPage() {
       </section>
 
       {/* Contact Form */}
-      <section className="py-16 md:py-24 bg-muted/30">
-        <div className="max-w-5xl mx-auto px-4">
+      <section className="py-10 md:py-16 bg-muted/30">
+        <div className="max-w-6xl mx-auto px-4">
           <div className="grid lg:grid-cols-5 gap-12 items-start">
             {/* Form Info Sidebar */}
             <motion.div
@@ -186,9 +181,9 @@ export default function ContactPage() {
               className="lg:col-span-2 space-y-6"
             >
               <div>
-                <h2 className="text-2xl md:text-3xl font-bold mb-4 text-foreground">
-                  Let's Start a Conversation
-                </h2>
+                <h3 className="text-2xl md:text-3xl lg:text-4xl font-black italic uppercase tracking-tighter mb-4 text-foreground">
+                  Let's Start <span className="text-primary">Conversation</span>
+                </h3>
                 <p className="text-muted-foreground mb-6">
                   Whether you're curious about features, need technical support,
                   or want to explore partnership opportunities, we're here to
@@ -198,24 +193,24 @@ export default function ContactPage() {
 
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
-                  <Mail className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
+                  <Mail className="w-5 h-5 text-primary mt-1 shrink-0" />
                   <div>
                     <div className="font-medium text-foreground text-sm mb-1">
                       Direct Email
                     </div>
                     <div className="text-sm text-muted-foreground">
                       <a
-                        href="mailto:support@crypalgos.com"
+                        href="mailto:support@crypalogs.com"
                         className="text-sm text-muted-foreground hover:underline"
                       >
-                        support@crypalgos.com
+                        support@crypalogs.com
                       </a>
                     </div>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <Clock className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
+                  <Clock className="w-5 h-5 text-primary mt-1 shrink-0" />
                   <div>
                     <div className="font-medium text-foreground text-sm mb-1">
                       Response Time
@@ -227,7 +222,7 @@ export default function ContactPage() {
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <Users className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
+                  <Users className="w-5 h-5 text-primary mt-1 shrink-0" />
                   <div>
                     <div className="font-medium text-foreground text-sm mb-1">
                       Support Team
@@ -241,7 +236,7 @@ export default function ContactPage() {
 
               <Card className="p-4 bg-primary/5 border-primary/20">
                 <div className="flex items-start gap-3">
-                  <Shield className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
+                  <Shield className="w-5 h-5 text-primary mt-1 shrink-0" />
                   <div>
                     <div className="font-medium text-primary text-sm mb-1">
                       Privacy First
@@ -255,7 +250,6 @@ export default function ContactPage() {
               </Card>
             </motion.div>
 
-            {/* Contact Form */}
             <motion.div
               initial={{ opacity: 0, x: 30 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -263,7 +257,7 @@ export default function ContactPage() {
               transition={{ duration: 0.8 }}
               className="lg:col-span-3"
             >
-              <Card className="p-8 bg-card border backdrop-blur-sm shadow-lg">
+              <Card className="p-8 bg-card border-border backdrop-blur-3xl shadow-2xl rounded-[2rem]">
                 <div className="mb-6">
                   <h3 className="text-xl font-semibold mb-2 text-foreground">
                     Send Us a Message
@@ -395,8 +389,6 @@ export default function ContactPage() {
           </div>
         </div>
       </section>
-
-
     </div>
   );
 }

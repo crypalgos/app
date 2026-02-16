@@ -4,15 +4,12 @@ import FeaturesSection from "./_components/home/features-10";
 import StartBuilding from "./_components/home/cta";
 import { GridView } from "./_components/home/grid-view";
 import FAQsThree from "./_components/home/faq-section";
-import ClockDemo from "./_components/home/clock";
 import ScrollStackDemo from "./_components/home/scrollstack";
-
 
 export default function page() {
   return (
-    <div className="overflow-x-hidden">
+    <div>
       <HeroSection />
-      <ClockDemo />
       <ScrollStackDemo />
       <FeaturesSection />
       <GridView />
