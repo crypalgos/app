@@ -60,14 +60,13 @@ export const ScrollStackItem: React.FC<ScrollStackItemProps> = ({
         width: "100%",
         height: "100%",
         display: "flex",
-        alignItems: "flex-start",
-        paddingTop: "2vh", // Move slightly up to fill more viewport
+        alignItems: "center",
         justifyContent: "center",
       }}
     >
       <div
         className={cn(
-          "w-full min-h-[60vh] md:h-[90vh] rounded-[2rem] md:rounded-[2.5rem] border border-border bg-card backdrop-blur-2xl shadow-2xl p-6 md:p-16 flex flex-col justify-center overflow-hidden transition-colors duration-500 hover:border-primary/20",
+          "w-full h-[50vh] md:h-[60vh] rounded-[2rem] md:rounded-[2.5rem] border border-border bg-card backdrop-blur-2xl shadow-lg p-6 md:p-12 flex flex-col justify-center overflow-hidden transition-colors duration-500 hover:border-primary/20",
           itemClassName,
         )}
       >
@@ -103,10 +102,10 @@ const ScrollStack: React.FC<ScrollStackProps> = ({
     <div
       ref={containerRef}
       className={cn("relative w-full", className)}
-      style={{ height: `${total * 85}vh` }}
+      style={{ height: `${total * 60}vh` }}
     >
       <div className="sticky top-0 h-screen w-full overflow-hidden px-4 md:px-8">
-        <div className="max-w-6xl mx-auto h-full relative">
+        <div className="max-w-6xl mx-auto h-full relative flex items-center">
           {childrenArray.map((child, index) => {
             if (React.isValidElement(child)) {
               return React.cloneElement(
