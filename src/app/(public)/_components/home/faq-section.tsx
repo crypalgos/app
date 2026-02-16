@@ -49,12 +49,12 @@ export default function FAQsThree() {
   ];
 
   return (
-    <section className="bg-background dark:bg-background py-12 md:py-24 border-y border-border/40">
+    <section className="bg-background dark:bg-background py-10 md:py-16 border-y border-border/40">
       <div className="mx-auto max-w-4xl px-4 md:px-6">
         <div className="flex flex-col items-center gap-12 text-center">
-          <div className="max-w-2xl">
-            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-              Frequently Asked Questions
+          <div className="max-w-3xl">
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-black italic uppercase tracking-tighter mb-4">
+              Frequently Asked <span className="text-primary">Questions</span>
             </h2>
             <p className="text-muted-foreground mt-4 text-lg leading-relaxed">
               Everything you need to know about our platform. Can't find it
