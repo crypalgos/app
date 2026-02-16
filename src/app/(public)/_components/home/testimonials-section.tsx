@@ -12,13 +12,13 @@ export default function TestimonialsSection() {
   }));
 
   return (
-    <section className="w-full py-8 md:py-12 overflow-hidden relative z-10">
+    <section className="w-full py-10 md:py-16">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+        <div className="text-center mb-12 md:mb-16">
+          <h2 className="text-3xl md:text-5xl lg:text-6xl font-black italic uppercase tracking-tighter mb-4">
             Loved by Crypto Traders
           </h2>
-          <p className="text-muted-foreground text-lg">
+          <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto font-medium opacity-80">
             From beginners to quants — our community is growing every day.
           </p>
         </div>

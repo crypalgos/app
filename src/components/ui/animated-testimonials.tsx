@@ -28,17 +28,17 @@ const AnimatedCanopy = ({
   <div
     {...props}
     className={cn(
-      "group relative flex h-full w-full overflow-hidden p-2 [--duration:10s] [--gap:12px] [gap:var(--gap)]",
+      "group relative flex h-fit w-full overflow-hidden p-2 [--duration:10s] [--gap:12px] gap-(--gap)",
       vertical ? "flex-col" : "flex-row",
-      className
+      className,
     )}
   >
     {Array.from({ length: repeat }).map((_, index) => (
       <div
         key={`item-${index}`}
-        className={cn("flex shrink-0 [gap:var(--gap)]", {
-          "group-hover:[animation-play-state:paused]": pauseOnHover,
-          "[animation-direction:reverse]": reverse,
+        className={cn("flex shrink-0 gap-(--gap)", {
+          "group-hover:paused": pauseOnHover,
+          "direction-reverse": reverse,
           "animate-canopy-horizontal flex-row": !vertical,
           "animate-canopy-vertical flex-col": vertical,
         })}
@@ -50,7 +50,7 @@ const AnimatedCanopy = ({
       <div
         className={cn(
           "pointer-events-none absolute inset-0 z-10 h-full w-full from-white/50 from-5% via-transparent via-50% to-white/50 to-95% dark:from-gray-800/50 dark:via-transparent dark:to-gray-800/50",
-          vertical ? "bg-gradient-to-b" : "bg-gradient-to-r"
+          vertical ? "bg-linear-to-b" : "bg-linear-to-r",
         )}
       />
     )}
@@ -67,7 +67,7 @@ const TestimonialCard = ({
   <div
     className={cn(
       "group mx-2 flex h-32 w-80 shrink-0 cursor-pointer overflow-hidden rounded-xl border border-transparent p-3 transition-all hover:border-blue-400 hover:shadow-[0_0_10px_#60a5fa] dark:hover:border-blue-400",
-      className
+      className,
     )}
   >
     <div className="flex items-start gap-3">

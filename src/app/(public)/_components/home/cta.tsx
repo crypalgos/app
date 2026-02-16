@@ -1,5 +1,7 @@
 import React from "react";
 import Link from "next/link";
+import Clock from "@/components/ui/clock";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface StartBuildingProps {
   title?: string;
@@ -9,83 +11,55 @@ interface StartBuildingProps {
   className?: string;
 }
 
-const StartBuilding: React.FC<StartBuildingProps> = ({
-  title = "Start Trading Smarter Today",
-  subtitle = "Join thousands of traders automating their strategies with AI-powered tools.",
-  buttonText = "Get Started Free",
-  linkTo = "/get-started/index",
-  className = "",
-}) => {
+const StartBuilding: React.FC<StartBuildingProps> = ({ className = "" }) => {
   return (
-    <section className={`w-full py-8 sm:py-12 md:py-16 relative z-[22] ${className}`}>
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-5">
-        <div
-          className="
-            relative w-full
-            rounded-2xl sm:rounded-3xl py-8 px-6 sm:py-12 sm:px-8 md:py-20 md:px-12
-            bg-linear-to-br from-primary/95 to-primary
-            border border-white/10
-            shadow-[0_8px_32px_rgba(31,38,135,0.37)]
-            backdrop-blur-sm
-            overflow-hidden
-            flex flex-col items-center justify-center text-center gap-4 sm:gap-6
-            transition-all duration-300 ease-out
-            hover:shadow-[0_12px_40px_rgba(31,38,135,0.45)]
-            hover:border-white/20
-          "
-        >
-          {/* Grain Texture Overlay */}
-          <div
-            className="
-              absolute inset-0 pointer-events-none z-[1]
-              opacity-40 mix-blend-overlay
-              bg-[url('/assets/demo/grain.webp')]
-              bg-size-[300px_300px] bg-repeat
-            "
-          />
+    <section
+      id="cta"
+      className={`w-full py-10 md:py-16 relative z-20 ${className}`}
+    >
+      <div className="max-w-[1240px] mx-auto px-4 sm:px-6">
+        <Card className="group relative w-full rounded-[2.5rem] border-border bg-card/50 backdrop-blur-xl shadow-xl overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] hover:border-primary/30">
+          {/* Enhanced Background Decorative Elements */}
+          <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] pointer-events-none group-hover:bg-primary/20 transition-all duration-1000" />
+          <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/4 w-[400px] h-[400px] bg-blue-500/5 rounded-full blur-[100px] pointer-events-none group-hover:bg-blue-500/15 transition-all duration-1000" />
 
-          {/* Content */}
-          <div className="relative z-[2] flex flex-col items-center gap-3 sm:gap-4 md:gap-6">
-            <h2
-              className="
-              text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl
-              font-medium leading-tight sm:leading-none
-              animate-[fadeInUp_0.6s_ease-out]
-              "
-            >
-              {title}
-            </h2>
+          <CardContent className="relative z-10 flex flex-col lg:flex-row items-center justify-between py-10 px-8 sm:py-14 sm:px-14 lg:py-16 lg:px-20 gap-10 lg:gap-16 min-h-[320px]">
+            {/* Clock Container - Visual Focal Point */}
+            <div className="relative w-44 sm:w-56 lg:w-[300px] shrink-0 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-[1.03] group-hover:rotate-1">
+              <div className="absolute inset-0 bg-primary/20 rounded-full blur-[60px] animate-pulse opacity-40" />
+              <div className="relative drop-shadow-xl">
+                <Clock className="w-full h-full" />
+              </div>
+            </div>
 
-            <p
-              className="
-              text-white text-sm sm:text-base md:text-[1.2rem]
-              font-medium opacity-60 max-w-[600px] leading-relaxed sm:leading-tight
-              animate-[fadeInUp_0.6s_ease-out_0.1s_both]
-              "
-            >
-              {subtitle}
-            </p>
+            {/* Content Section */}
+            <div className="flex flex-col items-center lg:items-start text-center lg:text-left space-y-6 flex-1">
+              <div className="space-y-4">
+                <div className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-bold uppercase tracking-widest text-primary animate-in fade-in slide-in-from-bottom-1 duration-700">
+                  Join the Future
+                </div>
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black italic uppercase tracking-tighter leading-[0.85] text-foreground">
+                  <span className="block opacity-95">Crypto Markets</span>
+                  <span className="block bg-linear-to-r from-primary via-blue-400 to-primary bg-clip-text text-transparent drop-shadow-sm">
+                    Never Sleep
+                  </span>
+                </h1>
+                <p className="text-base sm:text-lg text-muted-foreground font-medium max-w-md leading-relaxed opacity-70">
+                  Automate your trading strategies to capitalize on
+                  opportunities 24/7. Precision at every tick, speed at every
+                  move.
+                </p>
+              </div>
 
-            <Link
-              href={linkTo}
-              className="
-                inline-flex items-center justify-center
-                mt-1 sm:mt-2
-                bg-white text-primary
-                px-6 py-2 sm:px-8 sm:py-2.5
-                text-base sm:text-lg font-semibold
-                rounded-full
-                transition-all duration-200 ease-in-out
-                hover:shadow-[0_4px_12px_rgba(255,255,255,0.3)]
-                hover:-translate-y-0.5
-                active:translate-y-0
-                no-underline
-              "
-            >
-              {buttonText}
-            </Link>
-          </div>
-        </div>
+              <Link
+                href="#features"
+                className="inline-flex items-center justify-center h-11 px-8 animate-shimmer bg-[linear-gradient(110deg,var(--color-primary),45%,color-mix(in_srgb,var(--color-primary),white_25%),55%,var(--color-primary))] bg-size-[200%_100%] text-primary-foreground font-bold rounded-lg transition-all hover:scale-105 active:scale-95 focus:outline-none"
+              >
+                Start Automating
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </section>
   );

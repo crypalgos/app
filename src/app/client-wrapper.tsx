@@ -10,10 +10,8 @@ export default function ClientWrapper({
 }>) {
   return (
     <GlobalProviders>
-      <ScrollArea className="h-dvh w-full">
-        {children}
-        <Toaster />
-      </ScrollArea>
+      <div className="min-h-screen w-full flex flex-col">{children}</div>
+      <Toaster />
     </GlobalProviders>
   );
 }

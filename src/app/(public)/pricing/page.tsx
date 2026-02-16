@@ -1,8 +1,9 @@
 "use client";
 
-import PricingModern from ".";
+
 import PricingComparator from "./pricing-comparator";
 import { AccordionFAQ } from "./accordion";
+import PricingModern from "./pricing-modern";
 
 const Page = () => {
   return (
