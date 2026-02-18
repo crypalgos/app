@@ -24,8 +24,8 @@ import Link from "next/link";
 import { IconLock, IconMailCheck, IconChevronLeft } from "@tabler/icons-react";
 
 export function ForgotPasswordForm() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
 
   const form = useForm<IForgotPasswordSchema>({
     resolver: zodResolver(ForgotPasswordSchema),
@@ -38,41 +38,16 @@ export function ForgotPasswordForm() {
     try {
       setIsLoading(true);
       const response = await AuthActions.ForgotPasswordAction(data);
-      toast.success(response.message || "Password reset link sent");
-      setIsSubmitted(true);
+      toast.success(response.message || "Reset code sent to your email");
+      router.push(
+        `/reset-password?identifier=${encodeURIComponent(data.identifier)}`,
+      );
     } catch (error: any) {
       toast.error(error.message || "Failed to send reset link");
     } finally {
       setIsLoading(false);
     }
   };
-
-  if (isSubmitted) {
-    return (
-      <div className="w-full max-w-sm space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 text-left">
-        <div className="space-y-6">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20">
-            <IconMailCheck className="h-8 w-8 text-primary" />
-          </div>
-          <div className="space-y-2">
-            <h1 className="text-4xl font-extrabold tracking-tight text-foreground">
-              Check <span className="text-primary">Email</span>
-            </h1>
-            <p className="text-base text-muted-foreground font-medium opacity-70">
-              We&apos;ve sent a password reset link to your email address. Check
-              your inbox and follow the instructions.
-            </p>
-          </div>
-          <Button
-            asChild
-            className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-black text-sm uppercase tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
-          >
-            <Link href="/login">Return to Login</Link>
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="w-full max-w-sm space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">

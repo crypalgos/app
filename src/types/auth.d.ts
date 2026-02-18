@@ -23,18 +23,18 @@ interface ICheckUsernameAvailabilityResponse {
 
 interface ILoginResponse {
     user: IUser,
-    access_token: Record<string, string>,
+    access_token: string,
     message: string
 }
 
 interface IVerifyUserResponse {
     user: IUser,
-    access_token: Record<string, string>,
+    access_token: string,
     message: string
 }
 
 interface IRefreshTokenResponse {
     user: IUser,
-    access_token: Record<string, string>,
+    access_token: string,
     message: string
 }
