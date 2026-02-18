@@ -46,7 +46,7 @@ export function AppSidebar() {
       className="border-r border-sidebar-border bg-sidebar"
     >
       {/* Logo */}
-      <SidebarHeader className={cn("pt-5 pb-6", isCollapsed ? "px-2" : "px-5")}>
+      <SidebarHeader className={cn("pt-3 pb-8", isCollapsed ? "px-2" : "px-4")}>
         <Link href="/" className="flex items-center gap-2.5 overflow-hidden">
           {isCollapsed ? (
             <img
@@ -93,8 +93,8 @@ export function AppSidebar() {
                 className={cn(
                   "relative flex items-center rounded-lg font-medium transition-all duration-200 group",
                   isCollapsed
-                    ? "justify-center p-2.5 text-[13px]"
-                    : "gap-3 px-3 py-2.5 text-[13.5px]",
+                    ? "justify-center p-2 text-[13px]"
+                    : "gap-3 px-3 py-2 text-[13px]",
                   isActive
                     ? "bg-primary/8 text-foreground"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
@@ -107,7 +107,7 @@ export function AppSidebar() {
 
                 <item.icon
                   className={cn(
-                    "h-[18px] w-[18px] shrink-0 transition-colors duration-200",
+                    "h-4 w-4 shrink-0 transition-colors duration-200",
                     isActive
                       ? "text-primary"
                       : "text-muted-foreground group-hover:text-foreground",
@@ -154,7 +154,7 @@ export function AppSidebar() {
       </SidebarContent>
 
       {/* New Strategy Button */}
-      <SidebarFooter className={cn(isCollapsed ? "p-2" : "p-4")}>
+      <SidebarFooter className={cn(isCollapsed ? "p-2" : "p-3")}>
         {isCollapsed ? (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -169,12 +169,12 @@ export function AppSidebar() {
           </Tooltip>
         ) : (
           <div className="flex rounded-xl overflow-hidden bg-primary hover:brightness-110 transition-all duration-200 shadow-sm hover:shadow-md hover:shadow-primary/15">
-            <button className="flex-1 flex items-center justify-center gap-2.5 h-10 text-[13px] font-semibold text-primary-foreground">
+            <button className="flex-1 flex items-center justify-center gap-2.5 h-9 text-[13px] font-semibold text-primary-foreground">
               <Plus className="h-4 w-4" strokeWidth={2.5} />
               New Strategy
             </button>
             <div className="w-px bg-white/15 my-2" />
-            <button className="flex items-center justify-center w-9 h-10 text-primary-foreground hover:bg-white/10 transition-colors">
+            <button className="flex items-center justify-center w-9 h-9 text-primary-foreground hover:bg-white/10 transition-colors">
               <ChevronDown className="h-3.5 w-3.5" />
             </button>
           </div>
