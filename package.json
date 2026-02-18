@@ -6,15 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "pages:build": "npx @opennextjs/cloudflare build",
-    "preview": "npx wrangler dev",
-    "deploy": "npx wrangler deploy"
+    "lint": "eslint"
   },
   "dependencies": {
     "@base-ui/react": "^1.1.0",
     "@hookform/resolvers": "^5.2.2",
-    "@opennextjs/cloudflare": "^1.16.5",
     "@radix-ui/react-accordion": "^1.2.12",
     "@tabler/icons-react": "^3.36.1",
     "@tanstack/react-query": "^5.90.20",
