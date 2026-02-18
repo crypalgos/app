@@ -1,0 +1,20 @@
+{
+  "/(auth)/forgot-password/page": "app/(auth)/forgot-password/page.js",
+  "/(auth)/login/page": "app/(auth)/login/page.js",
+  "/(auth)/register/page": "app/(auth)/register/page.js",
+  "/(auth)/reset-password/page": "app/(auth)/reset-password/page.js",
+  "/(auth)/verify/page": "app/(auth)/verify/page.js",
+  "/(builder)/builder/page": "app/(builder)/builder/page.js",
+  "/(public)/contact/page": "app/(public)/contact/page.js",
+  "/(public)/page": "app/(public)/page.js",
+  "/(public)/pricing/page": "app/(public)/pricing/page.js",
+  "/(public)/privacy-policy/page": "app/(public)/privacy-policy/page.js",
+  "/(public)/return-policy/page": "app/(public)/return-policy/page.js",
+  "/(public)/risk-disclosure/page": "app/(public)/risk-disclosure/page.js",
+  "/(public)/terms-and-condition/page": "app/(public)/terms-and-condition/page.js",
+  "/(user)/dashboard/page": "app/(user)/dashboard/page.js",
+  "/(user)/profile/page": "app/(user)/profile/page.js",
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js"
+}
