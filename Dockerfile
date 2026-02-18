@@ -1,6 +1,5 @@
 # Stage 1: Dependencies
 FROM oven/bun:latest AS deps
-# RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Install dependencies based on the bun lockfile
@@ -13,13 +12,15 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Run tests
+RUN bun run test
+
 # Build the application
-# We use bun to run the build script
 RUN bun run build
 
 # Stage 3: Runner
-# Next.js standalone output still needs Node.js to run
-FROM node:22-alpine AS runner
+# The user requested to use Bun here too.
+FROM oven/bun:alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV production
@@ -40,4 +41,5 @@ EXPOSE 3000
 ENV PORT 3000
 ENV HOSTNAME "0.0.0.0"
 
-CMD ["node", "server.js"]
+# Bun can run the Next.js standalone server
+CMD ["bun", "server.js"]
