@@ -1,105 +1,112 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Sparkles, FileText, ArrowDown, HelpCircle } from "lucide-react";
+import { ArrowDown, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import ProfileDropdown from "@/components/kokonutui/profile-dropdown";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Separator } from "@/components/ui/separator";
+import { ActionGrid } from "./action-grid";
 
-
-const tabs = ["All", "Recents", "Created by Me", "Folders", "Unsorted"];
-
-const actionCards = [
-    { icon: Plus, label: "Create a Blank File" },
-    { icon: Sparkles, label: "Generate an AI Diagram" },
-    { icon: FileText, label: "Generate an AI outline" },
-];
+const tabs = ["All Strategies", "Active", "Backtesting", "Drafts", "Archived"];
 
 export function DashboardContent() {
-    const [activeTab, setActiveTab] = useState("All");
+  const [activeTab, setActiveTab] = useState("All Strategies");
 
-    return (
-        <main className="flex-1 flex flex-col bg-background">
-            {/* Header */}
-            <header className="flex items-center justify-between px-6 py-2.5 border-b border-border/40">
-                {/* Tabs */}
-                <nav className="flex gap-0.5">
-                    {tabs.map((tab) => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`px-3 py-1.5 text-[13px] rounded transition-colors ${activeTab === tab
-                                ? "bg-accent text-foreground"
-                                : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
-                                }`}
-                        >
-                            {tab}
-                        </button>
-                    ))}
-                </nav>
+  return (
+    <main className="flex-1 flex flex-col bg-background">
+      {/* Header */}
+      <header className="flex items-center justify-between px-5 py-2 border-b border-border/50 min-h-[52px] bg-background/80 backdrop-blur-sm sticky top-0 z-10">
+        <div className="flex items-center gap-3">
+          <SidebarTrigger className="-ml-1 text-muted-foreground hover:text-foreground" />
+          <Separator orientation="vertical" className="h-5 bg-border/60" />
 
+          {/* Tabs */}
+          <nav className="flex items-center gap-0.5">
+            {tabs.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-3 py-1.5 text-[13px] font-medium rounded-md transition-all duration-150 ${
+                  activeTab === tab
+                    ? "bg-accent text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent/40"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </nav>
+        </div>
 
+        {/* Right Section */}
+        <div className="flex items-center gap-2">
+          <ProfileDropdown />
+        </div>
+      </header>
 
-                {/* Right Section */}
-                <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8 cursor-pointer border border-border/40 hover:bg-accent transition-colors">
-                        <AvatarFallback className="bg-orange-500 text-white text-xs font-medium">G</AvatarFallback>
-                    </Avatar>
-                </div>
-            </header>
+      {/* Action Cards */}
+      <div className="px-6 pt-6 pb-2">
+        <ActionGrid />
+      </div>
 
-            {/* Action Cards */}
-            <div className="px-6 pt-5 pb-4">
-                <div className="grid grid-cols-3 gap-4 max-w-3xl">
-                    {actionCards.map((card) => (
-                        <button
-                            key={card.label}
-                            className="flex flex-col items-center justify-center gap-3 p-6 rounded-lg border border-border/60 bg-card/50 hover:bg-accent/30 hover:border-border transition-all"
-                        >
-                            <card.icon className="h-10 w-10 text-muted-foreground/70" strokeWidth={1} />
-                            <span className="text-sm text-foreground/90">{card.label}</span>
-                        </button>
-                    ))}
-                </div>
-            </div>
+      {/* Table Header */}
+      <div className="px-6 pt-4">
+        <div className="flex items-center py-2.5 border-b border-border/50">
+          <div className="flex-[2.5] px-3">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              Strategy Name
+            </span>
+          </div>
+          <div className="flex-1 px-3">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              Status
+            </span>
+          </div>
+          <div className="flex-[0.7] px-3">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              Created
+            </span>
+          </div>
+          <div className="flex-[0.7] px-3 flex items-center gap-1.5">
+            <ArrowDown className="h-3 w-3 text-foreground/70" />
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-foreground/70">
+              Performance
+            </span>
+          </div>
+          <div className="flex-[0.7] px-3 text-right">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              Trades
+            </span>
+          </div>
+          <div className="flex-[0.7] px-3 text-right">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              Author
+            </span>
+          </div>
+        </div>
+      </div>
 
-            {/* Table Header */}
-            <div className="px-6 pt-2">
-                <div className="flex items-center py-2 border-b border-border/40">
-                    <div className="flex-[2.5] px-2">
-                        <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Name</span>
-                    </div>
-                    <div className="flex-1 px-2">
-                        <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Location</span>
-                    </div>
-                    <div className="flex-[0.7] px-2">
-                        <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Created</span>
-                    </div>
-                    <div className="flex-[0.7] px-2 flex items-center gap-1">
-                        <ArrowDown className="h-3 w-3 text-foreground" />
-                        <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground">Edited</span>
-                    </div>
-                    <div className="flex-[0.7] px-2 text-right">
-                        <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Comments</span>
-                    </div>
-                    <div className="flex-[0.7] px-2 text-right">
-                        <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Author</span>
-                    </div>
-                </div>
-            </div>
+      {/* Empty State */}
+      <div className="flex-1 flex items-center justify-center py-20">
+        <div className="text-center space-y-2">
+          <p className="text-sm text-muted-foreground/50">
+            No strategies found
+          </p>
+          <p className="text-xs text-muted-foreground/30">
+            Create your first strategy to get started
+          </p>
+        </div>
+      </div>
 
-            {/* Empty State */}
-            <div className="flex-1 flex items-center justify-center py-20">
-                <p className="text-sm text-muted-foreground/60">Your list is empty</p>
-            </div>
-
-            {/* Help Button */}
-            <Button
-                size="icon"
-                variant="secondary"
-                className="fixed bottom-5 right-5 h-9 w-9 rounded-full shadow-md hover:shadow-lg transition-shadow"
-            >
-                <HelpCircle className="h-4 w-4" />
-            </Button>
-        </main >
-    );
+      {/* Help Button */}
+      <Button
+        size="icon"
+        variant="secondary"
+        className="fixed bottom-5 right-5 h-9 w-9 rounded-full shadow-md hover:shadow-lg transition-shadow border border-border/50"
+      >
+        <HelpCircle className="h-4 w-4" />
+      </Button>
+    </main>
+  );
 }
