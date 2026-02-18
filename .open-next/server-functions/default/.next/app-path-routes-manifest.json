@@ -1,0 +1,20 @@
+{
+  "/(auth)/forgot-password/page": "/forgot-password",
+  "/(auth)/login/page": "/login",
+  "/(auth)/register/page": "/register",
+  "/(auth)/reset-password/page": "/reset-password",
+  "/(auth)/verify/page": "/verify",
+  "/(builder)/builder/page": "/builder",
+  "/(public)/contact/page": "/contact",
+  "/(public)/page": "/",
+  "/(public)/pricing/page": "/pricing",
+  "/(public)/privacy-policy/page": "/privacy-policy",
+  "/(public)/return-policy/page": "/return-policy",
+  "/(public)/risk-disclosure/page": "/risk-disclosure",
+  "/(public)/terms-and-condition/page": "/terms-and-condition",
+  "/(user)/dashboard/page": "/dashboard",
+  "/(user)/profile/page": "/profile",
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/favicon.ico/route": "/favicon.ico"
+}
