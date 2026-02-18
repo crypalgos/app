@@ -29,7 +29,6 @@ pipeline {
             steps {
                 script {
                     sh '''
-                        docker network create crypalgos-network || true
                         docker compose -f $COMPOSE_FILE up -d --build --remove-orphans
                     '''
                 }
