@@ -8,7 +8,6 @@ import { AuthActions } from "@/api-actions/auth-actions";
 import { useAuthStore } from "@/store/auth-store";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Form,
   FormControl,
@@ -52,7 +51,8 @@ export function VerifyForm() {
       toast.success(response.message || "Verification successful");
       router.push("/");
     } catch (error: any) {
-      toast.error(error.message || "Verification failed");
+      const detailMsg = error.errors?.detail;
+      toast.error(detailMsg || error.message || "Verification failed");
     } finally {
       setIsLoading(false);
     }
@@ -69,7 +69,8 @@ export function VerifyForm() {
       await AuthActions.ResendVerificationAction({ identifier: email });
       toast.success("Verification code resent");
     } catch (error: any) {
-      toast.error(error.message || "Failed to resend code");
+      const detailMsg = error.errors?.detail;
+      toast.error(detailMsg || error.message || "Failed to resend code");
     } finally {
       setIsLoading(false);
     }
@@ -131,32 +132,15 @@ export function VerifyForm() {
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-          <FormField
-            control={form.control}
-            name="identifier"
-            render={({ field }) => (
-              <FormItem className="space-y-1.5">
-                <FormLabel className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">
-                  Email Address
-                </FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="m@example.com"
-                    className="h-12 rounded-xl bg-muted/20 border-border focus:ring-primary/20 transition-all text-base placeholder:text-muted-foreground/50"
-                    {...field}
-                    disabled={isLoading || !!identifier}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {/* Internal field for form state, hidden from UI as per user request */}
+          <input type="hidden" {...form.register("identifier")} />
+
           <FormField
             control={form.control}
             name="verification_code"
             render={({ field }) => (
-              <FormItem className="space-y-1.5">
+              <FormItem className="space-y-2">
                 <FormLabel className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">
                   Verification Code
                 </FormLabel>

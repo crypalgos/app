@@ -7,7 +7,6 @@ import {
     IForgotPasswordSchema,
     IResetPasswordSchema,
     IResendVerificationSchema,
-    IRefreshTokenSchema,
     ICheckUsernameAvailabilitySchema
 } from "@/schema/user.schema";
 
@@ -37,8 +36,8 @@ export const AuthActions = {
         return response.data.data;
     },
 
-    RefreshTokenAction: async (data: IRefreshTokenSchema): Promise<IRefreshTokenResponse> => {
-        const response = await axiosInstance.post<ApiResponse<IRefreshTokenResponse>>("/auth/refresh", data);
+    RefreshTokenAction: async (): Promise<IRefreshTokenResponse> => {
+        const response = await axiosInstance.post<ApiResponse<IRefreshTokenResponse>>("/auth/refresh");
         return response.data.data;
     },
 
