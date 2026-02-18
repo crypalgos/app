@@ -15,9 +15,12 @@ import {
 
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { IconLogin2 } from "@tabler/icons-react";
+import { useUser } from "@/api-actions/hooks/user-hooks";
+import ProfileDropdown from "@/components/kokonutui/profile-dropdown";
 
 export function NavbarWrapper() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { data: user, isLoading } = useUser();
 
   const navItems = [
     {
@@ -46,10 +49,15 @@ export function NavbarWrapper() {
         <NavItems items={navItems} />
         <div className="flex items-center gap-4">
           <ThemeToggle />
-          <NavbarButton variant="shimmer" href="/login">
-            Login
-            <IconLogin2 size={18} stroke={2} />
-          </NavbarButton>
+          {!isLoading &&
+            (user ? (
+              <ProfileDropdown />
+            ) : (
+              <NavbarButton variant="shimmer" href="/login">
+                Login
+                <IconLogin2 size={18} stroke={2} />
+              </NavbarButton>
+            ))}
         </div>
       </NavBody>
 
@@ -81,15 +89,22 @@ export function NavbarWrapper() {
             </a>
           ))}
           <div className="flex w-full flex-col gap-4">
-            <NavbarButton
-              onClick={() => setIsMobileMenuOpen(false)}
-              variant="primary"
-              className="w-full"
-              href="/login"
-            >
-              Login
-              <IconLogin2 size={18} stroke={2} />
-            </NavbarButton>
+            {!isLoading &&
+              (user ? (
+                <div className="px-4 py-2 border-t border-border mt-4">
+                  <ProfileDropdown className="w-full" />
+                </div>
+              ) : (
+                <NavbarButton
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  variant="primary"
+                  className="w-full"
+                  href="/login"
+                >
+                  Login
+                  <IconLogin2 size={18} stroke={2} />
+                </NavbarButton>
+              ))}
           </div>
         </MobileNavMenu>
       </MobileNav>
