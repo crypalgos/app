@@ -10,9 +10,3 @@ services:
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL}
-    networks:
-      - crypalgos-network
-
-networks:
-  crypalgos-network:
-    external: true
