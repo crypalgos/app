@@ -43,7 +43,9 @@ export function LoginForm() {
       toast.success(response.message || "Login successful");
       router.push("/");
     } catch (error: any) {
-      toast.error(error.message || "Failed to login");
+      // Check for nested error details first (e.g., from backend validation)
+      const detailMsg = error.errors?.detail;
+      toast.error(detailMsg || error.message || "Failed to login");
     } finally {
       setIsLoading(false);
     }

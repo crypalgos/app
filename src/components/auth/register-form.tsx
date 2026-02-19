@@ -45,7 +45,8 @@ export function RegisterForm() {
       toast.success(response.message || "Registration successful");
       router.push(`/verify?identifier=${encodeURIComponent(data.email)}`);
     } catch (error: any) {
-      toast.error(error.message || "Failed to register");
+      const detailMsg = error.errors?.detail;
+      toast.error(detailMsg || error.message || "Failed to register");
     } finally {
       setIsLoading(false);
     }
@@ -83,7 +84,7 @@ export function RegisterForm() {
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="name"

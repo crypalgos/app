@@ -71,7 +71,7 @@ export default function ContactPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <section className="relative min-h-[50vh] flex items-center justify-center overflow-hidden pt-20">
+      <section className="relative min-h-[50vh] flex items-center justify-center overflow-hidden pt-24 md:pt-20">
         <Spotlight
           gradientFirst="radial-gradient(circle at 40% 60%, var(--color-primary-transparent) 0%, var(--color-primary-transparent-dark) 40%, transparent 70%)"
           gradientSecond="radial-gradient(circle at 60% 40%, var(--color-accent-transparent) 0%, var(--color-accent-transparent-dark) 50%, transparent 80%)"
@@ -80,7 +80,7 @@ export default function ContactPage() {
           xOffset={100}
         />
 
-        <div className="relative z-10 max-w-7xl mx-auto px-4 py-20 text-center">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 py-8 md:py-20 text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -99,7 +99,7 @@ export default function ContactPage() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="text-5xl md:text-7xl lg:text-8xl font-black italic uppercase tracking-tighter mb-6 text-foreground leading-[0.9]"
+            className="text-4xl md:text-7xl lg:text-8xl font-black italic uppercase tracking-tighter mb-6 text-foreground leading-[0.9]"
           >
             We'd Love to
             <br />

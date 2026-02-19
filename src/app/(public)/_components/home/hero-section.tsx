@@ -3,7 +3,7 @@ import Image from "next/image";
 
 export default function HeroSection() {
   return (
-    <div className="flex flex-col min-h-[85vh] pt-16 md:pt-32 pb-12 relative overflow-hidden bg-background dark:bg-background">
+    <div className="flex flex-col min-h-[85vh] pt-32 md:pt-32 pb-12 relative overflow-hidden bg-background dark:bg-background">
       {/* Ultra-Smooth Background Elements */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
         {/* Soft Ambient Wash - Top Center focusing Axis */}

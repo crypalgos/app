@@ -46,12 +46,15 @@ const UserUpdateSchema = z.object({
 });
 
 const UserRegistrationSchema = z.object({
-    name: z.string().min(2).max(50).describe("Name of the user"),
-    email: z.string().email().describe("Email address of the user"),
+    name: z.string()
+        .min(3, "Name must be at least 3 characters long")
+        .max(50, "Name must be at most 50 characters long")
+        .describe("Name of the user"),
+    email: z.string().email("Invalid email address").describe("Email address of the user"),
     username: z
         .string()
-        .min(3)
-        .max(50)
+        .min(3, "Username must be at least 3 characters long")
+        .max(50, "Username must be at most 50 characters long")
         .regex(
             /^[a-zA-Z0-9_-]+$/,
             "Username can only contain letters, numbers, underscores, and hyphens"
@@ -59,16 +62,26 @@ const UserRegistrationSchema = z.object({
         .describe("Username for the user"),
     password: z
         .string()
-        .min(8, "Password must be at least 8 characters")
-        .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-        .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-        .regex(/[0-9]/, "Password must contain at least one number")
+        .min(6, "Password must be at least 6 characters long")
         .describe("Password for the user"),
+    confirmPassword: z.string()
+        .min(6, "Confirm password must be at least 6 characters long")
+        .optional(),
+}).refine((data) => {
+    if (data.confirmPassword && data.password !== data.confirmPassword) {
+        return false;
+    }
+    return true;
+}, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
 });
 
 const UserLoginSchema = z.object({
-    identifier: z.string().describe("Email or username for login"),
-    password: z.string().describe("Password for login"),
+    identifier: z.string().min(1, "Email or username is required").describe("Email or username for login"),
+    password: z.string()
+        .min(6, "Password must be at least 6 characters long")
+        .describe("Password for login"),
 });
 
 const UserLoginResponseSchema = z.object({
@@ -86,13 +99,19 @@ const UserRegistrationResponseSchema = z.object({
 });
 
 const VerifyUserSchema = z.object({
-    identifier: z.string().describe("Email address or username of the user"),
-    verification_code: z.string().describe("Verification code sent to email"),
+    identifier: z.string().min(1, "Email is required").describe("Email address or username of the user"),
+    verification_code: z.string()
+        .min(6, "Verification code must be at least 6 characters long")
+        .max(6, "Verification code must be exactly 6 characters long")
+        .describe("Verification code sent to email"),
 });
 
 const CheckVerificationCodeSchema = z.object({
-    identifier: z.string().describe("Email address or username of the user"),
-    verification_code: z.string().describe("Verification code to check"),
+    identifier: z.string().min(1, "Email is required").describe("Email address or username of the user"),
+    verification_code: z.string()
+        .min(6, "Verification code must be at least 6 characters long")
+        .max(6, "Verification code must be exactly 6 characters long")
+        .describe("Verification code to check"),
 });
 
 const VerifyUserResponseSchema = z.object({
@@ -105,23 +124,23 @@ const VerifyUserResponseSchema = z.object({
 });
 
 const ForgotPasswordSchema = z.object({
-    identifier: z.string().describe("Email address or username of the user"),
+    identifier: z.string().min(1, "Email is required").email("Invalid email address").describe("Email address of the user"),
 });
 
 const ResetPasswordSchema = z.object({
-    identifier: z.string().describe("Email address or username of the user"),
-    verification_code: z.string().describe("Verification code sent to email"),
+    identifier: z.string().email("Invalid email address").describe("Email address of the user"),
+    verification_code: z.string()
+        .min(6, "Verification code must be at least 6 characters long")
+        .max(6, "Verification code must be exactly 6 characters long")
+        .describe("Verification code sent to email"),
     new_password: z
         .string()
-        .min(8, "Password must be at least 8 characters")
-        .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-        .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-        .regex(/[0-9]/, "Password must contain at least one number")
+        .min(6, "New Password must be at least 6 characters long")
         .describe("New password"),
 });
 
 const ResendVerificationSchema = z.object({
-    identifier: z.string().describe("Email address or username of the user"),
+    identifier: z.string().email("Invalid email address").describe("Email address of the user"),
 });
 
 const RefreshTokenSchema = z.object({

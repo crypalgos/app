@@ -43,7 +43,8 @@ export function ForgotPasswordForm() {
         `/reset-password?identifier=${encodeURIComponent(data.identifier)}`,
       );
     } catch (error: any) {
-      toast.error(error.message || "Failed to send reset link");
+      const detailMsg = error.errors?.detail;
+      toast.error(detailMsg || error.message || "Failed to send reset link");
     } finally {
       setIsLoading(false);
     }
@@ -52,9 +53,7 @@ export function ForgotPasswordForm() {
   return (
     <div className="w-full max-w-sm space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="space-y-6">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20 mb-2 transition-transform hover:scale-110 duration-500">
-          <IconLock className="h-8 w-8 text-primary" />
-        </div>
+
         <div className="space-y-2 text-left">
           <h1 className="text-4xl font-extrabold tracking-tight text-foreground">
             Forgot <span className="text-primary">Password?</span>

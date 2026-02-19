@@ -184,7 +184,7 @@ export default function PricingComparator() {
             </div>
 
             {/* Shadcn Table */}
-            <div className="border rounded-lg overflow-hidden">
+            <div className="border rounded-lg overflow-x-auto">
                 <Table>
                     <TableHeader>
                         <TableRow className="hover:bg-transparent">

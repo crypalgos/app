@@ -9,7 +9,7 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-screen w-full bg-background relative overflow-hidden">
+    <div className="flex min-h-screen lg:h-screen w-full bg-background relative lg:overflow-hidden">
       <div className="hidden lg:flex relative w-1/2 flex-col items-center justify-center p-12 overflow-hidden border-r border-border bg-card/20 group">
         {/* Subtle inner glow for dark mode definition */}
         <div className="absolute inset-0 z-20 pointer-events-none border-x border-primary/3 dark:border-primary/5" />
@@ -65,7 +65,7 @@ export default function AuthLayout({
       </div>
 
       {/* Right Rail: Workspace */}
-      <div className="w-full lg:flex-1 flex items-center justify-center p-6 sm:p-8 relative">
+      <div className="w-full lg:flex-1 flex items-center justify-center p-4 sm:p-8 relative lg:overflow-y-auto">
         {/* Mobile Logo Only */}
         <div className="lg:hidden absolute top-8 left-1/2 -translate-x-1/2 z-50">
           <Link href="/">
@@ -91,7 +91,7 @@ export default function AuthLayout({
           <div className="absolute inset-0 bg-size-[40px_40px] bg-[linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)]" />
         </div>
 
-        <div className="w-full max-w-md relative z-10">
+        <div className="w-full max-w-md relative z-10 pt-20 lg:pt-0">
           {children}
         </div>
       </div>

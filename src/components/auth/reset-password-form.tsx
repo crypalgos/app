@@ -102,9 +102,6 @@ export function ResetPasswordForm() {
   return (
     <div className="w-full max-w-sm space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="space-y-6">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20 mb-2 transition-transform hover:scale-110 duration-500">
-          <IconShieldLock className="h-8 w-8 text-primary" />
-        </div>
         <div className="space-y-2 text-left">
           <h1 className="text-4xl font-extrabold tracking-tight text-foreground leading-tight">
             {step === 1 ? (

@@ -87,9 +87,9 @@ export const Navbar = ({ children, className }: NavbarProps) => {
       {React.Children.map(children, (child) =>
         React.isValidElement(child)
           ? React.cloneElement(
-              child as React.ReactElement<{ visible?: boolean }>,
-              { visible },
-            )
+            child as React.ReactElement<{ visible?: boolean }>,
+            { visible },
+          )
           : child,
       )}
     </motion.div>
@@ -258,14 +258,14 @@ export const NavbarLogo = () => {
         alt="CrypAlgos Logo"
         width={190}
         height={190}
-        className="block dark:hidden"
+        className="block dark:hidden w-[150px] lg:w-[190px] h-auto"
       />
       <img
         src="/logo_dark.svg"
         alt="CrypAlgos Logo"
         width={190}
         height={190}
-        className="hidden dark:block"
+        className="hidden dark:block w-[150px] lg:w-[190px] h-auto"
       />
     </Link>
   );

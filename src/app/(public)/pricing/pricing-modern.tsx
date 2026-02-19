@@ -123,7 +123,7 @@ export function PricingModern() {
     <section className="relative overflow-hidden w-full">
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background mask-[radial-gradient(ellipse_at_center,transparent_20%,black)] dark:bg-background" />
 
-      <div className="relative py-12 md:py-20">
+      <div className="relative pt-24 pb-12 md:py-20">
         <div className="mx-auto max-w-5xl px-6">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-4xl md:text-5xl lg:text-7xl font-black italic uppercase tracking-tighter mb-4 text-foreground">
@@ -140,9 +140,8 @@ export function PricingModern() {
               >
                 <div
                   aria-hidden="true"
-                  className={`pointer-events-none absolute inset-1 w-1/2 rounded-full bg-primary shadow-sm transition-transform duration-500 ease-in-out ${
-                    isAnnual ? "translate-x-full" : "translate-x-0"
-                  }`}
+                  className={`pointer-events-none absolute inset-1 w-1/2 rounded-full bg-primary shadow-sm transition-transform duration-500 ease-in-out ${isAnnual ? "translate-x-full" : "translate-x-0"
+                    }`}
                 />
                 <button
                   className="relative duration-500 data-[active=true]:font-medium data-[active=true]:text-primary-foreground"
@@ -169,7 +168,7 @@ export function PricingModern() {
                 {/* Basic Plan */}
                 <motion.div
                   animate={{ opacity: 1, y: 0 }}
-                  className="group relative flex h-[650px] cursor-pointer flex-col overflow-hidden rounded-[2rem] border border-border bg-card/50 backdrop-blur-xl p-8 transition-all hover:border-primary/20"
+                  className="group relative flex h-auto md:h-[650px] cursor-pointer flex-col overflow-hidden rounded-[2rem] border border-border bg-card/50 backdrop-blur-xl p-8 transition-all hover:border-primary/20"
                   data-animate-card
                   initial={{ opacity: 0, y: 40 }}
                   transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
@@ -243,7 +242,7 @@ export function PricingModern() {
                 {/* Pro Plan (Featured) */}
                 <motion.div
                   animate={{ opacity: 1, y: 0 }}
-                  className="group relative flex h-[650px] cursor-pointer flex-col overflow-hidden rounded-[2rem] border-2 border-primary/40 bg-card backdrop-blur-xl p-8 shadow-2xl shadow-primary/10"
+                  className="group relative flex h-auto md:h-[650px] cursor-pointer flex-col overflow-hidden rounded-[2rem] border-2 border-primary/40 bg-card backdrop-blur-xl p-8 shadow-2xl shadow-primary/10"
                   data-animate-card
                   initial={{ opacity: 0, y: 40 }}
                   transition={{
@@ -327,7 +326,7 @@ export function PricingModern() {
                 {/* Enterprise Plan */}
                 <motion.div
                   animate={{ opacity: 1, y: 0 }}
-                  className="group relative flex h-[650px] cursor-pointer flex-col overflow-hidden rounded-[2rem] border border-border bg-card/50 backdrop-blur-xl p-8 transition-all hover:border-primary/20"
+                  className="group relative flex h-auto md:h-[650px] cursor-pointer flex-col overflow-hidden rounded-[2rem] border border-border bg-card/50 backdrop-blur-xl p-8 transition-all hover:border-primary/20"
                   data-animate-card
                   initial={{ opacity: 0, y: 40 }}
                   transition={{
