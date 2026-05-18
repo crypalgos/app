@@ -170,8 +170,8 @@ export default function ProfileDropdown({
                     </div>
                     {item.value ? (
                       <div className="flex-shrink-0 ml-auto">
-                        <Badge 
-                          variant="secondary" 
+                        <Badge
+                          variant="secondary"
                           className="bg-primary/10 text-primary border border-primary/20 text-[10px] font-semibold tracking-wider rounded-md py-0.5 px-2 uppercase"
                         >
                           {item.value}

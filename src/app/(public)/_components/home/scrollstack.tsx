@@ -132,11 +132,18 @@ export default function ScrollStackDemo() {
       <ScrollStack
         viewportClassName="top-20 md:top-24 h-[calc(100vh-5rem)] md:h-[calc(100vh-6rem)]"
         title={
-          <div className="container mx-auto px-4 mb-6 text-center py-6">
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight mb-4 text-foreground">
-              Our <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-600">Ecosystem</span>
+          <div className="container mx-auto px-4 mb-4 py-4 text-center">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 border border-border/50 text-xs font-medium text-muted-foreground mb-5">
+              <span className="relative flex size-2">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex size-2 rounded-full bg-primary" />
+              </span>
+              Ecosystem
+            </div>
+            <h2 className="text-3xl md:text-5xl font-medium tracking-tighter leading-[1.1] mb-3">
+              Build. Test. <span className="text-primary">Deploy.</span>
             </h2>
-            <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto font-medium opacity-70">
+            <p className="text-muted-foreground text-base md:text-lg font-light leading-relaxed max-w-lg mx-auto">
               Everything you need to build, test, and deploy industrial-grade
               trading bots.
             </p>

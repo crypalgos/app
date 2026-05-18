@@ -52,7 +52,9 @@ axiosInstance.interceptors.response.use(
     const originalRequest = error.config;
     const isAuthRequest = originalRequest.url?.includes("/auth/login") ||
       originalRequest.url?.includes("/auth/register") ||
-      originalRequest.url?.includes("/auth/verify");
+      originalRequest.url?.includes("/auth/verify") ||
+      originalRequest.url?.includes("/auth/logout") ||
+      originalRequest.url?.includes("/auth/refresh");
 
     if (error.response?.status === 401 && !originalRequest._retry && !isAuthRequest) {
       if (isRefreshing) {
@@ -79,6 +81,12 @@ axiosInstance.interceptors.response.use(
         return axiosInstance(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
+        // Call the backend logout API when refresh fails to clear backend session
+        try {
+          await AuthActions.LogoutAction();
+        } catch (logoutError) {
+          console.error("Backend logout failed on refresh failure:", logoutError);
+        }
         // Clear auth store on refresh failure to prevent infinite loops
         useAuthStore.getState().setLogout();
         return Promise.reject(refreshError);

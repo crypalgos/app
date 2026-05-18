@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Navbar,
   NavBody,
@@ -18,11 +18,18 @@ import { IconLogin2 } from "@tabler/icons-react";
 import { useUser } from "@/api-actions/hooks/user-hooks";
 import ProfileDropdown from "@/components/kokonutui/profile-dropdown";
 import { LoginDialog } from "@/components/login-dialog";
+import { useAuthStore } from "@/store/auth-store";
 
 export function NavbarWrapper() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const { data: user, isLoading } = useUser();
+  const { isAuthenticated } = useAuthStore();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const navItems = [
     {
@@ -43,6 +50,9 @@ export function NavbarWrapper() {
     },
   ];
 
+  const showAuthMenu = mounted && isAuthenticated && !isLoading;
+  const showLoginButton = mounted && (!isAuthenticated || (!isLoading && !user));
+
   return (
     <Navbar>
       {/* Desktop Navigation */}
@@ -51,15 +61,24 @@ export function NavbarWrapper() {
         <NavItems items={navItems} />
         <div className="flex items-center gap-4">
           <ThemeToggle />
-          {!isLoading &&
-            (user ? (
-              <ProfileDropdown />
-            ) : (
+          {!mounted ? (
+            !isAuthenticated && (
               <NavbarButton variant="shimmer" as="button" onClick={() => setIsLoginOpen(true)}>
                 Login
                 <IconLogin2 size={18} stroke={2} />
               </NavbarButton>
-            ))}
+            )
+          ) : (
+            <>
+              {showAuthMenu && user && <ProfileDropdown />}
+              {showLoginButton && (
+                <NavbarButton variant="shimmer" as="button" onClick={() => setIsLoginOpen(true)}>
+                  Login
+                  <IconLogin2 size={18} stroke={2} />
+                </NavbarButton>
+              )}
+            </>
+          )}
         </div>
       </NavBody>
 
@@ -91,12 +110,8 @@ export function NavbarWrapper() {
             </a>
           ))}
           <div className="flex w-full flex-col gap-4">
-            {!isLoading &&
-              (user ? (
-                <div className="px-4 py-2 border-t border-border mt-4">
-                  <ProfileDropdown className="w-full" />
-                </div>
-              ) : (
+            {!mounted ? (
+              !isAuthenticated && (
                 <NavbarButton
                   onClick={() => {
                     setIsMobileMenuOpen(false);
@@ -109,7 +124,30 @@ export function NavbarWrapper() {
                   Login
                   <IconLogin2 size={18} stroke={2} />
                 </NavbarButton>
-              ))}
+              )
+            ) : (
+              <>
+                {showAuthMenu && user && (
+                  <div className="px-4 py-2 border-t border-border mt-4">
+                    <ProfileDropdown className="w-full" />
+                  </div>
+                )}
+                {showLoginButton && (
+                  <NavbarButton
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      setIsLoginOpen(true);
+                    }}
+                    variant="primary"
+                    className="w-full"
+                    as="button"
+                  >
+                    Login
+                    <IconLogin2 size={18} stroke={2} />
+                  </NavbarButton>
+                )}
+              </>
+            )}
           </div>
         </MobileNavMenu>
       </MobileNav>

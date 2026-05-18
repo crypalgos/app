@@ -120,26 +120,26 @@ function VerifyPage() {
                 control={control}
                 name="verification_code"
                 render={({ field }) => (
-                  <InputOTP
-                    id="verification_code"
-                    maxLength={6}
-                    value={field.value}
-                    onChange={field.onChange}
-                    disabled={isSubmitting}
-                    className="focus:ring-2 focus:ring-primary"
-                  >
-                    <InputOTPGroup>
-                      <InputOTPSlot index={0} className="w-12 h-12 text-lg md:w-14 md:h-14 font-semibold border-muted/80 bg-black/5 dark:bg-white/5" />
-                      <InputOTPSlot index={1} className="w-12 h-12 text-lg md:w-14 md:h-14 font-semibold border-muted/80 bg-black/5 dark:bg-white/5" />
-                      <InputOTPSlot index={2} className="w-12 h-12 text-lg md:w-14 md:h-14 font-semibold border-muted/80 bg-black/5 dark:bg-white/5" />
-                    </InputOTPGroup>
-                    <InputOTPSeparator />
-                    <InputOTPGroup>
-                      <InputOTPSlot index={3} className="w-12 h-12 text-lg md:w-14 md:h-14 font-semibold border-muted/80 bg-black/5 dark:bg-white/5" />
-                      <InputOTPSlot index={4} className="w-12 h-12 text-lg md:w-14 md:h-14 font-semibold border-muted/80 bg-black/5 dark:bg-white/5" />
-                      <InputOTPSlot index={5} className="w-12 h-12 text-lg md:w-14 md:h-14 font-semibold border-muted/80 bg-black/5 dark:bg-white/5" />
-                    </InputOTPGroup>
-                  </InputOTP>
+                    <InputOTP
+                      id="verification_code"
+                      maxLength={6}
+                      value={field.value}
+                      onChange={field.onChange}
+                      disabled={isSubmitting}
+                      className="focus:ring-2 focus:ring-primary"
+                    >
+                      <InputOTPGroup>
+                        <InputOTPSlot index={0} className="w-12 h-12 text-lg md:w-14 md:h-14 font-semibold border-zinc-200 dark:border-muted/80 bg-background dark:bg-white/5" />
+                        <InputOTPSlot index={1} className="w-12 h-12 text-lg md:w-14 md:h-14 font-semibold border-zinc-200 dark:border-muted/80 bg-background dark:bg-white/5" />
+                        <InputOTPSlot index={2} className="w-12 h-12 text-lg md:w-14 md:h-14 font-semibold border-zinc-200 dark:border-muted/80 bg-background dark:bg-white/5" />
+                      </InputOTPGroup>
+                      <InputOTPSeparator />
+                      <InputOTPGroup>
+                        <InputOTPSlot index={3} className="w-12 h-12 text-lg md:w-14 md:h-14 font-semibold border-zinc-200 dark:border-muted/80 bg-background dark:bg-white/5" />
+                        <InputOTPSlot index={4} className="w-12 h-12 text-lg md:w-14 md:h-14 font-semibold border-zinc-200 dark:border-muted/80 bg-background dark:bg-white/5" />
+                        <InputOTPSlot index={5} className="w-12 h-12 text-lg md:w-14 md:h-14 font-semibold border-zinc-200 dark:border-muted/80 bg-background dark:bg-white/5" />
+                      </InputOTPGroup>
+                    </InputOTP>
                 )}
               />
             </div>

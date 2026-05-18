@@ -64,7 +64,7 @@ export function AppSidebar() {
   const pathname = usePathname();
 
   return (
-    <Sidebar variant="sidebar" collapsible="icon" className="border-r border-sidebar-border bg-sidebar text-sidebar-foreground h-screen">
+    <Sidebar variant="sidebar" collapsible="icon" className="border-r border-sidebar-border bg-background text-sidebar-foreground h-screen [&_[data-sidebar=sidebar]]:!bg-background">
       <SidebarHeader className="py-6 px-4 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-4">
         <Link href="/" className="flex items-center gap-3 overflow-hidden group-data-[collapsible=icon]:justify-center">
           <img
