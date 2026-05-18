@@ -3,7 +3,7 @@ import {infer as zodInfer } from 'zod';
 
 
 export const UserLoginSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  identifier: z.string().min(1, "Email or username is required"),
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 export type IUserLoginSchema = z.infer<typeof UserLoginSchema>;
@@ -17,31 +17,31 @@ export const UserRegistrationSchema = z.object({
 export type IUserRegistrationSchema = z.infer<typeof UserRegistrationSchema>;
 
 export const VerifyUserSchema = z.object({
-  email: z.string().email(),
-  code: z.string().length(6),
+  identifier: z.string().min(1, "Email or username is required"),
+  verification_code: z.string().length(6),
 });
 export type IVerifyUserSchema = z.infer<typeof VerifyUserSchema>;
 
 export const CheckVerificationCodeSchema = z.object({
-  email: z.string().email(),
-  code: z.string().length(6),
+  identifier: z.string().min(1, "Email or username is required"),
+  verification_code: z.string().length(6),
 });
 export type ICheckVerificationCodeSchema = z.infer<typeof CheckVerificationCodeSchema>;
 
 export const ForgotPasswordSchema = z.object({
-  email: z.string().email(),
+  identifier: z.string().min(1, "Email or username is required"),
 });
 export type IForgotPasswordSchema = z.infer<typeof ForgotPasswordSchema>;
 
 export const ResetPasswordSchema = z.object({
-  email: z.string().email(),
-  code: z.string().length(6),
+  identifier: z.string().min(1, "Email or username is required"),
+  verification_code: z.string().length(6),
   new_password: z.string().min(8),
 });
 export type IResetPasswordSchema = z.infer<typeof ResetPasswordSchema>;
 
 export const ResendVerificationSchema = z.object({
-  email: z.string().email(),
+  identifier: z.string().min(1, "Email or username is required"),
 });
 export type IResendVerificationSchema = z.infer<typeof ResendVerificationSchema>;
 

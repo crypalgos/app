@@ -11,14 +11,19 @@ import { UserLoginSchema, IUserLoginSchema } from "@/schema/user.schema";
 import { AuthActions } from "@/api-actions/auth-actions";
 
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { FieldGroup, Field, FieldLabel, FieldError } from "@/components/ui/field";
+
+import { useAuthStore } from "@/store/auth-store";
+import { GoogleLoginButton } from "@/components/google-login-button";
+
 
 export default function LoginPage() {
   const router = useRouter();
   const [globalError, setGlobalError] = useState<string | null>(null);
+  const setLogin = useAuthStore((state) => state.setLogin);
 
   const {
     register,
@@ -27,7 +32,7 @@ export default function LoginPage() {
   } = useForm<IUserLoginSchema>({
     resolver: zodResolver(UserLoginSchema),
     defaultValues: {
-      email: "",
+      identifier: "",
       password: "",
     },
   });
@@ -36,7 +41,7 @@ export default function LoginPage() {
     setGlobalError(null);
     try {
       const response = await AuthActions.LoginAction(data);
-      // Optional: Handle token saving or global state update here
+      setLogin(response);
       router.push("/dashboard"); // Redirect to dashboard or appropriate route
     } catch (error: any) {
       setGlobalError(
@@ -61,53 +66,66 @@ export default function LoginPage() {
         </Alert>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-        <div className="space-y-2">
-          <Label htmlFor="email" className="text-foreground/80">Email address</Label>
-          <Input
-            id="email"
-            type="email"
-            placeholder="name@example.com"
-            className="h-11 bg-black/5 dark:bg-white/5 border-border/50 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all"
-            {...register("email")}
-            disabled={isSubmitting}
-          />
-          {errors.email && (
-            <p className="text-xs text-destructive font-medium mt-1">{errors.email.message}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="password" className="text-foreground/80">Password</Label>
-            <Link
-              href="/forgot-password"
-              className="text-xs font-medium text-primary hover:underline hover:text-primary/80 transition-colors"
-            >
-              Forgot password?
-            </Link>
+      <div className="flex flex-col gap-4">
+        <GoogleLoginButton />
+        
+        <div className="relative flex items-center justify-center my-1">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-border/50"></div>
           </div>
-          <Input
-            id="password"
-            type="password"
-            placeholder="••••••••"
-            className="h-11 bg-black/5 dark:bg-white/5 border-border/50 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all"
-            {...register("password")}
-            disabled={isSubmitting}
-          />
-          {errors.password && (
-            <p className="text-xs text-destructive font-medium mt-1">{errors.password.message}</p>
-          )}
+          <span className="relative px-3 text-[10px] uppercase bg-background text-muted-foreground font-bold tracking-wider z-10">
+            Or continue with email
+          </span>
         </div>
+      </div>
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <FieldGroup>
+          <Field data-invalid={!!errors.identifier}>
+            <FieldLabel htmlFor="identifier" className="text-foreground/80">Email or Username</FieldLabel>
+            <Input
+              id="identifier"
+              type="text"
+              placeholder="name@example.com or username"
+              className="h-11 bg-black/5 dark:bg-white/5 border-border/50 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all"
+              {...register("identifier")}
+              aria-invalid={!!errors.identifier}
+              disabled={isSubmitting}
+            />
+            <FieldError errors={[errors.identifier]} />
+          </Field>
+
+          <Field data-invalid={!!errors.password}>
+            <div className="flex items-center justify-between w-full">
+              <FieldLabel htmlFor="password" className="text-foreground/80">Password</FieldLabel>
+              <Link
+                href="/forgot-password"
+                className="text-xs font-medium text-primary hover:underline hover:text-primary/80 transition-colors"
+              >
+                Forgot password?
+              </Link>
+            </div>
+            <Input
+              id="password"
+              type="password"
+              placeholder="••••••••"
+              className="h-11 bg-black/5 dark:bg-white/5 border-border/50 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all"
+              {...register("password")}
+              aria-invalid={!!errors.password}
+              disabled={isSubmitting}
+            />
+            <FieldError errors={[errors.password]} />
+          </Field>
+        </FieldGroup>
 
         <div className="flex items-center space-x-2 pt-1 pb-3">
           <Checkbox id="remember" className="border-border/60 data-[state=checked]:bg-primary" />
-          <Label
+          <label
             htmlFor="remember"
-            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-muted-foreground"
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-muted-foreground cursor-pointer"
           >
             Remember for 30 days
-          </Label>
+          </label>
         </div>
 
         <Button
@@ -127,6 +145,8 @@ export default function LoginPage() {
       </form>
 
       <div className="text-center mt-4">
+
+
         <p className="text-sm text-muted-foreground">
           Don&apos;t have an account?{" "}
           <Link

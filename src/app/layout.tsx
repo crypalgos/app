@@ -22,11 +22,15 @@ export const metadata: Metadata = {
   description: "Advanced algorithmic strategies, flow-based builders, and rigorous backtesting.",
 };
 
-export default function RootLayout({
+import { getServerUser } from "@/lib/server-auth";
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const user = await getServerUser();
+
   return (
     <html
       lang="en"
@@ -39,6 +43,7 @@ export default function RootLayout({
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
+          initialUser={user}
         >
           <main className="flex-1">{children}</main>
         </Providers>

@@ -1,19 +1,9 @@
-"use client";
-
 import { ReactNode } from "react";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-import ProfileDropdown from "@/components/kokonutui/profile-dropdown";
-import { useUser } from "@/api-actions/hooks/user-hooks";
-import Link from "next/link";
-import { NavbarButton } from "@/app/(public)/_components/base/resizable-navbar";
-import { IconLogin2 } from "@tabler/icons-react";
-import { Loader2 } from "lucide-react";
+import { DashboardHeaderActions } from "./_components/header-actions";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const { data: user, isLoading } = useUser();
-
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -45,22 +35,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
 
           {/* Theme Toggle & User Auth Action Controls */}
-          <div className="pl-2 shrink-0 flex items-center gap-3">
-            <ThemeToggle className="scale-90" />
-            
-            {isLoading ? (
-              <div className="w-8 h-8 flex items-center justify-center">
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground/60" />
-              </div>
-            ) : user ? (
-              <ProfileDropdown className="scale-95 origin-right" />
-            ) : (
-              <NavbarButton variant="shimmer" href="/login" className="h-8.5 py-1 px-3 text-xs font-bold gap-1.5">
-                Login
-                <IconLogin2 size={15} stroke={2.5} />
-              </NavbarButton>
-            )}
-          </div>
+          <DashboardHeaderActions />
         </header>
         <main className="flex-1 p-4 md:p-6 bg-background">
           {children}

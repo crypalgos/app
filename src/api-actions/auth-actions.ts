@@ -56,6 +56,11 @@ export const AuthActions = {
         return response.data.data;
     },
 
+    GoogleLoginAction: async (data: { id_token: string }): Promise<ILoginResponse> => {
+        const response = await axiosInstance.post<ApiResponse<ILoginResponse>>("/auth/google", data);
+        return response.data.data;
+    },
+
     LogoutAction: async (): Promise<IUniversalMessage> => {
         const response = await axiosInstance.post<ApiResponse<IUniversalMessage>>("/auth/logout");
         return response.data.data;

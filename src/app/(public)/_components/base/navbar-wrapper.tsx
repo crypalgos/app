@@ -17,9 +17,11 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { IconLogin2 } from "@tabler/icons-react";
 import { useUser } from "@/api-actions/hooks/user-hooks";
 import ProfileDropdown from "@/components/kokonutui/profile-dropdown";
+import { LoginDialog } from "@/components/login-dialog";
 
 export function NavbarWrapper() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
   const { data: user, isLoading } = useUser();
 
   const navItems = [
@@ -53,7 +55,7 @@ export function NavbarWrapper() {
             (user ? (
               <ProfileDropdown />
             ) : (
-              <NavbarButton variant="shimmer" href="/login">
+              <NavbarButton variant="shimmer" as="button" onClick={() => setIsLoginOpen(true)}>
                 Login
                 <IconLogin2 size={18} stroke={2} />
               </NavbarButton>
@@ -96,10 +98,13 @@ export function NavbarWrapper() {
                 </div>
               ) : (
                 <NavbarButton
-                  onClick={() => setIsMobileMenuOpen(false)}
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    setIsLoginOpen(true);
+                  }}
                   variant="primary"
                   className="w-full"
-                  href="/login"
+                  as="button"
                 >
                   Login
                   <IconLogin2 size={18} stroke={2} />
@@ -108,6 +113,9 @@ export function NavbarWrapper() {
           </div>
         </MobileNavMenu>
       </MobileNav>
+
+      {/* Global Login Dialog Trigger */}
+      <LoginDialog isOpen={isLoginOpen} onOpenChange={setIsLoginOpen} />
     </Navbar>
   );
 }
