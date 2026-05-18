@@ -49,7 +49,7 @@ const AnimatedCanopy = ({
     {applyMask && (
       <div
         className={cn(
-          "pointer-events-none absolute inset-0 z-10 h-full w-full from-white/50 from-5% via-transparent via-50% to-white/50 to-95% dark:from-gray-800/50 dark:via-transparent dark:to-gray-800/50",
+          "pointer-events-none absolute inset-0 z-10 h-full w-full from-background/80 from-5% via-transparent via-50% to-background/80 to-95%",
           vertical ? "bg-linear-to-b" : "bg-linear-to-r",
         )}
       />
@@ -66,12 +66,14 @@ const TestimonialCard = ({
 }) => (
   <div
     className={cn(
-      "group mx-2 flex h-32 w-80 shrink-0 cursor-pointer overflow-hidden rounded-xl border border-transparent p-3 transition-all hover:border-blue-400 hover:shadow-[0_0_10px_#60a5fa] dark:hover:border-blue-400",
+      "group mx-2 flex h-32 w-80 shrink-0 cursor-pointer overflow-hidden rounded-xl border border-border/40 bg-card/50 p-3 transition-all duration-300 hover:border-primary/40 hover:bg-card hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5",
       className,
     )}
   >
-    <div className="flex items-start gap-3">
-      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border-2 border-gray-200 dark:border-gray-600">
+    <div className="flex items-start gap-3 relative">
+      {/* Subtle quote mark */}
+      <span className="absolute -top-1 -left-0.5 text-3xl leading-none text-primary/10 font-serif select-none pointer-events-none">&ldquo;</span>
+      <div className="relative size-10 shrink-0 overflow-hidden rounded-full border border-border/60 ring-2 ring-primary/10 mt-1">
         <img
           src={testimonial.image}
           alt={testimonial.name}
@@ -80,14 +82,14 @@ const TestimonialCard = ({
       </div>
       <div className="flex-1">
         <div className="flex items-baseline gap-2">
-          <span className="text-sm font-bold text-foreground">
+          <span className="text-sm font-semibold text-foreground">
             {testimonial.name}
           </span>
           <span className="text-xs text-muted-foreground">
             {testimonial.handle}
           </span>
         </div>
-        <p className="mt-1 line-clamp-3 text-sm text-foreground">
+        <p className="mt-1 line-clamp-3 text-sm text-muted-foreground leading-relaxed">
           {testimonial.description}
         </p>
       </div>

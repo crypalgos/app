@@ -251,7 +251,7 @@ export default function RegisterPage() {
               <Input
                 id="name"
                 placeholder="John Doe"
-                className="h-11 bg-black/5 dark:bg-white/5 border-border/50 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all"
+                className="h-11 bg-background dark:bg-white/5 border-zinc-200 dark:border-border/50 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all"
                 {...register("name")}
                 aria-invalid={!!errors.name}
               />
@@ -264,7 +264,7 @@ export default function RegisterPage() {
                 id="email"
                 type="email"
                 placeholder="name@example.com"
-                className="h-11 bg-black/5 dark:bg-white/5 border-border/50 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all"
+                className="h-11 bg-background dark:bg-white/5 border-zinc-200 dark:border-border/50 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all"
                 {...register("email")}
                 aria-invalid={!!errors.email}
               />
@@ -291,7 +291,7 @@ export default function RegisterPage() {
                 <Input
                   id="username"
                   placeholder="johndoe"
-                  className="h-11 bg-black/5 dark:bg-white/5 border-border/50 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all pr-10"
+                  className="h-11 bg-background dark:bg-white/5 border-zinc-200 dark:border-border/50 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all pr-10"
                   {...register("username")}
                   aria-invalid={!!errors.username}
                 />
@@ -343,7 +343,7 @@ export default function RegisterPage() {
                   id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
-                  className="h-11 bg-black/5 dark:bg-white/5 border-border/50 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all pr-10"
+                  className="h-11 bg-background dark:bg-white/5 border-zinc-200 dark:border-border/50 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all pr-10"
                   {...register("password")}
                   aria-invalid={!!errors.password}
                   disabled={isSubmitting}
@@ -366,7 +366,7 @@ export default function RegisterPage() {
                   id="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
                   placeholder="••••••••"
-                  className="h-11 bg-black/5 dark:bg-white/5 border-border/50 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all pr-10"
+                  className="h-11 bg-background dark:bg-white/5 border-zinc-200 dark:border-border/50 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all pr-10"
                   {...register("confirmPassword")}
                   aria-invalid={!!errors.confirmPassword}
                   disabled={isSubmitting}

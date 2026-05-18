@@ -87,7 +87,7 @@ export default function LoginPage() {
               id="identifier"
               type="text"
               placeholder="name@example.com or username"
-              className="h-11 bg-black/5 dark:bg-white/5 border-border/50 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all"
+              className="h-11 bg-background dark:bg-white/5 border-zinc-200 dark:border-border/50 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all"
               {...register("identifier")}
               aria-invalid={!!errors.identifier}
               disabled={isSubmitting}
@@ -109,7 +109,7 @@ export default function LoginPage() {
               id="password"
               type="password"
               placeholder="••••••••"
-              className="h-11 bg-black/5 dark:bg-white/5 border-border/50 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all"
+              className="h-11 bg-background dark:bg-white/5 border-zinc-200 dark:border-border/50 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all"
               {...register("password")}
               aria-invalid={!!errors.password}
               disabled={isSubmitting}

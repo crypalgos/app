@@ -270,7 +270,7 @@ export default function ForgotPasswordPage() {
               <Input
                 id="identifier"
                 placeholder="name@example.com or username"
-                className="h-11 bg-black/5 dark:bg-white/5 border-border/50 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all"
+                className="h-11 bg-background dark:bg-white/5 border-zinc-200 dark:border-border/50 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all"
                 {...register("identifier")}
                 aria-invalid={!!errors.identifier}
                 disabled={requestingCode}
@@ -383,7 +383,7 @@ export default function ForgotPasswordPage() {
                   id="new_password"
                   type={showNewPassword ? "text" : "password"}
                   placeholder="••••••••"
-                  className="pr-10 h-11 bg-black/5 dark:bg-white/5 border-border/50 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all rounded-xl"
+                  className="pr-10 h-11 bg-background dark:bg-white/5 border-zinc-200 dark:border-border/50 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all rounded-xl"
                   {...register("new_password")}
                   aria-invalid={!!errors.new_password}
                   disabled={isSubmitting}
@@ -449,7 +449,7 @@ export default function ForgotPasswordPage() {
                   id="confirm_password"
                   type={showConfirmPassword ? "text" : "password"}
                   placeholder="••••••••"
-                  className="pr-10 h-11 bg-black/5 dark:bg-white/5 border-border/50 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all rounded-xl"
+                  className="pr-10 h-11 bg-background dark:bg-white/5 border-zinc-200 dark:border-border/50 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all rounded-xl"
                   {...register("confirm_password")}
                   aria-invalid={!!errors.confirm_password}
                   disabled={isSubmitting}
