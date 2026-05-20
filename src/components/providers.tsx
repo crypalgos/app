@@ -50,7 +50,7 @@ export function Providers({
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <NuqsAdapter>{children}</NuqsAdapter>
-          <Toaster position="top-right" richColors closeButton />
+          <Toaster position="bottom-right" richColors closeButton />
         </TooltipProvider>
       </QueryClientProvider>
     </NextThemesProvider>

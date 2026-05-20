@@ -87,7 +87,7 @@
 
 .dark,
 [data-theme="dark"] {
-  --background: oklch(19.125% 0.00002 271.152);
+  --background: oklch(19.95% 0.00256 248.161);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
@@ -113,7 +113,7 @@
   --chart-5: oklch(0.424 0.199 265.638);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.623 0.214 259.815);
+  --sidebar-primary: oklch(0.546 0.245 262.881);
   --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
@@ -174,4 +174,8 @@
   .group:hover .group-hover\:paused {
     animation-play-state: paused;
   }
+}
+
+.react-flow__attribution {
+  display: none !important;
 }

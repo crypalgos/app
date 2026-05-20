@@ -17,7 +17,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <SidebarTrigger className="-ml-2 opacity-70 hover:opacity-100" />
 
             {/* Header Tabs */}
-            <div className="flex-1 overflow-x-auto no-scrollbar mask-fade-right">
+            {/* <div className="flex-1 overflow-x-auto no-scrollbar mask-fade-right">
               <nav className="flex items-center gap-1 text-[13px] font-medium min-w-max pr-4">
                 <button className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded-md transition-colors">
                   All Strategies
@@ -35,7 +35,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   Archived
                 </button>
               </nav>
-            </div>
+            </div> */}
           </div>
 
           {/* Theme Toggle & User Auth Action Controls */}
