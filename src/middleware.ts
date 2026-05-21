@@ -35,7 +35,7 @@ export function middleware(request: NextRequest) {
 
   // If the user has an active session cookie they are the logged-in admin.
   // Let them access any route without restriction.
-  const accessToken = request.cookies.get("access_token")?.value;
+  const accessToken = request.cookies.get("access_token")?.value || request.cookies.get("token")?.value;
   if (accessToken) {
     return NextResponse.next();
   }

@@ -83,7 +83,7 @@ export default function ProfileDropdown({
 
   const handleLogout = () => {
     logout(undefined, {
-      onSuccess: () => {
+      onSettled: () => {
         router.push("/login");
       },
     });
