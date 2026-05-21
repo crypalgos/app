@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowLeft, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, XCircle, ArrowLeft, ArrowRight, Eye, EyeOff, Sparkles } from "lucide-react";
 
 import { AuthActions } from "@/api-actions/auth-actions";
 import { Input } from "@/components/ui/input";
@@ -149,10 +149,27 @@ export default function RegisterPage() {
       </div>
 
       {globalError && (
-        <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="ml-2 font-medium">{globalError}</AlertDescription>
-        </Alert>
+        globalError.toLowerCase().includes("waitlist") ? (
+          <Alert className="bg-primary/10 border-primary/20 text-primary rounded-xl p-5 flex flex-col gap-3">
+            <div className="flex items-start gap-2.5">
+              <Sparkles className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-bold text-sm text-foreground">Pre-Launch Phase Only</h4>
+                <AlertDescription className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                  {globalError} Join our waitlist to be among the first to get access when invitations open.
+                </AlertDescription>
+              </div>
+            </div>
+            <Button asChild size="sm" className="w-full bg-primary text-primary-foreground hover:bg-primary/90 mt-1 font-semibold rounded-lg">
+              <Link href="/waitlist">Join the Waitlist</Link>
+            </Button>
+          </Alert>
+        ) : (
+          <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive rounded-xl">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="ml-2 font-medium">{globalError}</AlertDescription>
+          </Alert>
+        )
       )}
 
       {/* Social Provider Option - Only shown on Step 1 for best conversion */}

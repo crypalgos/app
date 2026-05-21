@@ -5,22 +5,27 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, AlertCircle, Sparkles } from "lucide-react";
+import { Loader2, AlertCircle, ShieldAlert } from "lucide-react";
 
 import { UserLoginSchema, IUserLoginSchema } from "@/schema/user.schema";
 import { AuthActions } from "@/api-actions/auth-actions";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FieldGroup, Field, FieldLabel, FieldError } from "@/components/ui/field";
 
 import { useAuthStore } from "@/store/auth-store";
 import { GoogleLoginButton } from "@/components/google-login-button";
 
-
-export default function LoginPage() {
+/**
+ * Admin-only login page.
+ * This route (/admin/login) is intentionally excluded from the waitlist-mode
+ * middleware redirect so the administrator can always access the platform.
+ * It is not linked from any public navigation — discoverable only via the
+ * "Are you the administrator?" link on the waitlist page.
+ */
+export default function AdminLoginPage() {
   const router = useRouter();
   const [globalError, setGlobalError] = useState<string | null>(null);
   const setLogin = useAuthStore((state) => state.setLogin);
@@ -42,7 +47,7 @@ export default function LoginPage() {
     try {
       const response = await AuthActions.LoginAction(data);
       setLogin(response);
-      router.push("/dashboard"); // Redirect to dashboard or appropriate route
+      router.push("/dashboard");
     } catch (error: any) {
       setGlobalError(
         error?.response?.data?.message || "Invalid credentials. Please try again."
@@ -52,43 +57,34 @@ export default function LoginPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Admin badge */}
       <div className="flex flex-col space-y-2 text-center md:text-left mb-4">
+        <div className="inline-flex items-center gap-1.5 self-center md:self-start px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-xs font-semibold text-amber-600 dark:text-amber-400 tracking-wide mb-1">
+          <ShieldAlert className="size-3" />
+          Administrator Access
+        </div>
         <h1 className="text-3xl font-semibold tracking-tight">Welcome back</h1>
         <p className="text-sm text-muted-foreground">
-          Enter your credentials to access your workspace
+          Enter your administrator credentials to access the platform.
         </p>
       </div>
 
       {globalError && (
-        globalError.toLowerCase().includes("waitlist") ? (
-          <Alert className="bg-primary/10 border-primary/20 text-primary rounded-xl p-5 flex flex-col gap-3">
-            <div className="flex items-start gap-2.5">
-              <Sparkles className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-              <div>
-                <h4 className="font-bold text-sm text-foreground">Pre-Launch Phase Only</h4>
-                <AlertDescription className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                  {globalError} Join our waitlist to be among the first to get access when invitations open.
-                </AlertDescription>
-              </div>
-            </div>
-            <Button asChild size="sm" className="w-full bg-primary text-primary-foreground hover:bg-primary/90 mt-1 font-semibold rounded-lg">
-              <Link href="/waitlist">Join the Waitlist</Link>
-            </Button>
-          </Alert>
-        ) : (
-          <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive rounded-xl">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription className="ml-2 font-medium">{globalError}</AlertDescription>
-          </Alert>
-        )
+        <Alert
+          variant="destructive"
+          className="bg-destructive/10 border-destructive/20 text-destructive rounded-xl"
+        >
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="ml-2 font-medium">{globalError}</AlertDescription>
+        </Alert>
       )}
 
       <div className="flex flex-col gap-4">
         <GoogleLoginButton />
-        
+
         <div className="relative flex items-center justify-center my-1">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-border/50"></div>
+            <div className="w-full border-t border-border/50" />
           </div>
           <span className="relative px-3 text-[10px] uppercase bg-background text-muted-foreground font-bold tracking-wider z-10">
             Or continue with email
@@ -99,7 +95,9 @@ export default function LoginPage() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <FieldGroup>
           <Field data-invalid={!!errors.identifier}>
-            <FieldLabel htmlFor="identifier" className="text-foreground/80">Email or Username</FieldLabel>
+            <FieldLabel htmlFor="identifier" className="text-foreground/80">
+              Email or Username
+            </FieldLabel>
             <Input
               id="identifier"
               type="text"
@@ -113,15 +111,9 @@ export default function LoginPage() {
           </Field>
 
           <Field data-invalid={!!errors.password}>
-            <div className="flex items-center justify-between w-full">
-              <FieldLabel htmlFor="password" className="text-foreground/80">Password</FieldLabel>
-              <Link
-                href="/forgot-password"
-                className="text-xs font-medium text-primary hover:underline hover:text-primary/80 transition-colors"
-              >
-                Forgot password?
-              </Link>
-            </div>
+            <FieldLabel htmlFor="password" className="text-foreground/80">
+              Password
+            </FieldLabel>
             <Input
               id="password"
               type="password"
@@ -134,16 +126,6 @@ export default function LoginPage() {
             <FieldError errors={[errors.password]} />
           </Field>
         </FieldGroup>
-
-        <div className="flex items-center space-x-2 pt-1 pb-3">
-          <Checkbox id="remember" className="border-border/60 data-[state=checked]:bg-primary" />
-          <label
-            htmlFor="remember"
-            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-muted-foreground cursor-pointer"
-          >
-            Remember for 30 days
-          </label>
-        </div>
 
         <Button
           type="submit"
@@ -162,17 +144,12 @@ export default function LoginPage() {
       </form>
 
       <div className="text-center mt-4">
-
-
-        <p className="text-sm text-muted-foreground">
-          Don&apos;t have an account?{" "}
-          <Link
-            href="/register"
-            className="font-medium text-foreground hover:text-primary transition-colors hover:underline"
-          >
-            Request access
-          </Link>
-        </p>
+        <Link
+          href="/waitlist"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          ← Back to waitlist
+        </Link>
       </div>
     </div>
   );

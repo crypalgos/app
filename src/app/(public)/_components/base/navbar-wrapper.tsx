@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Navbar,
   NavBody,
@@ -14,13 +15,16 @@ import {
 } from "./resizable-navbar";
 
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { IconLogin2 } from "@tabler/icons-react";
+import { IconLogin2, IconMailPlus } from "@tabler/icons-react";
 import { useUser } from "@/api-actions/hooks/user-hooks";
 import ProfileDropdown from "@/components/kokonutui/profile-dropdown";
 import { LoginDialog } from "@/components/login-dialog";
 import { useAuthStore } from "@/store/auth-store";
 
+const isWaitlistMode = process.env.NEXT_PUBLIC_WAITLIST_MODE === "true";
+
 export function NavbarWrapper() {
+  const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -53,6 +57,27 @@ export function NavbarWrapper() {
   const showAuthMenu = mounted && isAuthenticated && !isLoading;
   const showLoginButton = mounted && (!isAuthenticated || (!isLoading && !user));
 
+  /** Handles the CTA button click — navigates to waitlist or opens login dialog */
+  const handleCtaClick = () => {
+    if (isWaitlistMode) {
+      router.push("/waitlist");
+    } else {
+      setIsLoginOpen(true);
+    }
+  };
+
+  const handleMobileCtaClick = () => {
+    setIsMobileMenuOpen(false);
+    if (isWaitlistMode) {
+      router.push("/waitlist");
+    } else {
+      setIsLoginOpen(true);
+    }
+  };
+
+  const ctaLabel = isWaitlistMode ? "Join Waitlist" : "Login";
+  const CtaIcon = isWaitlistMode ? IconMailPlus : IconLogin2;
+
   return (
     <Navbar>
       {/* Desktop Navigation */}
@@ -63,18 +88,18 @@ export function NavbarWrapper() {
           <ThemeToggle />
           {!mounted ? (
             !isAuthenticated && (
-              <NavbarButton variant="shimmer" as="button" onClick={() => setIsLoginOpen(true)}>
-                Login
-                <IconLogin2 size={18} stroke={2} />
+              <NavbarButton variant="shimmer" as="button" onClick={handleCtaClick}>
+                {ctaLabel}
+                <CtaIcon size={18} stroke={2} />
               </NavbarButton>
             )
           ) : (
             <>
               {showAuthMenu && user && <ProfileDropdown />}
               {showLoginButton && (
-                <NavbarButton variant="shimmer" as="button" onClick={() => setIsLoginOpen(true)}>
-                  Login
-                  <IconLogin2 size={18} stroke={2} />
+                <NavbarButton variant="shimmer" as="button" onClick={handleCtaClick}>
+                  {ctaLabel}
+                  <CtaIcon size={18} stroke={2} />
                 </NavbarButton>
               )}
             </>
@@ -113,16 +138,13 @@ export function NavbarWrapper() {
             {!mounted ? (
               !isAuthenticated && (
                 <NavbarButton
-                  onClick={() => {
-                    setIsMobileMenuOpen(false);
-                    setIsLoginOpen(true);
-                  }}
+                  onClick={handleMobileCtaClick}
                   variant="primary"
                   className="w-full"
                   as="button"
                 >
-                  Login
-                  <IconLogin2 size={18} stroke={2} />
+                  {ctaLabel}
+                  <CtaIcon size={18} stroke={2} />
                 </NavbarButton>
               )
             ) : (
@@ -134,16 +156,13 @@ export function NavbarWrapper() {
                 )}
                 {showLoginButton && (
                   <NavbarButton
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      setIsLoginOpen(true);
-                    }}
+                    onClick={handleMobileCtaClick}
                     variant="primary"
                     className="w-full"
                     as="button"
                   >
-                    Login
-                    <IconLogin2 size={18} stroke={2} />
+                    {ctaLabel}
+                    <CtaIcon size={18} stroke={2} />
                   </NavbarButton>
                 )}
               </>
@@ -152,8 +171,10 @@ export function NavbarWrapper() {
         </MobileNavMenu>
       </MobileNav>
 
-      {/* Global Login Dialog Trigger */}
-      <LoginDialog isOpen={isLoginOpen} onOpenChange={setIsLoginOpen} />
+      {/* Global Login Dialog — only rendered when not in waitlist mode */}
+      {!isWaitlistMode && (
+        <LoginDialog isOpen={isLoginOpen} onOpenChange={setIsLoginOpen} />
+      )}
     </Navbar>
   );
 }
