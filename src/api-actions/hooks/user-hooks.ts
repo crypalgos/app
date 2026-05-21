@@ -44,7 +44,7 @@ export const useLogout = () => {
 
   return useMutation({
     mutationFn: () => AuthActions.LogoutAction(),
-    onSuccess: () => {
+    onSettled: () => {
       setLogout();
       queryClient.removeQueries({ queryKey: ["user", "me"] });
     },
