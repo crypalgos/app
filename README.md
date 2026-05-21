@@ -1,36 +1,81 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CrypAlgos Quantitative Command Center
 
-## Getting Started
+A high-performance, visual, and analytical Next.js platform designed for strategy building, trade execution modeling, and portfolio analytics in the CrypAlgos ecosystem.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 🌟 Overview
+
+The frontend application (`app`) operates as the primary visualization portal and algorithm design workbench. It enables quantitative traders to build, compile, and execute algorithmic strategies via interactive node graphs, monitor live portfolio metrics, and participate in pre-launch Priority Waitlists.
+
+---
+
+## ⚡️ Technology Stack
+
+We construct a highly resilient client experience utilizing a modern, optimized web architecture:
+
+| Core Technology | Scope | Library Details |
+| :--- | :--- | :--- |
+| **Framework Engine** | React 19 / Next.js 16 (App Router) | High-performance routing & edge features |
+| **Visual Node Canvas** | Quantitative Strategy Logic | `@xyflow/react` (React Flow) |
+| **Code IDE Core** | Syntax highlighting, code editing | `@monaco-editor/react` |
+| **Server State** | Caching, dynamic network queries | `@tanstack/react-query` (v5) |
+| **Client Store** | Lightweight global state sync | `zustand` (v5) |
+| **URL Query State** | URL-synchronized filters & sorting | `nuqs` (v2) |
+| **Styling Layout** | Dark quantitative theme, animations | Tailwind CSS v4 / Radix / KokonutUI |
+| **Request Interceptor**| Base URL mapping & auth tokens | `axios` |
+| **Validation Forms** | Declarative payload validation | `react-hook-form` / `zod` |
+
+---
+
+## 🔌 Environment Setup
+
+Before launching the local server, create a `.env` file in the root of the `app` folder (reference [/.env.sample](/.env.sample)):
+
+```env
+# The direct API entrypoint pointing to the active FastAPI local core
+NEXT_PUBLIC_BACKEND_URL=http://localhost:8000/api/v1
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🚀 Development Quick Start
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The project supports both `bun` (recommended) and `npm` package managers.
 
-## Learn More
+### 1. Install Dependencies
+```bash
+# Using bun
+bun install
 
-To learn more about Next.js, take a look at the following resources:
+# Or using standard npm
+npm install
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 2. Run the Development Server
+```bash
+# Using bun
+bun run dev
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Or using standard npm
+npm run dev
+```
+Open **[http://localhost:3000](http://localhost:3000)** in your browser to view the application.
 
-## Deploy on Vercel
+### 3. Build & Compile Production Target
+To ensure strict type safety, styling sheets compilation, and bundle code-splitting are flawless:
+```bash
+npm run build
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📂 Developer Guides & Knowledge Transfer Index
+
+To eliminate duplicate onboardings and ensure that future developers and AI coding agents operate with complete context, we maintain a dedicated technical suite:
+
+*   📖 **[Architectural Blueprint](/docs/architecture.md)**: Deep dive into directory structures, route group classifications, and state management strategies.
+*   📖 **[Quantitative Strategy Builder](/docs/strategy_builder.md)**: Visual node-graph canvases, Zustand flow states, Monaco Editor synchronization, and optimized rendering guides.
+*   📖 **[Performance & Scaling Guide](/docs/scaling.md)**: Optimized bundle configurations, dynamic imports code splitting, high-frequency tick rendering, and caching defaults.
+*   📖 **[Contributing Guidelines](/docs/contributing.md)**: Theme variable setups in CSS, dynamic class merging practices, component definitions, and Git pipelines.
+*   📖 **[Developer Do's & Don'ts Checklist](/docs/best_practices.md)**: Best practices and strict restrictions regarding typing, color styling, forms validation, and state isolation.

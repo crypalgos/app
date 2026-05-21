@@ -64,5 +64,15 @@ export const AuthActions = {
     LogoutAction: async (): Promise<IUniversalMessage> => {
         const response = await axiosInstance.post<ApiResponse<IUniversalMessage>>("/auth/logout");
         return response.data.data;
+    },
+
+    JoinWaitlistAction: async (data: { name: string; email: string }): Promise<any> => {
+        const response = await axiosInstance.post<ApiResponse<any>>("/auth/waitlist", data);
+        return response.data.data;
+    },
+
+    ContactAction: async (data: { name: string; email: string; subject?: string; message: string }): Promise<any> => {
+        const response = await axiosInstance.post<ApiResponse<any>>("/contact", data);
+        return response.data.data;
     }
 }
