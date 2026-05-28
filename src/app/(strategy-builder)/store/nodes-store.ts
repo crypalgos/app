@@ -23,7 +23,7 @@ const initialNodes: Node[] = [
     data: {
       label: "BTC/USDT",
       dataType: "OHLCV",
-      source: "Binance",
+      source: "Delta",
       isConnected: true,
     },
   },
@@ -294,7 +294,14 @@ type NodesState = {
   activeView: string;
   isRunning: boolean;
   isBacktesting: boolean;
+  isSaving: boolean;
   codeContent: string;
+  // Strategy meta — populated after loading from API
+  strategyId: string | null;
+  strategyName: string;
+  strategyDescription: string;
+  isCodeModified: boolean;
+  backtestTaskId: string | null;
   setNodes: (nodes: Node[]) => void;
   setEdges: (edges: Edge[]) => void;
   setViewport: (viewport: Viewport) => void;
@@ -303,7 +310,18 @@ type NodesState = {
   setActiveView: (view: string) => void;
   setIsRunning: (running: boolean) => void;
   setIsBacktesting: (backtesting: boolean) => void;
+  setIsSaving: (saving: boolean) => void;
   setCodeContent: (code: string) => void;
+  setStrategyMeta: (id: string, name: string, description: string, isCodeModified: boolean) => void;
+  setBacktestTaskId: (taskId: string | null) => void;
+  initializeFromStrategy: (strategy: {
+    id: string;
+    name: string;
+    description: string | null;
+    canvas_json: Record<string, unknown>;
+    compiled_code: string;
+    is_code_modified: boolean;
+  }) => void;
   addNode: (node: Node) => void;
   updateNode: (id: string, patch: Partial<Node>) => void;
   removeNode: (id: string) => void;
@@ -328,6 +346,12 @@ export const useNodesStore = create<NodesState>((set, get) => ({
   activeView: "canvas",
   isRunning: false,
   isBacktesting: false,
+  isSaving: false,
+  strategyId: null,
+  strategyName: "New Strategy",
+  strategyDescription: "",
+  isCodeModified: false,
+  backtestTaskId: null,
   codeContent: `import numpy as np
 import pandas as pd
 from crypalgos.strategy import StrategyBase, Indicator
@@ -363,7 +387,30 @@ class CustomGridStrategy(StrategyBase):
   setActiveView: (activeView) => set(() => ({ activeView })),
   setIsRunning: (isRunning) => set(() => ({ isRunning })),
   setIsBacktesting: (isBacktesting) => set(() => ({ isBacktesting })),
+  setIsSaving: (isSaving) => set(() => ({ isSaving })),
   setCodeContent: (codeContent) => set(() => ({ codeContent, isSynced: false })),
+
+  setStrategyMeta: (id, name, description, isCodeModified) =>
+    set(() => ({ strategyId: id, strategyName: name, strategyDescription: description, isCodeModified })),
+
+  setBacktestTaskId: (backtestTaskId) => set(() => ({ backtestTaskId })),
+
+  initializeFromStrategy: (strategy) => {
+    const canvasJson = strategy.canvas_json as {
+      nodes?: Node[];
+      edges?: Edge[];
+    };
+    set(() => ({
+      strategyId: strategy.id,
+      strategyName: strategy.name,
+      strategyDescription: strategy.description ?? "",
+      isCodeModified: strategy.is_code_modified,
+      codeContent: strategy.compiled_code,
+      nodes: canvasJson.nodes ?? initialNodes,
+      edges: canvasJson.edges ?? initialEdges,
+      isSynced: true,
+    }));
+  },
 
   addNode: (node) =>
     set((state) => ({

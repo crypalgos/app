@@ -31,6 +31,7 @@ import { TEMPLATE_STRATEGIES, type TemplateStrategy } from "./types";
 interface LaunchConsoleProps {
   onCreateStrategy: (type: "create" | "ai") => void;
   onDeployTemplate: (template: TemplateStrategy) => void;
+  isCreating?: boolean;
 }
 
 const LAUNCH_ACTIONS = [
@@ -57,6 +58,7 @@ const LAUNCH_ACTIONS = [
 export function LaunchConsole({
   onCreateStrategy,
   onDeployTemplate,
+  isCreating = false,
 }: LaunchConsoleProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -84,7 +86,8 @@ export function LaunchConsole({
           <button
             key={action.label}
             onClick={() => onCreateStrategy(action.type)}
-            className="group relative flex flex-col items-center gap-3 rounded-xl border border-border/50 bg-card p-4 md:p-5 transition-all hover:border-primary/20 hover:shadow-sm cursor-pointer"
+            disabled={isCreating}
+            className="group relative flex flex-col items-center gap-3 rounded-xl border border-border/50 bg-card p-4 md:p-5 transition-all hover:border-primary/20 hover:shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <div
               className={cn(

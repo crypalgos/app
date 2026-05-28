@@ -9,7 +9,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import BuilderSidebar from "./sidebar/builder-sidebar";
 import SubNav from "./sub-nav/sub-nav";
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import type { ReactFlowInstance } from "@xyflow/react";
 import CanvasControls from "./builder/controls/canvas-controls";
 import StartNode from "./builder/custom-node/start-node";
@@ -21,8 +21,9 @@ import CustomEdge from "./builder/custom-edge/custom-edge";
 import CustomConnectionLine from "./builder/custom-connection-line/custom-connection-line";
 import { useTheme } from "next-themes";
 import { useNodesStore } from "../store/nodes-store";
+import { useStrategy } from "@/api-actions/hooks/strategy-hooks";
 import Editor from "@monaco-editor/react";
-import { IconCode, IconFileCode, IconFileText, IconSettings } from "@tabler/icons-react";
+import { IconCode, IconFileCode, IconFileText, IconSettings, IconLoader2 } from "@tabler/icons-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -40,7 +41,11 @@ const edgeTypes = {
   custom: CustomEdge,
 };
 
-export default function Canvas() {
+interface CanvasProps {
+  strategyId: string;
+}
+
+export default function Canvas({ strategyId }: CanvasProps) {
   const {
     nodes,
     edges,
@@ -50,10 +55,31 @@ export default function Canvas() {
     setReactFlowInstance,
     activeView,
     codeContent,
-    setCodeContent
+    setCodeContent,
+    initializeFromStrategy,
   } = useNodesStore();
   const { theme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+
+  // Fetch strategy from backend
+  const { data: strategy, isLoading: isLoadingStrategy } = useStrategy(strategyId);
+
+  // Hydrate the store on first load only — subsequent refetches (after save) 
+  // update the cache but don't re-init so user edits aren't wiped.
+  const hasInitialized = React.useRef(false);
+  useEffect(() => {
+    if (strategy && !hasInitialized.current) {
+      initializeFromStrategy(strategy);
+      hasInitialized.current = true;
+    }
+  }, [strategy, initializeFromStrategy]);
+
+  // When compiled_code refreshes (e.g. after canvas save), sync into Monaco
+  useEffect(() => {
+    if (strategy && hasInitialized.current) {
+      setCodeContent(strategy.compiled_code);
+    }
+  }, [strategy?.compiled_code, setCodeContent]);
 
   const onInit = useCallback(
     (instance: ReactFlowInstance) => {
@@ -64,19 +90,32 @@ export default function Canvas() {
 
   const bgColor = resolvedTheme === "dark" ? "#151617" : "#ffffff";
   const dotsColor = resolvedTheme === "dark" ? "#46474A" : "#CCCFD1";
-  
+
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  if (!mounted) {
-    return null; // Prevents hydration mismatch
+  if (!mounted) return null;
+
+  // Full-screen loading while fetching strategy from API
+  if (isLoadingStrategy) {
+    return (
+      <>
+        <SubNav strategyId={strategyId} />
+        <div className="fixed inset-0 top-[68px] flex items-center justify-center bg-background">
+          <div className="flex flex-col items-center gap-4 text-muted-foreground">
+            <IconLoader2 className="size-8 animate-spin text-primary" />
+            <p className="text-sm font-medium">Loading strategy workspace...</p>
+          </div>
+        </div>
+      </>
+    );
   }
 
   return (
     <>
-      <SubNav />
-      
+      <SubNav strategyId={strategyId} />
+
       {activeView === "canvas" ? (
         <div className="fixed inset-0 top-[68px] overflow-hidden">
           {/* Full canvas area */}
@@ -113,14 +152,14 @@ export default function Canvas() {
       ) : (
         /* Highly immersive Monaco strategy editor */
         <div className="fixed inset-0 top-[68px] bg-background overflow-hidden flex flex-col md:flex-row">
-          
+
           {/* Left panel: File Explorer simulation */}
           <div className="w-full md:w-[260px] shrink-0 bg-card/60 dark:bg-card/45 backdrop-blur-md border-r border-border/80 p-4 flex flex-col gap-4 select-none">
             <div>
               <h3 className="font-extrabold text-[10px] tracking-widest uppercase text-muted-foreground">Workspace Strategy Files</h3>
               <p className="text-[10px] text-muted-foreground/80 mt-0.5 font-medium">Direct source code override</p>
             </div>
-            
+
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between p-2 rounded-xl bg-sidebar-primary/10 text-sidebar-primary text-xs font-bold border border-sidebar-primary/20 cursor-pointer">
                 <div className="flex items-center gap-2">
@@ -129,20 +168,20 @@ export default function Canvas() {
                 </div>
                 <Badge className="text-[8px] py-0 px-1 bg-sidebar-primary text-sidebar-primary-foreground font-mono">ACTIVE</Badge>
               </div>
-              
+
               <div className="flex items-center gap-2 p-2 rounded-xl hover:bg-muted/50 text-muted-foreground/80 text-xs font-medium cursor-not-allowed opacity-60">
                 <IconFileText className="size-4" />
                 <span>README.md</span>
               </div>
-              
+
               <div className="flex items-center gap-2 p-2 rounded-xl hover:bg-muted/50 text-muted-foreground/80 text-xs font-medium cursor-not-allowed opacity-60">
                 <IconSettings className="size-4" />
                 <span>config.json</span>
               </div>
             </div>
- 
+
             <Separator className="bg-border/60 my-2" />
- 
+
             <div className="p-3 bg-muted/20 border border-border/60 rounded-xl">
               <h4 className="text-[10px] font-extrabold text-foreground uppercase tracking-wider flex items-center gap-1.5">
                 <IconCode className="size-3.5 text-sidebar-primary" /> Strategy Engine
@@ -152,7 +191,7 @@ export default function Canvas() {
               </p>
             </div>
           </div>
-          
+
           {/* Monaco Editor Wrapper */}
           <div className="flex-grow h-full bg-[#f1f1f1] dark:bg-[#1e1e1e] relative">
             <Editor
@@ -179,12 +218,11 @@ export default function Canvas() {
                 smoothScrolling: true,
                 scrollbar: {
                   verticalScrollbarSize: 10,
-                  horizontalScrollbarSize: 10
-                }
+                  horizontalScrollbarSize: 10,
+                },
               }}
             />
           </div>
-
         </div>
       )}
     </>
