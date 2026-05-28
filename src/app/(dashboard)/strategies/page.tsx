@@ -12,88 +12,108 @@ import {
   EmptyMedia,
 } from "@/components/ui/empty";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { IconPlus, IconTerminal2 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 import { LaunchConsole } from "./_components/launch-console";
 import { WorkspaceToolbar } from "./_components/workspace-toolbar";
 import { StrategyCard } from "./_components/strategy-card";
 import { StrategyTable } from "./_components/strategy-table";
-import type { Strategy, TemplateStrategy } from "./_components/types";
+import type { TemplateStrategy } from "./_components/types";
+import { toUiStrategy } from "./_components/types";
+import {
+  useStrategies,
+  useCreateStrategy,
+  useDeleteStrategy,
+} from "@/api-actions/hooks/strategy-hooks";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [viewMode, setViewMode] = useState<"card" | "table">("card");
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const limit = 6;
 
-  // ─── Handlers ───
+  // ─── API data ───────────────────────────────────────────────────────────────
+  const { data: apiStrategies, isLoading } = useStrategies(page, limit, searchQuery);
+  const { mutateAsync: createStrategy, isPending: isCreating } = useCreateStrategy();
+  const { mutate: deleteStrategy } = useDeleteStrategy();
 
-  const handleCreateStrategy = (type?: "create" | "ai" | any) => {
-    const id = Math.random().toString(36).substr(2, 9);
-    if (type === "ai") {
-      router.push(`/workflow/${id}?mode=ai`);
-    } else {
-      router.push(`/workflow/${id}`);
+  // Map API strategies to UI model
+  const strategies = (apiStrategies?.strategies ?? []).map(toUiStrategy);
+
+  // ─── Handlers ───────────────────────────────────────────────────────────────
+
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    setPage(1);
+  };
+
+  const handleCreateStrategy = async (type?: "create" | "ai" | string) => {
+    try {
+      const newStrat = await createStrategy({
+        name: type === "ai" ? "AI Strategy" : "New Strategy",
+        description: type === "ai"
+          ? "AI-generated trading strategy"
+          : "Custom visual strategy",
+        canvas_json: {
+          nodes: [
+            {
+              id: "start-1",
+              type: "startNode",
+              position: { x: 400, y: 50 },
+              data: { label: "Start Strategy", isActive: false },
+            },
+          ],
+          edges: [],
+        },
+      });
+
+      if (type === "ai") {
+        router.push(`/workflow/${newStrat.id}?mode=ai`);
+      } else {
+        router.push(`/workflow/${newStrat.id}`);
+      }
+    } catch {
+      toast.error("Failed to create strategy. Please try again.");
     }
   };
 
-  const handleDeployTemplate = (template: TemplateStrategy) => {
-    const id = Math.random().toString(36).substr(2, 9);
-    const templateId = template.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-    router.push(`/workflow/${id}?template-id=${templateId}`);
+  const handleDeployTemplate = async (template: TemplateStrategy) => {
+    try {
+      const newStrat = await createStrategy({
+        name: template.name,
+        description: template.description,
+        canvas_json: template.canvas_json,
+      });
+      router.push(`/workflow/${newStrat.id}?template=true`);
+    } catch {
+      toast.error("Failed to deploy template. Please try again.");
+    }
   };
 
   const handleDelete = (id: string) => {
-    setStrategies((prev) => prev.filter((s) => s.id !== id));
+    deleteStrategy(id, {
+      onSuccess: () => toast.success("Strategy deleted."),
+      onError: () => toast.error("Failed to delete strategy."),
+    });
   };
 
   const handleBacktest = (id: string) => {
-    setStrategies((prev) =>
-      prev.map((s) =>
-        s.id === id
-          ? {
-              ...s,
-              trades: s.trades + 1,
-              performance: Number(
-                (s.performance + (Math.random() * 5 - 2)).toFixed(1),
-              ),
-            }
-          : s,
-      ),
-    );
+    router.push(`/workflow/${id}`);
   };
 
-  const handleToggleLive = (id: string) => {
-    setStrategies((prev) =>
-      prev.map((s) =>
-        s.id === id
-          ? { ...s, status: s.status === "active" ? "paused" : "active" }
-          : s,
-      ),
-    );
+  const handleToggleLive = (_id: string) => {
+    toast.info("Live trading coming soon.");
   };
 
   const handleEdit = (id: string) => {
-    const strat = strategies.find((s) => s.id === id);
-    if (!strat) return;
-    const newName = prompt("Rename Strategy:", strat.name);
-    if (newName?.trim()) {
-      setStrategies((prev) =>
-        prev.map((s) => (s.id === id ? { ...s, name: newName.trim() } : s)),
-      );
-    }
+    router.push(`/workflow/${id}`);
   };
 
-  // ─── Derived state ───
-
-  const filteredStrategies = strategies.filter(
-    (s) =>
-      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.type.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
-
-  // ─── Render ───
+  // ─── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <div className="flex flex-col gap-8 max-w-[1400px] mx-auto w-full px-4 md:px-6 pb-20 pt-2">
@@ -101,6 +121,7 @@ export default function DashboardPage() {
       <LaunchConsole
         onCreateStrategy={handleCreateStrategy}
         onDeployTemplate={handleDeployTemplate}
+        isCreating={isCreating}
       />
 
       <Separator />
@@ -108,14 +129,21 @@ export default function DashboardPage() {
       {/* Active Workspace */}
       <section className="flex flex-col gap-5">
         <WorkspaceToolbar
-          totalCount={strategies.length}
+          totalCount={apiStrategies?.total ?? 0}
           searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
+          onSearchChange={handleSearchChange}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
         />
 
-        {filteredStrategies.length === 0 ? (
+        {/* Loading skeletons */}
+        {isLoading ? (
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-[220px] rounded-xl" />
+            ))}
+          </div>
+        ) : strategies.length === 0 ? (
           <Empty className="border border-dashed border-border/60 min-h-[320px]">
             <EmptyHeader>
               <EmptyMedia variant="icon">
@@ -133,7 +161,8 @@ export default function DashboardPage() {
             {!searchQuery && (
               <EmptyContent>
                 <Button
-                  onClick={handleCreateStrategy}
+                  onClick={() => handleCreateStrategy("create")}
+                  disabled={isCreating}
                   className="cursor-pointer"
                 >
                   <IconPlus data-icon="inline-start" /> Deploy Strategy
@@ -150,7 +179,7 @@ export default function DashboardPage() {
                 viewMode === "table" && "md:hidden",
               )}
             >
-              {filteredStrategies.map((strat) => (
+              {strategies.map((strat) => (
                 <StrategyCard
                   key={strat.id}
                   strategy={strat}
@@ -169,13 +198,40 @@ export default function DashboardPage() {
               )}
             >
               <StrategyTable
-                strategies={filteredStrategies}
+                strategies={strategies}
                 onBacktest={handleBacktest}
                 onToggleLive={handleToggleLive}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
               />
             </div>
+
+            {/* Pagination Controls */}
+            {apiStrategies && apiStrategies.total_pages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-6">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="cursor-pointer"
+                >
+                  Previous
+                </Button>
+                <span className="text-xs text-muted-foreground font-medium">
+                  Page {apiStrategies.current_page} of {apiStrategies.total_pages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(apiStrategies.total_pages, p + 1))}
+                  disabled={page === apiStrategies.total_pages}
+                  className="cursor-pointer"
+                >
+                  Next
+                </Button>
+              </div>
+            )}
           </>
         )}
       </section>

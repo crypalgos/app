@@ -19,7 +19,7 @@ export default function DataNode({ data, selected }: DataNodeProps) {
   const { 
     label = "Market Data", 
     dataType = "OHLCV", 
-    source = "Binance",
+    source = "Delta",
     isConnected = true
   } = data || {}
 
