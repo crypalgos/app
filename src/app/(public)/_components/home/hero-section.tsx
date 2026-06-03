@@ -237,21 +237,6 @@ export default function HeroSection() {
           
           {/* Left Column: Typography & CTA */}
           <div className="lg:col-span-6 flex flex-col items-start text-left relative z-20">
-            
-            {/* Version Badge */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-              className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-muted/50 border border-border/50 text-xs font-medium text-muted-foreground mb-6 backdrop-blur-sm transition-colors hover:bg-muted/80"
-            >
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-              </span>
-              v2.4.0 Engine Release
-            </motion.div>
-
             {/* Massive Institutional Typography */}
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
@@ -295,42 +280,6 @@ export default function HeroSection() {
                 </div>
               </Link>
             </motion.div>
-
-            {/* Institutional Metrics */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 1, delay: 0.6 }}
-              className="mt-16 pt-8 border-t border-border/40 grid grid-cols-2 sm:flex sm:items-center gap-x-12 gap-y-8 w-full"
-            >
-              <div className="flex flex-col gap-1.5">
-                <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
-                  <Activity className="w-3.5 h-3.5 text-primary"/> Latency
-                </div>
-                <div className="text-2xl font-semibold text-foreground tracking-tight">&lt; 5ms</div>
-              </div>
-              
-              {/* Divider for desktop */}
-              <div className="hidden sm:block w-px h-10 bg-border/40" />
-
-              <div className="flex flex-col gap-1.5">
-                <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
-                  <BarChart2 className="w-3.5 h-3.5 text-primary"/> Backtest Speed
-                </div>
-                <div className="text-2xl font-semibold text-foreground tracking-tight">10M+ <span className="text-muted-foreground text-sm font-normal">ticks/sec</span></div>
-              </div>
-
-              {/* Divider for desktop */}
-              <div className="hidden sm:block w-px h-10 bg-border/40" />
-
-              <div className="flex flex-col gap-1.5 col-span-2 sm:col-span-1">
-                <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
-                  <Cpu className="w-3.5 h-3.5 text-primary"/> Uptime
-                </div>
-                <div className="text-2xl font-semibold text-foreground tracking-tight">99.99%</div>
-              </div>
-            </motion.div>
-
           </div>
 
           {/* Right Column: Interactive React Flow Canvas */}

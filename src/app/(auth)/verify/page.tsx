@@ -60,10 +60,9 @@ function VerifyPage() {
       toast.success("Account verified successfully!");
       router.push("/dashboard");
     } catch (error: any) {
-      setGlobalError(
-        error?.response?.data?.message || "Verification failed. Please try again."
-      );
-      toast.error(error?.response?.data?.message || "Verification failed.");
+      const errorMsg = error.message || "Verification failed. Please try again.";
+      setGlobalError(errorMsg);
+      toast.error(errorMsg);
     }
   };
 
@@ -80,7 +79,7 @@ function VerifyPage() {
       toast.success("Verification code resent successfully!");
       setCountdown(RESEND_COOLDOWN);
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to resend code.");
+      toast.error(error.message || "Failed to resend code.");
     } finally {
       setIsResending(false);
     }

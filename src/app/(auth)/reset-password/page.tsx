@@ -104,9 +104,7 @@ function ResetPasswordPage() {
       setStep(2);
       setGlobalError(null);
     } catch (error: any) {
-      setGlobalError(
-        error?.response?.data?.message || "Invalid or expired verification code."
-      );
+      setGlobalError(error.message || "Invalid or expired verification code.");
     } finally {
       setCheckingCode(false);
     }
@@ -123,9 +121,7 @@ function ResetPasswordPage() {
       // Redirect to login after successful password reset
       router.push("/login?reset=true");
     } catch (error: any) {
-      setGlobalError(
-        error?.response?.data?.message || "Failed to reset password. Please try again."
-      );
+      setGlobalError(error.message || "Failed to reset password. Please try again.");
     }
   };
 

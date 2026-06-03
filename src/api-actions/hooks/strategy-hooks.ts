@@ -77,6 +77,36 @@ export const useUpdateCanvas = (strategyId: string) => {
   });
 };
 
+/** Rename a strategy (name + description only) — reads current canvas from cache so it doesn't wipe nodes. */
+export const useRenameStrategy = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      strategyId,
+      name,
+      description,
+    }: {
+      strategyId: string;
+      name: string;
+      description: string;
+    }) => {
+      // Read existing canvas_json from React Query cache to avoid wiping canvas
+      const cached = queryClient.getQueryData<{ canvas_json: Record<string, unknown> }>(
+        STRATEGY_KEYS.detail(strategyId)
+      );
+      return StrategyActions.updateCanvas(strategyId, {
+        canvas_json: cached?.canvas_json ?? {},
+        name,
+        description,
+      });
+    },
+    onSuccess: (_data, { strategyId }) => {
+      queryClient.invalidateQueries({ queryKey: STRATEGY_KEYS.detail(strategyId) });
+      queryClient.invalidateQueries({ queryKey: STRATEGY_KEYS.list() });
+    },
+  });
+};
+
 
 /** Reset custom code — re-compile from visual DAG canvas. */
 export const useResetBuilder = (strategyId: string) => {

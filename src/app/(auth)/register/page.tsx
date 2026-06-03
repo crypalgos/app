@@ -127,9 +127,7 @@ export default function RegisterPage() {
       await AuthActions.RegisterAction(registrationData);
       router.push(`/verify?identifier=${encodeURIComponent(data.email)}`);
     } catch (error: any) {
-      setGlobalError(
-        error?.response?.data?.message || "Registration failed. Please try again."
-      );
+      setGlobalError(error.message || "Registration failed. Please try again.");
     }
   };
 

@@ -77,7 +77,7 @@ export function GridView() {
       </div>
 
       {/* Feature grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 relative z-10 max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 relative z-10 max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8">
         {features.map((feature, index) => (
           <Feature key={feature.title} {...feature} index={index} />
         ))}
@@ -100,10 +100,15 @@ function Feature({
   return (
     <div
       className={cn(
-        "flex flex-col py-10 relative group/feature border-border/30",
-        "lg:border-r",
-        (index === 0 || index === 4) && "lg:border-l",
+        "flex flex-col py-8 md:py-10 relative group/feature border-border/30",
+        // Horizontal borders:
+        index < 6 ? "border-b" : "border-b-0",
+        "lg:border-b-0",
         index < 4 && "lg:border-b",
+        // Vertical borders:
+        index % 2 === 0 ? "border-r" : "border-r-0",
+        (index === 0 || index === 4) && "lg:border-l",
+        (index + 1) % 4 !== 0 ? "lg:border-r" : "lg:border-r-0"
       )}
     >
       {/* Hover gradient overlay */}
@@ -114,7 +119,7 @@ function Feature({
       )}
 
       {/* Icon — transitions to primary on hover */}
-      <div className="mb-4 relative z-10 px-6 md:px-10 text-muted-foreground group-hover/feature:text-primary transition-colors duration-300">
+      <div className="mb-4 relative z-10 px-4 sm:px-6 md:px-10 text-muted-foreground group-hover/feature:text-primary transition-colors duration-300">
         <Icon
           className="size-5 transition-transform duration-300 group-hover/feature:scale-110"
           strokeWidth={1.5}
@@ -122,15 +127,15 @@ function Feature({
       </div>
 
       {/* Title with accent bar */}
-      <div className="text-sm font-semibold mb-2 relative z-10 px-6 md:px-10">
+      <div className="text-sm font-semibold mb-2 relative z-10 px-4 sm:px-6 md:px-10">
         <div className="absolute left-0 inset-y-0 h-6 group-hover/feature:h-8 w-1 rounded-tr-full rounded-br-full bg-border group-hover/feature:bg-primary transition-all duration-200 origin-center" />
-        <span className="group-hover/feature:translate-x-1.5 transition-transform duration-200 inline-block text-foreground">
+        <span className="group-hover/feature:translate-x-1.5 transition-transform duration-200 inline-block text-foreground text-xs sm:text-sm">
           {title}
         </span>
       </div>
 
       {/* Description */}
-      <p className="text-xs text-muted-foreground max-w-xs relative z-10 px-6 md:px-10 leading-relaxed">
+      <p className="text-[11px] sm:text-xs text-muted-foreground max-w-xs relative z-10 px-4 sm:px-6 md:px-10 leading-relaxed">
         {description}
       </p>
     </div>

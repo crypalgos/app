@@ -50,14 +50,11 @@ export default function WaitlistPage() {
       await AuthActions.JoinWaitlistAction(data);
       setSuccess(true);
     } catch (error: any) {
-      // Backend wraps errors as: { api_error: { message: "..." } }
-      const message: string =
-        error?.response?.data?.api_error?.message ||
-        error?.response?.data?.message ||
-        "Something went wrong. Please try again.";
+      const message: string = error.message || "Something went wrong. Please try again.";
 
       // Detect duplicate — show a friendlier inline state instead of a red alert
       if (
+        error?.status === 409 ||
         error?.response?.status === 409 ||
         message.toLowerCase().includes("already registered") ||
         message.toLowerCase().includes("already on the waitlist")

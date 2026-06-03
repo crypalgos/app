@@ -63,13 +63,13 @@ export const ScrollStackItem: React.FC<ScrollStackItemProps> = ({
         width: "100%",
         height: "100%",
         display: "flex",
-        alignItems: "flex-start",
+        alignItems: "center",
         justifyContent: "center",
       }}
     >
       <div
         className={cn(
-          "w-full h-[50vh] md:h-[60vh] rounded-[2rem] md:rounded-[2.5rem] border border-border bg-card backdrop-blur-2xl shadow-lg p-6 md:p-12 flex flex-col justify-center overflow-hidden transition-colors duration-500 hover:border-primary/20",
+          "w-full h-[90%] md:h-[85%] min-h-[400px] md:min-h-[460px] rounded-[2rem] md:rounded-[2.5rem] border border-border bg-card backdrop-blur-2xl shadow-lg p-6 md:p-8 lg:p-10 flex flex-col justify-center overflow-hidden transition-colors duration-500 hover:border-primary/20",
           itemClassName,
         )}
       >
@@ -106,16 +106,18 @@ const ScrollStack: React.FC<ScrollStackProps> = ({
     <div
       ref={containerRef}
       className={cn("relative w-full", className)}
-      style={{ height: `${total * 60}vh` }}
+      style={{ height: `${total * 65}vh` }}
     >
+      {/* Title rendered above sticky container so it scrolls out of view */}
+      {title && <div className="w-full relative z-20 mb-8">{title}</div>}
+
       <div
         className={cn(
-          "sticky top-0 h-[70vh] w-full overflow-hidden px-4 md:px-8 flex flex-col",
+          "sticky top-20 md:top-24 h-[calc(100vh-10rem)] md:h-[calc(100vh-12rem)] w-full overflow-hidden px-4 md:px-8 flex flex-col justify-center",
           viewportClassName,
         )}
       >
-        {title}
-        <div className="max-w-6xl mx-auto flex-1 w-full relative flex items-start">
+        <div className="max-w-6xl mx-auto w-full relative flex items-center justify-center h-full">
           {childrenArray.map((child, index) => {
             if (React.isValidElement(child)) {
               return React.cloneElement(
