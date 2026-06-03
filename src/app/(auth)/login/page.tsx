@@ -44,9 +44,7 @@ export default function LoginPage() {
       setLogin(response);
       router.push("/dashboard"); // Redirect to dashboard or appropriate route
     } catch (error: any) {
-      setGlobalError(
-        error?.response?.data?.message || "Invalid credentials. Please try again."
-      );
+      setGlobalError(error.message || "Invalid credentials. Please try again.");
     }
   };
 

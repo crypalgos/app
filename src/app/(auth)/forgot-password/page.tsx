@@ -107,9 +107,7 @@ export default function ForgotPasswordPage() {
       toast.success("Verification code sent to your registered email address.");
       setStep(2);
     } catch (error: any) {
-      setGlobalError(
-        error?.response?.data?.message || "Failed to send reset code. Please try again."
-      );
+      setGlobalError(error.message || "Failed to send reset code. Please try again.");
     } finally {
       setRequestingCode(false);
     }
@@ -129,9 +127,7 @@ export default function ForgotPasswordPage() {
       });
       setStep(3);
     } catch (error: any) {
-      setGlobalError(
-        error?.response?.data?.message || "Invalid or expired verification code."
-      );
+      setGlobalError(error.message || "Invalid or expired verification code.");
     } finally {
       setCheckingCode(false);
     }
@@ -156,9 +152,7 @@ export default function ForgotPasswordPage() {
       toast.success("Password reset successfully! Please sign in with your new credentials.");
       router.push("/login?reset=true");
     } catch (error: any) {
-      setGlobalError(
-        error?.response?.data?.message || "Failed to reset password. Please try again."
-      );
+      setGlobalError(error.message || "Failed to reset password. Please try again.");
     }
   };
 

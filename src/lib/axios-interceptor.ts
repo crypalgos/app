@@ -100,7 +100,24 @@ axiosInstance.interceptors.response.use(
       error.response.data &&
       error.response.data.api_error
     ) {
-      throw error.response.data.api_error;
+      const apiError = error.response.data.api_error;
+      let detailMsg = apiError.errors?.detail;
+
+      // Handle validation errors or complex error maps where keys represent fields
+      if (!detailMsg && apiError.errors && typeof apiError.errors === "object") {
+        const messages = Object.entries(apiError.errors)
+          .map(([field, msg]) => `${field}: ${msg}`);
+        if (messages.length > 0) {
+          detailMsg = messages.join(", ");
+        }
+      }
+
+      const fallbackMsg = apiError.message;
+      
+      const customError = new Error(detailMsg || fallbackMsg || "An error occurred");
+      (customError as any).status = apiError.status_code;
+      (customError as any).api_error = apiError;
+      throw customError;
     }
     throw error;
   },

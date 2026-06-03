@@ -49,9 +49,7 @@ export default function AdminLoginPage() {
       setLogin(response);
       router.push("/dashboard");
     } catch (error: any) {
-      setGlobalError(
-        error?.response?.data?.message || "Invalid credentials. Please try again."
-      );
+      setGlobalError(error.message || "Invalid credentials. Please try again.");
     }
   };
 

@@ -1,294 +1,13 @@
 import { create } from "zustand";
 import { applyNodeChanges, applyEdgeChanges, addEdge } from "@xyflow/react";
-import type { Edge, Node, Viewport, ReactFlowInstance } from "@xyflow/react";
+import type { Edge, Node, ReactFlowInstance } from "@xyflow/react";
 import { ensureCustomEdge } from "../_components/builder/custom-edge/edge-utils";
 
-const initialNodes: Node[] = [
-  // Start Node - Top of the flow
-  {
-    id: "start-1",
-    type: "startNode",
-    position: { x: 400, y: 50 },
-    data: {
-      label: "Start Strategy",
-      isActive: false,
-    },
-  },
 
-  // Data Source - Below start
-  {
-    id: "data-btc",
-    type: "dataNode",
-    position: { x: 400, y: 180 },
-    data: {
-      label: "BTC/USDT",
-      dataType: "OHLCV",
-      source: "Delta",
-      isConnected: true,
-    },
-  },
-
-  // Parallel Indicators - Below data source
-  {
-    id: "bollinger-bands",
-    type: "indicatorNode",
-    position: { x: 250, y: 320 },
-    data: {
-      label: "Bollinger Bands",
-      indicator: "BB",
-      period: 20,
-      value: "±2.5%",
-      isCalculating: false,
-    },
-  },
-  {
-    id: "atr-indicator",
-    type: "indicatorNode",
-    position: { x: 550, y: 320 },
-    data: {
-      label: "ATR",
-      indicator: "ATR",
-      period: 14,
-      value: "1,250",
-      isCalculating: false,
-    },
-  },
-
-  // Volatility Check - Below indicators
-  {
-    id: "high-volatility",
-    type: "conditionNode",
-    position: { x: 400, y: 460 },
-    data: {
-      label: "High Volatility Check",
-      condition: "ATR > Avg(ATR) * 1.5",
-      isConfigured: true,
-    },
-  },
-
-  // Parallel Breakout Detection - Below volatility check
-  {
-    id: "breakout-up",
-    type: "conditionNode",
-    position: { x: 250, y: 600 },
-    data: {
-      label: "Upward Breakout",
-      condition: "Price > BB_Upper",
-      isConfigured: true,
-    },
-  },
-  {
-    id: "breakout-down",
-    type: "conditionNode",
-    position: { x: 550, y: 600 },
-    data: {
-      label: "Downward Breakout",
-      condition: "Price < BB_Lower",
-      isConfigured: true,
-    },
-  },
-
-  // Action Nodes - Bottom row
-  {
-    id: "long-position",
-    type: "actionNode",
-    position: { x: 150, y: 740 },
-    data: {
-      label: "Long Position",
-      actionType: "buy",
-      amount: "50%",
-      isExecuting: false,
-    },
-  },
-  {
-    id: "short-position",
-    type: "actionNode",
-    position: { x: 400, y: 740 },
-    data: {
-      label: "Short Position",
-      actionType: "sell",
-      amount: "50%",
-      isExecuting: false,
-    },
-  },
-  {
-    id: "close-positions",
-    type: "actionNode",
-    position: { x: 650, y: 740 },
-    data: {
-      label: "Close All Positions",
-      actionType: "sell",
-      amount: "100%",
-      isExecuting: false,
-    },
-  },
-];
-
-const initialEdges: Edge[] = [
-  // Primary Flow: Start → Data
-  {
-    id: "start-to-data",
-    source: "start-1",
-    sourceHandle: "output-1",
-    target: "data-btc",
-    type: "custom",
-    data: {
-      animated: true,
-      type: "info",
-      label: "Execute",
-    },
-  },
-
-  // Data Distribution: Data → Indicators (parallel)
-  {
-    id: "data-to-bollinger",
-    source: "data-btc",
-    target: "bollinger-bands",
-    type: "custom",
-    data: {
-      type: "default",
-      label: "OHLCV Data",
-    },
-  },
-  {
-    id: "data-to-atr",
-    source: "data-btc",
-    target: "atr-indicator",
-    type: "custom",
-    data: {
-      type: "default",
-      label: "OHLCV Data",
-    },
-  },
-
-  // Indicator Analysis: ATR → Volatility Check
-  {
-    id: "atr-to-volatility",
-    source: "atr-indicator",
-    target: "high-volatility",
-    type: "custom",
-    data: {
-      type: "warning",
-      label: "ATR Value",
-    },
-  },
-
-  // Volatility Distribution: High Vol → Breakout Checks (parallel)
-  {
-    id: "volatility-to-breakout-up",
-    source: "high-volatility",
-    sourceHandle: "true",
-    target: "breakout-up",
-    type: "custom",
-    data: {
-      animated: true,
-      type: "success",
-      label: "High Volatility",
-    },
-  },
-  {
-    id: "volatility-to-breakout-down",
-    source: "high-volatility",
-    sourceHandle: "true",
-    target: "breakout-down",
-    type: "custom",
-    data: {
-      animated: true,
-      type: "success",
-      label: "High Volatility",
-    },
-  },
-
-  // Signal Input: Bollinger → Breakout Conditions
-  {
-    id: "bollinger-to-breakout-up",
-    source: "bollinger-bands",
-    target: "breakout-up",
-    type: "custom",
-    data: {
-      type: "info",
-      label: "Upper Band",
-    },
-  },
-  {
-    id: "bollinger-to-breakout-down",
-    source: "bollinger-bands",
-    target: "breakout-down",
-    type: "custom",
-    data: {
-      type: "info",
-      label: "Lower Band",
-    },
-  },
-
-  // Execution: Breakouts → Actions
-  {
-    id: "breakout-up-to-long",
-    source: "breakout-up",
-    sourceHandle: "true",
-    target: "long-position",
-    type: "custom",
-    data: {
-      animated: true,
-      type: "success",
-      label: "Buy Signal",
-    },
-  },
-  {
-    id: "breakout-down-to-short",
-    source: "breakout-down",
-    sourceHandle: "true",
-    target: "short-position",
-    type: "custom",
-    data: {
-      animated: true,
-      type: "success",
-      label: "Sell Signal",
-    },
-  },
-
-  // Risk Management: False Breakouts → Close
-  {
-    id: "breakout-up-false-to-close",
-    source: "breakout-up",
-    sourceHandle: "false",
-    target: "close-positions",
-    type: "custom",
-    data: {
-      type: "error",
-      label: "False Breakout",
-    },
-  },
-  {
-    id: "breakout-down-false-to-close",
-    source: "breakout-down",
-    sourceHandle: "false",
-    target: "close-positions",
-    type: "custom",
-    data: {
-      type: "error",
-      label: "False Breakout",
-    },
-  },
-
-  // Risk Management: Low Volatility → Close
-  {
-    id: "low-volatility-to-close",
-    source: "high-volatility",
-    sourceHandle: "false",
-    target: "close-positions",
-    type: "custom",
-    data: {
-      type: "warning",
-      label: "Low Volatility",
-    },
-  },
-];
 
 type NodesState = {
   nodes: Node[];
   edges: Edge[];
-  viewport: Viewport;
   reactFlowInstance: ReactFlowInstance | null;
   isSynced: boolean;
   activeView: string;
@@ -296,15 +15,16 @@ type NodesState = {
   isBacktesting: boolean;
   isSaving: boolean;
   codeContent: string;
+  selectedNodeId: string | null;
+  activeCreationType: string | null;
+  activeCreationSource: { nodeId: string; handleId: string | null; placeholderId?: string | null; originalTargetId?: string | null } | null;
   // Strategy meta — populated after loading from API
   strategyId: string | null;
   strategyName: string;
   strategyDescription: string;
   isCodeModified: boolean;
+  setIsCodeModified: (modified: boolean) => void;
   backtestTaskId: string | null;
-  setNodes: (nodes: Node[]) => void;
-  setEdges: (edges: Edge[]) => void;
-  setViewport: (viewport: Viewport) => void;
   setReactFlowInstance: (instance: ReactFlowInstance) => void;
   setIsSynced: (synced: boolean) => void;
   setActiveView: (view: string) => void;
@@ -314,6 +34,10 @@ type NodesState = {
   setCodeContent: (code: string) => void;
   setStrategyMeta: (id: string, name: string, description: string, isCodeModified: boolean) => void;
   setBacktestTaskId: (taskId: string | null) => void;
+  setSelectedNodeId: (id: string | null) => void;
+  setActiveCreationType: (type: string | null) => void;
+  setActiveCreationSource: (source: { nodeId: string; handleId: string | null; placeholderId?: string | null; originalTargetId?: string | null } | null) => void;
+  addPlaceholderNode: (sourceNodeId: string, handleId: string | null, expectedType: string) => void;
   initializeFromStrategy: (strategy: {
     id: string;
     name: string;
@@ -324,8 +48,13 @@ type NodesState = {
   }) => void;
   addNode: (node: Node) => void;
   updateNode: (id: string, patch: Partial<Node>) => void;
+  updateNodeData: (id: string, dataPatch: Record<string, any>) => void;
   removeNode: (id: string) => void;
   addEdge: (edge: Edge) => void;
+  deleteEdge: (id: string) => void;
+  insertPlaceholderOnEdge: (edgeId: string) => void;
+  updateEdgeLabel: (id: string, label: string) => void;
+  duplicateNode: (id: string) => void;
   onNodesChange: (changes: any) => void;
   onEdgesChange: (changes: any) => void;
   onConnect: (params: any) => void;
@@ -334,53 +63,27 @@ type NodesState = {
   zoomOut: () => void;
   fitView: () => void;
   resetView: () => void;
-  reset: () => void;
 };
 
 export const useNodesStore = create<NodesState>((set, get) => ({
-  nodes: initialNodes,
-  edges: initialEdges,
-  viewport: { x: 0, y: 0, zoom: 1 },
+  nodes: [],
+  edges: [],
   reactFlowInstance: null,
   isSynced: true,
   activeView: "canvas",
   isRunning: false,
   isBacktesting: false,
   isSaving: false,
+  selectedNodeId: null,
+  activeCreationType: null,
+  activeCreationSource: null,
   strategyId: null,
   strategyName: "New Strategy",
   strategyDescription: "",
   isCodeModified: false,
   backtestTaskId: null,
-  codeContent: `import numpy as np
-import pandas as pd
-from crypalgos.strategy import StrategyBase, Indicator
+  codeContent: ``,
 
-class CustomGridStrategy(StrategyBase):
-    def initialize(self):
-        self.set_universe(["BTC/USDT"])
-        self.set_leverage(10)
-        
-        # --- Indicators ---
-        self.bb = Indicator.BollingerBands(period=20, std=2.0)
-        self.atr = Indicator.ATR(period=14)
-        
-    def on_data(self, data):
-        price = data.close
-        
-        # Volatility check & breakout triggers
-        if self.atr.value > 1250:
-            if price > self.bb.upper:
-                # Upward Breakout Buy
-                self.buy("BTC/USDT", amount=0.5)
-            elif price < self.bb.lower:
-                # Downward Breakout Close / Short
-                self.sell("BTC/USDT", amount=0.5)
-`,
-
-  setNodes: (nodes) => set(() => ({ nodes, isSynced: false })),
-  setEdges: (edges) => set(() => ({ edges, isSynced: false })),
-  setViewport: (viewport) => set(() => ({ viewport })),
   setReactFlowInstance: (instance) =>
     set(() => ({ reactFlowInstance: instance })),
   setIsSynced: (synced) => set(() => ({ isSynced: synced })),
@@ -389,9 +92,10 @@ class CustomGridStrategy(StrategyBase):
   setIsBacktesting: (isBacktesting) => set(() => ({ isBacktesting })),
   setIsSaving: (isSaving) => set(() => ({ isSaving })),
   setCodeContent: (codeContent) => set(() => ({ codeContent, isSynced: false })),
+  setIsCodeModified: (isCodeModified) => set(() => ({ isCodeModified, isSynced: false })),
 
   setStrategyMeta: (id, name, description, isCodeModified) =>
-    set(() => ({ strategyId: id, strategyName: name, strategyDescription: description, isCodeModified })),
+    set(() => ({ strategyId: id, strategyName: name, strategyDescription: description, isCodeModified, isSynced: false })),
 
   setBacktestTaskId: (backtestTaskId) => set(() => ({ backtestTaskId })),
 
@@ -406,9 +110,18 @@ class CustomGridStrategy(StrategyBase):
       strategyDescription: strategy.description ?? "",
       isCodeModified: strategy.is_code_modified,
       codeContent: strategy.compiled_code,
-      nodes: canvasJson.nodes ?? initialNodes,
-      edges: canvasJson.edges ?? initialEdges,
+      nodes: (canvasJson.nodes ?? [
+        {
+          id: "start-1",
+          type: "startNode",
+          position: { x: 400, y: 50 },
+          deletable: false,
+          data: { label: "Start Strategy", isActive: false },
+        },
+      ]).map(n => n.id === "start-1" ? { ...n, deletable: false } : n),
+      edges: canvasJson.edges ?? [],
       isSynced: true,
+      activeView: strategy.is_code_modified ? "code" : "canvas",
     }));
   },
 
@@ -424,12 +137,131 @@ class CustomGridStrategy(StrategyBase):
       isSynced: false,
     })),
 
+  updateNodeData: (id, dataPatch) =>
+    set((state) => {
+      const activeNode = state.nodes.find((n) => n.id === id);
+      let nextNodes = state.nodes.map((n) =>
+        n.id === id ? { ...n, data: { ...n.data, ...dataPatch } } : n
+      );
+
+      // If we are updating startNode, also update the hidden riskManagementNode in the background
+      if (activeNode && activeNode.type === "startNode") {
+        const riskNode = state.nodes.find((n) => n.type === "riskManagementNode");
+        if (riskNode) {
+          nextNodes = nextNodes.map((n) =>
+            n.type === "riskManagementNode"
+              ? { ...n, data: { ...n.data, ...dataPatch } }
+              : n
+          );
+        } else {
+          // If no risk node exists, instantiate a hidden one off-screen
+          const newRiskNode = {
+            id: "rm-1",
+            type: "riskManagementNode",
+            position: { x: -9999, y: -9999 },
+            data: {
+              label: "Risk Guard",
+              ...dataPatch,
+            },
+          };
+          nextNodes.push(newRiskNode);
+        }
+      }
+
+      return {
+        nodes: nextNodes,
+        isSynced: false,
+      };
+    }),
+
+  setSelectedNodeId: (selectedNodeId) => set(() => ({ selectedNodeId })),
+
+  setActiveCreationType: (activeCreationType) => set(() => ({ activeCreationType })),
+
+  setActiveCreationSource: (activeCreationSource) => set(() => ({ activeCreationSource })),
+
+  addPlaceholderNode: (sourceNodeId, handleId, expectedType) =>
+    set((state) => {
+      const parentNode = state.nodes.find((n) => n.id === sourceNodeId);
+      if (!parentNode) return {};
+
+      // Check for existing placeholder on same parent/handle
+      const existingPlaceholder = state.nodes.find(
+        (n) =>
+          n.type === "placeholderNode" &&
+          n.data?.parentSourceId === sourceNodeId &&
+          n.data?.parentSourceHandleId === handleId
+      );
+      if (existingPlaceholder) return {};
+
+      const placeholderId = `placeholder-${Date.now()}`;
+      const x = parentNode.position.x + (Math.random() * 20 - 10);
+      const y = parentNode.position.y + 130;
+
+      const newPlaceholder = {
+        id: placeholderId,
+        type: "placeholderNode",
+        position: { x, y },
+        data: {
+          expectedType,
+          parentSourceId: sourceNodeId,
+          parentSourceHandleId: handleId,
+        },
+      };
+
+      const newEdge = {
+        id: `edge-${sourceNodeId}-${placeholderId}`,
+        source: sourceNodeId,
+        sourceHandle: handleId || undefined,
+        target: placeholderId,
+        type: "custom",
+        data: {
+          type: "placeholder",
+          animated: false,
+          label: "Add Node",
+        },
+      };
+
+      return {
+        nodes: [...state.nodes, newPlaceholder],
+        edges: [...state.edges, newEdge],
+        isSynced: false,
+      };
+    }),
+
   removeNode: (id) =>
-    set((state) => ({
-      nodes: state.nodes.filter((n) => n.id !== id),
-      edges: state.edges.filter((e) => e.source !== id && e.target !== id),
-      isSynced: false,
-    })),
+    set((state) => {
+      // Deletion protection for the start strategy root node
+      if (id === "start-1") return {};
+      return {
+        nodes: state.nodes.filter((n) => n.id !== id),
+        edges: state.edges.filter((e) => e.source !== id && e.target !== id),
+        isSynced: false,
+      };
+    }),
+
+  duplicateNode: (id) =>
+    set((state) => {
+      const sourceNode = state.nodes.find((n) => n.id === id);
+      if (!sourceNode || sourceNode.type === "startNode") return {};
+
+      // Clone parameters and spawn the copy at a 50px visual offset
+      const duplicateId = `${sourceNode.type}-${Date.now()}`;
+      const clone = {
+        ...sourceNode,
+        id: duplicateId,
+        position: {
+          x: sourceNode.position.x + 50,
+          y: sourceNode.position.y + 50,
+        },
+        selected: false,
+      };
+
+      return {
+        nodes: [...state.nodes, clone],
+        isSynced: false,
+      };
+    }),
 
   addEdge: (edge) =>
     set((state) => ({
@@ -437,12 +269,92 @@ class CustomGridStrategy(StrategyBase):
       isSynced: false,
     })),
 
+  deleteEdge: (id) =>
+    set((state) => ({
+      edges: state.edges.filter((e) => e.id !== id),
+      isSynced: false,
+    })),
+
+  updateEdgeLabel: (id, label) =>
+    set((state) => ({
+      edges: state.edges.map((e) =>
+        e.id === id ? { ...e, data: { ...e.data, label } } : e
+      ),
+      isSynced: false,
+    })),
+
+  insertPlaceholderOnEdge: (edgeId) =>
+    set((state) => {
+      const edge = state.edges.find((e) => e.id === edgeId);
+      if (!edge) return {};
+
+      const sourceNode = state.nodes.find((n) => n.id === edge.source);
+      const targetNode = state.nodes.find((n) => n.id === edge.target);
+      if (!sourceNode || !targetNode) return {};
+
+      // Compute midpoint coordinates
+      const x = (sourceNode.position.x + targetNode.position.x) / 2;
+      const y = (sourceNode.position.y + targetNode.position.y) / 2;
+
+      const placeholderId = `placeholder-${Date.now()}`;
+
+      // Create new placeholder node
+      const newPlaceholder = {
+        id: placeholderId,
+        type: "placeholderNode",
+        position: { x, y },
+        data: {
+          parentSourceId: edge.source,
+          parentSourceHandleId: edge.sourceHandle || null,
+          originalTargetId: edge.target,
+        },
+      };
+
+      // Create two dashed placeholder edges: Source -> Placeholder and Placeholder -> Target
+      const edge1 = {
+        id: `edge-${edge.source}-${placeholderId}`,
+        source: edge.source,
+        sourceHandle: edge.sourceHandle || undefined,
+        target: placeholderId,
+        type: "custom",
+        data: {
+          type: "placeholder",
+          animated: false,
+          label: "Add Node",
+        },
+      };
+
+      const edge2 = {
+        id: `edge-${placeholderId}-${edge.target}`,
+        source: placeholderId,
+        target: edge.target,
+        type: "custom",
+        data: {
+          type: "placeholder",
+          animated: false,
+          label: "To Target",
+        },
+      };
+
+      // Remove the original edge and add the placeholder node & both draft edges
+      const nextEdges = state.edges.filter((e) => e.id !== edgeId).concat(edge1, edge2);
+
+      return {
+        nodes: [...state.nodes, newPlaceholder],
+        edges: nextEdges,
+        isSynced: false,
+      };
+    }),
+
   onNodesChange: (changes) =>
     set((state) => {
-      // Only set unsaved if changes actually represent mutations
-      const isMutation = changes.some((c: any) => c.type === 'remove' || c.type === 'position' || c.type === 'select');
+      // Keyboard deletion protection: block removals of start-1
+      const safeChanges = changes.filter(
+        (c: any) => !(c.type === "remove" && c.id === "start-1")
+      );
+      const isMutation = safeChanges.some((c: any) => c.type === 'remove' || c.type === 'position' || c.type === 'select');
       return {
-        nodes: applyNodeChanges(changes, state.nodes),
+        nodes: applyNodeChanges(safeChanges, state.nodes),
         isSynced: isMutation ? false : state.isSynced,
       };
     }),
@@ -488,6 +400,10 @@ class CustomGridStrategy(StrategyBase):
               edgeType = "success";
               edgeLabel = "Action Flow";
               break;
+            case "riskManagementNode":
+              edgeType = "error";
+              edgeLabel = "Risk Safeguard";
+              break;
             default:
               edgeType = "default";
               edgeLabel = "Connection";
@@ -530,7 +446,7 @@ class CustomGridStrategy(StrategyBase):
   fitView: () => {
     const { reactFlowInstance } = get();
     if (reactFlowInstance) {
-      reactFlowInstance.fitView({ padding: 0.1 });
+      reactFlowInstance.fitView({ padding: 0.1, maxZoom: 0.95 });
     }
   },
 
@@ -540,14 +456,7 @@ class CustomGridStrategy(StrategyBase):
       reactFlowInstance.setCenter(0, 0, { zoom: 1 });
     }
   },
-
-  reset: () =>
-    set(() => ({
-      nodes: initialNodes,
-      edges: initialEdges,
-      viewport: { x: 0, y: 0, zoom: 1 },
-    })),
 }));
 
-export const nodesInitial = initialNodes;
-export const edgesInitial = initialEdges;
+export const nodesInitial: Node[] = [];
+export const edgesInitial: Edge[] = [];

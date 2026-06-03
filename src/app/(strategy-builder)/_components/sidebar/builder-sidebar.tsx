@@ -1,5 +1,6 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
+
 import {
   TrendingUp,
   Zap,
@@ -10,8 +11,6 @@ import {
   MousePointer,
   Hand,
   Maximize2,
-  Sun,
-  Moon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,7 +20,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
-import { useTheme } from "next-themes";
+import { useNodesStore } from "../../store/nodes-store";
 
 // Algorithmic Trading Strategy Builder Tools
 const toolbarItems = [
@@ -127,22 +126,26 @@ function ToolbarItem({ item, isActive, onSelect }: ToolbarItemProps) {
 
 export default function BuilderSidebar() {
   const [activeTool, setActiveTool] = useState("select");
-  const { setTheme, resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
 
-  // Avoid hydration mismatch for theme toggler icon
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const setActiveCreationType = useNodesStore((state) => state.setActiveCreationType);
 
   const handleToolSelect = (toolId: string) => {
     setActiveTool(toolId);
     console.log("Selected trading tool:", toolId);
-  };
-
-  const isDark = resolvedTheme === "dark";
-  const toggleTheme = () => {
-    setTheme(isDark ? "light" : "dark");
+    
+    // Map sidebar tools to node creation types
+    const creationMap: Record<string, string> = {
+      data: "data",
+      indicators: "indicator",
+      conditions: "condition",
+      actions: "action",
+      risk: "risk",
+    };
+    
+    const creationType = creationMap[toolId];
+    if (creationType) {
+      setActiveCreationType(creationType);
+    }
   };
 
   return (
@@ -176,33 +179,6 @@ export default function BuilderSidebar() {
             ))}
           </div>
 
-          {/* Dynamic Theme Toggler */}
-          {mounted && (
-            <>
-              <Separator className="my-2" />
-              <div className="flex flex-col gap-1">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={toggleTheme}
-                      className="w-10 h-10 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors rounded-lg cursor-pointer"
-                    >
-                      {isDark ? (
-                        <Sun className="w-4 h-4 text-amber-500 animate-pulse" />
-                      ) : (
-                        <Moon className="w-4 h-4 text-indigo-500" />
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="font-medium">
-                    <p>Switch to {isDark ? "Light Mode" : "Dark Mode"}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            </>
-          )}
         </div>
       </TooltipProvider>
     </div>

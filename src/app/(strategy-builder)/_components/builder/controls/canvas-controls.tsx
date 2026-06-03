@@ -97,7 +97,7 @@ export default function CanvasControls() {
   };
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20">
       <TooltipProvider>
         <div className="bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-2xl p-1 flex items-center gap-1">
           {controlItems.map((item, index) => (

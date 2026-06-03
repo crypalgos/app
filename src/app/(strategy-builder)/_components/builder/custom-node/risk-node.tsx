@@ -1,29 +1,30 @@
 import React, { useState } from "react";
 import { Handle, Position } from "@xyflow/react";
-import { IconGitBranch, IconTrash, IconSettings, IconCopy } from "@tabler/icons-react";
+import { IconShield, IconTrash, IconSettings, IconCopy } from "@tabler/icons-react";
 import { Badge } from "@/components/ui/badge";
 import { useNodesStore } from "../../../store/nodes-store";
 
-interface ConditionNodeData {
+interface RiskNodeData {
   label?: string;
-  leftOperand?: string;
-  operator?: string;
-  rightOperand?: string | number;
-  compoundLogic?: string;
+  position_size_pct?: number;
+  max_drawdown_pct?: number;
+  daily_loss_limit?: number | null;
+  atr_sl_mult?: number;
+  atr_tp_mult?: number;
+  max_open_positions?: number;
 }
 
-interface ConditionNodeProps {
+interface RiskNodeProps {
   id: string;
-  data: ConditionNodeData;
+  data: RiskNodeData;
   selected?: boolean;
 }
 
-export default React.memo(function ConditionNode({ id, data, selected }: ConditionNodeProps) {
+export default React.memo(function RiskNode({ id, data, selected }: RiskNodeProps) {
   const {
-    label = "Condition Gate",
-    leftOperand = "price",
-    operator = "GREATER_THAN",
-    rightOperand = "SMA(20)",
+    label = "Risk Guard",
+    max_drawdown_pct = 0.25,
+    max_open_positions = 2,
   } = data || {};
 
   const [isHovered, setIsHovered] = useState(false);
@@ -42,20 +43,6 @@ export default React.memo(function ConditionNode({ id, data, selected }: Conditi
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     removeNode(id);
-  };
-
-  const getConditionExpression = () => {
-    const opSymbols: Record<string, string> = {
-      GREATER_THAN: ">",
-      LESS_THAN: "<",
-      GREATER_THAN_OR_EQUAL: ">=",
-      LESS_THAN_OR_EQUAL: "<=",
-      EQUAL: "==",
-      CROSSES_ABOVE: "Crosses Above",
-      CROSSES_BELOW: "Crosses Below",
-    };
-    const cleanOp = opSymbols[operator || ""] || operator || "";
-    return `${leftOperand} ${cleanOp} ${rightOperand}`;
   };
 
   return (
@@ -77,23 +64,23 @@ export default React.memo(function ConditionNode({ id, data, selected }: Conditi
         `}
       >
         {/* Header with icon, title and badge */}
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
-            <div className="size-8 bg-blue-600 text-white rounded-md flex items-center justify-center">
-              <IconGitBranch className="size-4" />
+            <div className="size-8 bg-red-600 text-white rounded-md flex items-center justify-center">
+              <IconShield className="size-4" />
             </div>
             <div className="flex flex-col select-none">
-              <h3 className="text-foreground font-semibold text-sm truncate max-w-[180px]">
+              <h3 className="text-foreground font-semibold text-sm truncate max-w-[140px]">
                 {label}
               </h3>
-              <p className="text-[10px] text-muted-foreground font-mono truncate max-w-[180px]">
-                {getConditionExpression()}
+              <p className="text-[10px] text-muted-foreground font-mono">
+                Max DD: {(max_drawdown_pct * 100).toFixed(0)}% | Open Pos: {max_open_positions}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-1 select-none">
             <Badge variant="secondary" className="text-[10px]">
-              Logic
+              Risk
             </Badge>
           </div>
         </div>
@@ -137,7 +124,6 @@ export default React.memo(function ConditionNode({ id, data, selected }: Conditi
           </div>
         )}
       </div>
-
       {/* React Flow Handles */}
       <Handle
         type="target"
@@ -145,35 +131,17 @@ export default React.memo(function ConditionNode({ id, data, selected }: Conditi
         className="!w-2.5 !h-2.5 !bg-white !border-2 !border-primary !rounded-full"
         style={{ top: -5 }}
       />
-      
-      {/* True Path source handle and '+' action button */}
+      {/* React Flow source handle and '+' action button */}
       <Handle
         type="source"
         position={Position.Bottom}
-        id="true"
-        className="!w-5 !h-5 !bg-white dark:!bg-zinc-800 !border !border-emerald-500 !rounded-full flex items-center justify-center text-emerald-500 hover:!bg-emerald-500 hover:!text-white transition-colors duration-200 shadow-md cursor-pointer font-bold text-[13px] pb-[1px] z-30"
-        style={{ bottom: -10, left: "35%", pointerEvents: 'all' }}
+        className="!w-5 !h-5 !bg-white dark:!bg-zinc-800 !border !border-primary !rounded-full flex items-center justify-center text-primary hover:!bg-primary hover:!text-white transition-colors duration-200 shadow-md cursor-pointer font-bold text-[13px] pb-[1px] z-30"
+        style={{ bottom: -10, pointerEvents: 'all' }}
         onClick={(e) => {
           e.stopPropagation();
-          addPlaceholderNode(id, "true", "action");
+          addPlaceholderNode(id, null, "data");
         }}
-        title="Drag to connect True Path or click to spawn placeholder"
-      >
-        +
-      </Handle>
-      
-      {/* False Path source handle and '+' action button */}
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        id="false"
-        className="!w-5 !h-5 !bg-white dark:!bg-zinc-800 !border !border-red-500 !rounded-full flex items-center justify-center text-red-500 hover:!bg-red-500 hover:!text-white transition-colors duration-200 shadow-md cursor-pointer font-bold text-[13px] pb-[1px] z-30"
-        style={{ bottom: -10, left: "65%", pointerEvents: 'all' }}
-        onClick={(e) => {
-          e.stopPropagation();
-          addPlaceholderNode(id, "false", "action");
-        }}
-        title="Drag to connect False Path or click to spawn placeholder"
+        title="Drag to connect or click to spawn placeholder"
       >
         +
       </Handle>
