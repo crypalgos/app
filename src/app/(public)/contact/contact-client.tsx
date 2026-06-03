@@ -12,7 +12,6 @@ import {
   Send,
   CheckCircle,
   Mail,
-  MapPin,
   MessageSquare,
   Sparkles,
   ArrowRight
@@ -117,19 +116,6 @@ export default function ContactPage() {
                     <a href="mailto:support@crypalgos.com" className="text-sm font-medium text-primary hover:underline">
                       support@crypalgos.com
                     </a>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
-                    <MapPin className="w-5 h-5 text-blue-500" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-semibold text-foreground">Visit us</h4>
-                    <p className="text-sm text-muted-foreground mb-1 mt-1">Come say hello at our office HQ.</p>
-                    <p className="text-sm font-medium text-foreground">
-                      100 Market St.<br />San Francisco, CA 94105
-                    </p>
                   </div>
                 </div>
               </div>
