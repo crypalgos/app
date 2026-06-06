@@ -104,22 +104,69 @@ export const useNodesStore = create<NodesState>((set, get) => ({
       nodes?: Node[];
       edges?: Edge[];
     };
+    
+    let rawNodes = canvasJson.nodes ?? [
+      {
+        id: "start-1",
+        type: "startNode",
+        position: { x: 400, y: 50 },
+        deletable: false,
+        data: { label: "Start Strategy", isActive: false },
+      },
+    ];
+    let rawEdges = canvasJson.edges ?? [];
+
+    const startNode = rawNodes.find(n => n.type === "startNode");
+    const riskNode = rawNodes.find(n => n.type === "riskManagementNode");
+
+    if (riskNode) {
+      if (startNode) {
+        startNode.data = {
+          ...startNode.data,
+          ...riskNode.data,
+        };
+      }
+      // Bypass risk node edges
+      const sourcesToRm = rawEdges.filter(e => e.target === riskNode.id);
+      const targetsFromRm = rawEdges.filter(e => e.source === riskNode.id);
+      
+      const edgesToKeep = rawEdges.filter(e => e.source !== riskNode.id && e.target !== riskNode.id);
+      const newBypassedEdges: Edge[] = [];
+      
+      sourcesToRm.forEach(srcEdge => {
+        targetsFromRm.forEach(tgtEdge => {
+          newBypassedEdges.push(ensureCustomEdge({
+            id: `edge-${srcEdge.source}-${tgtEdge.target}`,
+            source: srcEdge.source,
+            sourceHandle: srcEdge.sourceHandle,
+            target: tgtEdge.target,
+            targetHandle: tgtEdge.targetHandle,
+            type: "custom",
+            data: {
+              type: "info",
+              animated: false,
+              label: "Data Flow",
+            },
+          }));
+        });
+      });
+
+      rawNodes = rawNodes.filter(n => n.type !== "riskManagementNode");
+      rawEdges = [...edgesToKeep, ...newBypassedEdges];
+    }
+
     set(() => ({
       strategyId: strategy.id,
       strategyName: strategy.name,
       strategyDescription: strategy.description ?? "",
       isCodeModified: strategy.is_code_modified,
       codeContent: strategy.compiled_code,
-      nodes: (canvasJson.nodes ?? [
-        {
-          id: "start-1",
-          type: "startNode",
-          position: { x: 400, y: 50 },
-          deletable: false,
-          data: { label: "Start Strategy", isActive: false },
-        },
-      ]).map(n => n.id === "start-1" ? { ...n, deletable: false } : n),
-      edges: canvasJson.edges ?? [],
+      nodes: rawNodes.map((n, idx) => {
+        const position = n.position || { x: 400, y: 50 + (idx * 150) };
+        const base = { ...n, position };
+        return base.id === "start-1" ? { ...base, deletable: false } : base;
+      }),
+      edges: rawEdges,
       isSynced: true,
       activeView: strategy.is_code_modified ? "code" : "canvas",
     }));
@@ -138,41 +185,12 @@ export const useNodesStore = create<NodesState>((set, get) => ({
     })),
 
   updateNodeData: (id, dataPatch) =>
-    set((state) => {
-      const activeNode = state.nodes.find((n) => n.id === id);
-      let nextNodes = state.nodes.map((n) =>
+    set((state) => ({
+      nodes: state.nodes.map((n) =>
         n.id === id ? { ...n, data: { ...n.data, ...dataPatch } } : n
-      );
-
-      // If we are updating startNode, also update the hidden riskManagementNode in the background
-      if (activeNode && activeNode.type === "startNode") {
-        const riskNode = state.nodes.find((n) => n.type === "riskManagementNode");
-        if (riskNode) {
-          nextNodes = nextNodes.map((n) =>
-            n.type === "riskManagementNode"
-              ? { ...n, data: { ...n.data, ...dataPatch } }
-              : n
-          );
-        } else {
-          // If no risk node exists, instantiate a hidden one off-screen
-          const newRiskNode = {
-            id: "rm-1",
-            type: "riskManagementNode",
-            position: { x: -9999, y: -9999 },
-            data: {
-              label: "Risk Guard",
-              ...dataPatch,
-            },
-          };
-          nextNodes.push(newRiskNode);
-        }
-      }
-
-      return {
-        nodes: nextNodes,
-        isSynced: false,
-      };
-    }),
+      ),
+      isSynced: false,
+    })),
 
   setSelectedNodeId: (selectedNodeId) => set(() => ({ selectedNodeId })),
 

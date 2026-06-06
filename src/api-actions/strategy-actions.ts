@@ -19,12 +19,9 @@ export interface UpdateCanvasRequest {
 }
 
 export interface TriggerBacktestRequest {
-  exchange: string;
-  symbol: string;
   start_date: string; // ISO 8601
   end_date: string;   // ISO 8601
   initial_capital?: number;
-  leverage?: number;
 }
 
 // ─── Response types ───────────────────────────────────────────────────────────

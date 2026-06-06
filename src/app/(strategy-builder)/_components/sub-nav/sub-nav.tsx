@@ -59,13 +59,9 @@ export default function SubNav({ strategyId }: SubNavProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingView, setPendingView] = useState<string | null>(null);
 
-  // Backtest config form state
-  const [btSymbol, setBtSymbol] = useState("BTC/USDT");
-  const [btExchange, setBtExchange] = useState("delta");
   const [btStartDate, setBtStartDate] = useState("2024-01-01");
   const [btEndDate, setBtEndDate] = useState("2024-12-31");
   const [btCapital, setBtCapital] = useState("10000");
-  const [btLeverage, setBtLeverage] = useState("1");
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -99,35 +95,6 @@ export default function SubNav({ strategyId }: SubNavProps) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") handleNameSubmit();
     else if (e.key === "Escape") handleNameCancel();
-  };
-
-  // Submit backtest to Celery queue: POST /strategies/{id}/backtest
-  const handleBacktestSubmit = async () => {
-    setBacktestOpen(false);
-    setIsBacktesting(true);
-    toast.info("Enqueuing backtest to worker queue...", {
-      description: `${btSymbol} on ${btExchange} — ${btStartDate} → ${btEndDate}`,
-      duration: 3000,
-    });
-    try {
-      const result = await triggerBacktest({
-        exchange: btExchange,
-        symbol: btSymbol,
-        start_date: new Date(btStartDate).toISOString(),
-        end_date: new Date(btEndDate).toISOString(),
-        initial_capital: parseFloat(btCapital),
-        leverage: parseInt(btLeverage, 10),
-      });
-      setBacktestTaskId(result.task_id);
-      toast.success("Backtest enqueued successfully!", {
-        description: `Task ID: ${result.task_id.slice(0, 12)}... — Check the Backtests tab for results.`,
-        duration: 6000,
-      });
-    } catch {
-      toast.error("Failed to enqueue backtest. Please check your strategy code.");
-    } finally {
-      setIsBacktesting(false);
-    }
   };
 
 

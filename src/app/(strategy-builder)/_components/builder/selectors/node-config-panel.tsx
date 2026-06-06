@@ -175,13 +175,6 @@ export default function NodeConfigPanel() {
       let data = activeNode.data || {};
 
       if (activeNode.type === "startNode") {
-        const riskNode = nodes.find((n) => n.type === "riskManagementNode");
-        if (riskNode) {
-          data = {
-            ...data,
-            ...riskNode.data,
-          };
-        }
         // Seed strategy meta from global store
         data = {
           ...data,
@@ -978,8 +971,8 @@ export default function NodeConfigPanel() {
                     </>
                   )}
 
-                  {/* 6. STRATEGY-WIDE RISK MANAGEMENT NODE CONFIGURATION */}
-                  {(activeNode.type === "riskManagementNode" || activeNode.type === "startNode") && (
+                  {/* 6. STRATEGY-WIDE RISK MANAGEMENT CONFIGURATION */}
+                  {activeNode.type === "startNode" && (
                     <>
                       <Field>
                         <FieldLabel>Position Size Percentage (position_size_pct)</FieldLabel>

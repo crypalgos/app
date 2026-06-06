@@ -12,6 +12,7 @@ export interface Strategy {
   author: string;
   type: string;
   description: string;
+  canvas_json?: Record<string, any>;
 }
 
 // ─── API model (mirrors FastAPI StrategyResponseSchema) ───────────────────────
@@ -44,6 +45,7 @@ export function toUiStrategy(api: ApiStrategy): Strategy {
     author: api.user_id.slice(0, 8),
     type: api.is_code_modified ? "Custom Code" : "Visual Builder",
     description: api.description ?? "No description provided.",
+    canvas_json: api.canvas_json as Record<string, any>,
   };
 }
 

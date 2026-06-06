@@ -4,18 +4,28 @@ import { IconBolt, IconTrash, IconSettings, IconCopy } from "@tabler/icons-react
 import { Badge } from "@/components/ui/badge";
 import { useNodesStore } from "../../../store/nodes-store";
 
+const TRIGGER_LABELS: Record<string, string> = {
+  IMMEDIATE: "On Bar",
+  ON_FILL: "On Fill",
+  ON_POSITION_OPEN: "On Position Open",
+  ON_POSITION_CLOSE: "On Position Close",
+  ON_PROFIT_TARGET: "On TP Hit",
+  ON_STOP_LOSS: "On SL Hit",
+  ON_BAR_CLOSE: "On Bar Close",
+};
+
 interface ActionNodeData {
   label?: string;
   actionType?: string;
-  message?: string;
-  url?: string;
-  channel?: string;
-  orderType?: string;
-  sizeType?: string;
-  sizeValue?: number;
+  trigger?: string;
   amount?: number;
   sl?: number;
   tp?: number;
+  side?: string;
+  limit_price?: number;
+  percentage?: number;
+  // Legacy fallback
+  steps?: any[];
 }
 
 interface ActionNodeProps {
@@ -25,16 +35,7 @@ interface ActionNodeProps {
 }
 
 export default React.memo(function ActionNode({ id, data, selected }: ActionNodeProps) {
-  const {
-    label,
-    actionType = "buy",
-    message,
-    url,
-    channel,
-    amount,
-    sl,
-    tp,
-  } = data || {};
+  const { label } = data || {};
 
   const [isHovered, setIsHovered] = useState(false);
 
@@ -44,7 +45,6 @@ export default React.memo(function ActionNode({ id, data, selected }: ActionNode
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Single click to select the node - panel will open automatically
     setSelectedNodeId(id);
   };
 
@@ -53,34 +53,24 @@ export default React.memo(function ActionNode({ id, data, selected }: ActionNode
     removeNode(id);
   };
 
-  const isUtility = ["log_info", "trigger_webhook", "send_notification"].includes(actionType);
+  const actionType = data.actionType || "buy";
+  const trigger = data.trigger || "IMMEDIATE";
+  const triggerLabel = TRIGGER_LABELS[trigger] || trigger;
 
   const getSubtext = () => {
-    if (actionType === "log_info") {
-      return `Log: "${message || "Info Trace"}"`;
+    if (actionType === "close_all") return "Close All Positions";
+    if (actionType === "cancel_all_orders") return "Cancel All Orders";
+    if (actionType === "reduce_position") {
+      const pct = data.percentage !== undefined ? `${(data.percentage * 100).toFixed(0)}%` : "50%";
+      return `Reduce Position by ${pct}`;
     }
-    if (actionType === "trigger_webhook") {
-      return `Webhook: ${url || "API endpoint"}`;
-    }
-    if (actionType === "send_notification") {
-      return `Notify: ${channel || "Discord"}`;
-    }
-    if (actionType === "close_all") {
-      return "Close All Positions";
-    }
-    
-    // Standard trading actions
-    const size = amount !== undefined ? `${amount} Contracts` : "Market Size";
-    const brackets = (sl || tp) ? ` | SL: ${sl ?? "-"} TP: ${tp ?? "-"}` : "";
+
+    const size = data.amount !== undefined ? `${data.amount} Contracts` : "Market Size";
+    const brackets = (data.sl || data.tp) ? ` | SL: ${data.sl ?? "-"} TP: ${data.tp ?? "-"}` : "";
     return `${actionType.toUpperCase()} | ${size}${brackets}`;
   };
 
-  const nodeLabel = label || (
-    actionType === "log_info" ? "Log Info Trace" : 
-    actionType === "trigger_webhook" ? "Webhook Alert" : 
-    actionType === "send_notification" ? "Send Notification" : 
-    "Action Gate"
-  );
+  const nodeLabel = label || "Action Node";
 
   return (
     <div 
@@ -103,7 +93,7 @@ export default React.memo(function ActionNode({ id, data, selected }: ActionNode
         {/* Header with icon, title and badge */}
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
-            <div className={`size-8 ${isUtility ? "bg-indigo-600" : "bg-emerald-600"} text-white rounded-md flex items-center justify-center`}>
+            <div className="size-8 bg-emerald-600 text-white rounded-md flex items-center justify-center">
               <IconBolt className="size-4" />
             </div>
             <div className="flex flex-col select-none">
@@ -117,7 +107,7 @@ export default React.memo(function ActionNode({ id, data, selected }: ActionNode
           </div>
           <div className="flex items-center gap-1 select-none">
             <Badge variant="secondary" className="text-[10px]">
-              {isUtility ? "Utility" : "Actions"}
+              {triggerLabel}
             </Badge>
           </div>
         </div>
