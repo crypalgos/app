@@ -3,6 +3,7 @@ import { Handle, Position } from "@xyflow/react";
 import { IconDatabase, IconTrash, IconSettings, IconCopy } from "@tabler/icons-react";
 import { Badge } from "@/components/ui/badge";
 import { useNodesStore } from "../../../store/nodes-store";
+import { getCoinLogoUrl } from "@/lib/instruments";
 
 interface DataNodeData {
   label?: string;
@@ -23,12 +24,17 @@ interface DataNodeProps {
 export default React.memo(function DataNode({ id, data, selected }: DataNodeProps) {
   const {
     label = "Market Data Feed",
-    assetClass = "SPOT",
-    symbol = "BTC/USDT",
-    timeframe = "1m",
-    leverage = 1,
+    source = "delta",
+    assetClass = "PERPETUAL",
+    symbol,
+    timeframe = "1h",
+    leverage = 10,
     dataType = "OHLCV",
   } = data || {};
+
+  const extractCoin = (sym: string) => sym.replace(/USDT?$/, "").replace(/_PERP$/, "").replace(/_SPOT$/, "").replace(/Q$/, "").toLowerCase().slice(0, 3);
+  const coin = symbol ? extractCoin(symbol) : "";
+  const isConfigured = !!symbol;
 
   const [isHovered, setIsHovered] = useState(false);
 
@@ -69,16 +75,30 @@ export default React.memo(function DataNode({ id, data, selected }: DataNodeProp
         {/* Header with icon, title and badge */}
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
-            <div className="size-8 bg-purple-600 text-white rounded-md flex items-center justify-center">
-              <IconDatabase className="size-4" />
-            </div>
+            {isConfigured ? (
+              <img 
+                src={getCoinLogoUrl(coin)} 
+                alt={coin} 
+                className="size-8 rounded-full bg-white shadow-sm p-0.5" 
+              />
+            ) : (
+              <div className="size-8 bg-purple-600 text-white rounded-md flex items-center justify-center">
+                <IconDatabase className="size-4" />
+              </div>
+            )}
             <div className="flex flex-col select-none">
               <h3 className="text-foreground font-semibold text-sm truncate max-w-[180px]">
-                {symbol}
+                {isConfigured ? symbol : "Unconfigured Node"}
               </h3>
-              <p className="text-[10px] text-muted-foreground font-mono">
-                {assetClass} | {timeframe} | {leverage}x | {dataType}
-              </p>
+              {isConfigured ? (
+                <p className="text-[10px] text-muted-foreground font-mono">
+                  {assetClass} | {timeframe} | {leverage}x | {dataType}
+                </p>
+              ) : (
+                <p className="text-[10px] text-orange-400 font-mono">
+                  Click gear to configure
+                </p>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-1 select-none">
@@ -91,7 +111,7 @@ export default React.memo(function DataNode({ id, data, selected }: DataNodeProp
         {/* Floating Toolbar top-right of the card (n8n style, connected) */}
         {(isHovered || selected) && (
           <div 
-            className={`absolute right-[-1px] top-[-25px] h-[26px] bg-white dark:bg-[#1B1D21] border border-b-0 rounded-t-lg px-1.5 flex items-center gap-1 z-40 animate-in fade-in slide-in-from-bottom-1 duration-150 ${
+            className={`absolute -right-px top-[-25px] h-[26px] bg-white dark:bg-[#1B1D21] border border-b-0 rounded-t-lg px-1.5 flex items-center gap-1 z-40 animate-in fade-in slide-in-from-bottom-1 duration-150 ${
               selected ? "border-primary shadow-[0_-3px_8px_rgba(59,130,246,0.15)]" : "border-border shadow-xs"
             }`}
             onClick={(e) => e.stopPropagation()}
@@ -115,7 +135,7 @@ export default React.memo(function DataNode({ id, data, selected }: DataNodeProp
               <IconCopy className="size-3.5" />
             </button>
 
-            <div className="w-[1px] h-3 bg-border/60 mx-0.5" />
+            <div className="w-px h-3 bg-border/60 mx-0.5" />
 
             <button
               onClick={handleDelete}
@@ -132,7 +152,7 @@ export default React.memo(function DataNode({ id, data, selected }: DataNodeProp
       <Handle
         type="target"
         position={Position.Top}
-        className="!w-2.5 !h-2.5 !bg-white !border-2 !border-primary !rounded-full"
+        className="w-2.5! h-2.5! bg-white! border-2! border-primary! rounded-full!"
         style={{ top: -5 }}
       />
       
@@ -140,7 +160,7 @@ export default React.memo(function DataNode({ id, data, selected }: DataNodeProp
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!w-5 !h-5 !bg-white dark:!bg-zinc-800 !border !border-primary !rounded-full flex items-center justify-center text-primary hover:!bg-primary hover:!text-white transition-colors duration-200 shadow-md cursor-pointer font-bold text-[13px] pb-[1px] z-30"
+        className="w-5! h-5! bg-white! dark:bg-zinc-800! border! border-primary! rounded-full! flex items-center justify-center text-primary hover:bg-primary! hover:text-white! transition-colors duration-200 shadow-md cursor-pointer font-bold text-[13px] pb-px z-30"
         style={{ bottom: -10, pointerEvents: 'all' }}
         onClick={(e) => {
           e.stopPropagation();

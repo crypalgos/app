@@ -29,7 +29,7 @@ import {
   IconChartBar,
   IconGitBranch,
   IconBolt,
-  IconShield,
+
   IconPlus,
   IconClick,
 } from "@tabler/icons-react";
@@ -123,15 +123,6 @@ export default function NodeCreationDialog() {
         sl: 0.98,
         tp: 1.05,
       },
-      risk: {
-        label: "Risk Safeguard",
-        position_size_pct: 0.50,
-        max_drawdown_pct: 0.25,
-        daily_loss_limit: null,
-        atr_sl_mult: 2.0,
-        atr_tp_mult: 5.0,
-        max_open_positions: 2,
-      },
     };
     setFormData(defaults[category] || {});
   };
@@ -169,15 +160,6 @@ export default function NodeCreationDialog() {
           amount: 0.1,
           sl: 0.98,
           tp: 1.05,
-        },
-        risk: {
-          label: "Risk Safeguard",
-          position_size_pct: 0.50,
-          max_drawdown_pct: 0.25,
-          daily_loss_limit: null,
-          atr_sl_mult: 2.0,
-          atr_tp_mult: 5.0,
-          max_open_positions: 2,
         },
       };
       setFormData(defaults[activeCreationType === "selector" ? "data" : activeCreationType] || {});
@@ -249,8 +231,6 @@ export default function NodeCreationDialog() {
       // actionNode and utilityNode classifications both map to actionNode or utilityNode type on canvas
       const isUtility = ["log_info", "trigger_webhook", "send_notification"].includes(formData.actionType);
       newNode.type = isUtility ? "utilityNode" : "actionNode";
-    } else if (chosenType === "risk") {
-      newNode.type = "riskManagementNode";
     }
 
     addNode(newNode);
@@ -284,10 +264,6 @@ export default function NodeCreationDialog() {
             case "actionNode":
               edgeType = "success";
               edgeLabel = "Action Flow";
-              break;
-            case "riskManagementNode":
-              edgeType = "error";
-              edgeLabel = "Risk Safeguard";
               break;
             default:
               edgeType = "default";
@@ -383,8 +359,6 @@ export default function NodeCreationDialog() {
         return <IconGitBranch className="size-5 text-blue-400" />;
       case "action":
         return <IconBolt className="size-5 text-emerald-400" />;
-      case "risk":
-        return <IconShield className="size-5 text-red-400" />;
       default:
         return <IconSettings className="size-5 text-primary" />;
     }
@@ -992,73 +966,6 @@ export default function NodeCreationDialog() {
                     </Field>
                   </>
                 )}
-              </>
-            )}
-
-            {/* 5. STRATEGY-WIDE RISK MANAGEMENT NODE CONFIGURATION */}
-            {dialogView === "risk" && (
-              <>
-                <Field>
-                  <FieldLabel>Position Size Percentage (position_size_pct)</FieldLabel>
-                  <Input
-                    type="number"
-                    step={0.01}
-                    min={0.01}
-                    max={1.00}
-                    value={formData.position_size_pct ?? 0.50}
-                    onChange={(e) => updateFormKey("position_size_pct", parseFloat(e.target.value) || 0.50)}
-                    className="font-mono border-border/80"
-                  />
-                  <FieldDescription>Enter fractional decimal value, e.g. 0.50 for 50% capital sizing.</FieldDescription>
-                </Field>
-
-                <Field>
-                  <FieldLabel>Maximum Strategy Drawdown (max_drawdown_pct)</FieldLabel>
-                  <Input
-                    type="number"
-                    step={0.01}
-                    min={0.01}
-                    max={1.00}
-                    value={formData.max_drawdown_pct ?? 0.25}
-                    onChange={(e) => updateFormKey("max_drawdown_pct", parseFloat(e.target.value) || 0.25)}
-                    className="font-mono border-border/80"
-                  />
-                </Field>
-
-                <Field>
-                  <FieldLabel>Stop Loss ATR Multiplier (atr_sl_mult)</FieldLabel>
-                  <Input
-                    type="number"
-                    step={0.1}
-                    min={0.1}
-                    value={formData.atr_sl_mult ?? 2.0}
-                    onChange={(e) => updateFormKey("atr_sl_mult", parseFloat(e.target.value) || 2.0)}
-                    className="font-mono border-border/80"
-                  />
-                </Field>
-
-                <Field>
-                  <FieldLabel>Take Profit ATR Multiplier (atr_tp_mult)</FieldLabel>
-                  <Input
-                    type="number"
-                    step={0.1}
-                    min={0.1}
-                    value={formData.atr_tp_mult ?? 5.0}
-                    onChange={(e) => updateFormKey("atr_tp_mult", parseFloat(e.target.value) || 5.0)}
-                    className="font-mono border-border/80"
-                  />
-                </Field>
-
-                <Field>
-                  <FieldLabel>Max Parallel Open Positions</FieldLabel>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={formData.max_open_positions ?? 2}
-                    onChange={(e) => updateFormKey("max_open_positions", parseInt(e.target.value) || 2)}
-                    className="font-mono border-border/80"
-                  />
-                </Field>
               </>
             )}
 

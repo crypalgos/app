@@ -94,34 +94,29 @@ function StrategyRow({
     }
   };
 
-  // Backtest
+  // Backtest — symbol/exchange/leverage resolved from DataNode by backend
   const [backtestOpen, setBacktestOpen] = useState(false);
-  const [btSymbol, setBtSymbol] = useState("BTC/USDT");
-  const [btExchange, setBtExchange] = useState("delta");
   const [btStartDate, setBtStartDate] = useState("2024-01-01");
   const [btEndDate, setBtEndDate] = useState("2024-12-31");
   const [btCapital, setBtCapital] = useState("10000");
-  const [btLeverage, setBtLeverage] = useState("1");
   const { mutateAsync: triggerBacktest, isPending: isEnqueuing } = useTriggerBacktest(strat.id);
 
   const handleBacktestSubmit = async () => {
     setBacktestOpen(false);
-    toast.info("Enqueuing backtest...", { description: `${btSymbol} · ${btExchange}`, duration: 3000 });
+    toast.info("Starting backtest...", { description: `${btStartDate} → ${btEndDate}`, duration: 3000 });
     try {
       const result = await triggerBacktest({
-        exchange: btExchange, symbol: btSymbol,
         start_date: new Date(btStartDate).toISOString(),
         end_date: new Date(btEndDate).toISOString(),
         initial_capital: parseFloat(btCapital),
-        leverage: parseInt(btLeverage, 10),
       });
-      toast.success("Backtest enqueued!", {
+      toast.success("Backtest completed!", {
         description: `Task ${result.task_id.slice(0, 12)}...`,
         duration: 6000,
         action: { label: "Open", onClick: () => router.push(`/workflow/${strat.id}`) },
       });
     } catch {
-      toast.error("Failed to enqueue backtest.");
+      toast.error("Failed to run backtest. Ensure your Data Node is configured.");
     }
   };
 
@@ -288,15 +283,13 @@ function StrategyRow({
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-2">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-semibold">Symbol</Label>
-                <Input value={btSymbol} onChange={(e) => setBtSymbol(e.target.value)} className="h-9 text-sm font-mono" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-semibold">Exchange</Label>
-                <Input value={btExchange} onChange={(e) => setBtExchange(e.target.value)} className="h-9 text-sm font-mono" />
-              </div>
+            {/* Info Banner */}
+            <div className="flex items-start gap-2.5 bg-primary/5 border border-primary/20 rounded-xl px-3 py-2.5">
+              <IconChartBar className="size-3.5 text-primary shrink-0 mt-0.5" />
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                <span className="font-semibold text-foreground">Symbol, exchange and leverage</span> are read from your{" "}
+                <span className="font-semibold text-foreground">Data Node</span> configuration automatically.
+              </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
@@ -308,27 +301,21 @@ function StrategyRow({
                 <Input type="date" value={btEndDate} onChange={(e) => setBtEndDate(e.target.value)} className="h-9 text-sm" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-semibold flex items-center gap-1"><IconCurrencyDollar className="size-3.5 text-muted-foreground" /> Capital (USD)</Label>
-                <Input type="number" min={100} value={btCapital} onChange={(e) => setBtCapital(e.target.value)} className="h-9 text-sm font-mono" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-semibold">Leverage (1–20×)</Label>
-                <Input type="number" min={1} max={20} value={btLeverage} onChange={(e) => setBtLeverage(e.target.value)} className="h-9 text-sm font-mono" />
-              </div>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-semibold flex items-center gap-1"><IconCurrencyDollar className="size-3.5 text-muted-foreground" /> Initial Capital (USD)</Label>
+              <Input type="number" min={100} value={btCapital} onChange={(e) => setBtCapital(e.target.value)} className="h-9 text-sm font-mono" />
             </div>
             <div className="flex items-center gap-2 bg-muted/40 border border-border/60 rounded-xl px-3 py-2">
               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Summary</span>
               <span className="text-xs font-mono text-foreground ml-auto">
-                {btSymbol} · {btExchange} · ${parseFloat(btCapital || "0").toLocaleString()} · {btLeverage}× · {btStartDate} → {btEndDate}
+                ${parseFloat(btCapital || "0").toLocaleString()} · {btStartDate} → {btEndDate}
               </span>
             </div>
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" size="sm" onClick={() => setBacktestOpen(false)} className="cursor-pointer">Cancel</Button>
             <Button size="sm" onClick={handleBacktestSubmit} disabled={isEnqueuing} className="cursor-pointer gap-1.5">
-              {isEnqueuing ? <><IconLoader2 className="size-3.5 animate-spin" /> Enqueueing...</> : <><IconActivity className="size-3.5" /> Run Backtest</>}
+              {isEnqueuing ? <><IconLoader2 className="size-3.5 animate-spin" /> Running...</> : <><IconActivity className="size-3.5" /> Run Backtest</>}
             </Button>
           </DialogFooter>
         </DialogContent>

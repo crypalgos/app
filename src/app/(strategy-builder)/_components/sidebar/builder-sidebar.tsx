@@ -128,18 +128,50 @@ export default function BuilderSidebar() {
   const [activeTool, setActiveTool] = useState("select");
 
   const setActiveCreationType = useNodesStore((state) => state.setActiveCreationType);
+  const setSelectedNodeId = useNodesStore((state) => state.setSelectedNodeId);
 
   const handleToolSelect = (toolId: string) => {
-    setActiveTool(toolId);
-    console.log("Selected trading tool:", toolId);
-    
+    if (toolId === "select" || toolId === "hand") {
+      setActiveTool(toolId);
+      console.log("Selected canvas tool:", toolId);
+      return;
+    }
+
+    console.log("Selected action tool:", toolId);
+    const nodes = useNodesStore.getState().nodes;
+
+    if (toolId === "risk") {
+      const startNode = nodes.find((n) => n.type === "startNode");
+      if (startNode) {
+        setSelectedNodeId(startNode.id);
+      }
+      return;
+    }
+
+    const toolToNodeMap: Record<string, string> = {
+      data: "dataNode",
+      indicators: "indicatorNode",
+      conditions: "conditionNode",
+      actions: "actionNode",
+      utilities: "utilityNode",
+    };
+
+    const nodeType = toolToNodeMap[toolId];
+    if (nodeType) {
+      const existingNode = nodes.find((n) => n.type === nodeType);
+      if (existingNode) {
+        setSelectedNodeId(existingNode.id);
+        return;
+      }
+    }
+
     // Map sidebar tools to node creation types
     const creationMap: Record<string, string> = {
       data: "data",
       indicators: "indicator",
       conditions: "condition",
       actions: "action",
-      risk: "risk",
+      utilities: "action",
     };
     
     const creationType = creationMap[toolId];

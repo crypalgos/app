@@ -10,6 +10,7 @@ interface IndicatorNodeData {
   dataSourceId?: string;
   parameters?: Record<string, any>;
   value?: string;
+  indicators?: any[];
 }
 
 interface IndicatorNodeProps {
@@ -110,22 +111,24 @@ export default React.memo(function IndicatorNode({ id, data, selected }: Indicat
 
         {/* Header with icon, title and badge */}
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-3">
-            <div className="size-8 bg-orange-500 text-white rounded-md flex items-center justify-center">
+          <div className="flex items-center gap-3 overflow-hidden">
+            <div className="size-8 bg-orange-500 text-white rounded-md flex items-center justify-center shrink-0">
               <IconChartBar className="size-4" />
             </div>
-            <div className="flex flex-col select-none">
+            <div className="flex flex-col select-none overflow-hidden">
               <h3 className="text-foreground font-semibold text-sm truncate max-w-[180px]">
-                {label}
+                {(data.indicators || []).length > 0 ? "Applied Indicators" : label}
               </h3>
               <p className="text-[10px] text-muted-foreground font-mono truncate max-w-[180px]">
-                {type} ({getParamsString()})
+                {(data.indicators || []).length > 0
+                  ? (data.indicators || []).map((i: any) => `${i.indicator === "BollingerBands" ? "BB" : i.indicator}(${i.period})`).join(", ")
+                  : `${type} (${getParamsString()})`}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-1 select-none">
+          <div className="flex items-center gap-1 select-none shrink-0">
             <Badge variant="secondary" className="text-[10px]">
-              Indicator
+              {(data.indicators || []).length > 1 ? `${(data.indicators || []).length} Inds` : "Indicator"}
             </Badge>
           </div>
         </div>

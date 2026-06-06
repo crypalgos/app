@@ -146,13 +146,6 @@ export default function NodeConfigSheet() {
       let data = activeNode.data || {};
       
       if (activeNode.type === "startNode") {
-        const riskNode = nodes.find((n) => n.type === "riskManagementNode");
-        if (riskNode) {
-          data = {
-            ...data,
-            ...riskNode.data,
-          };
-        }
         // Seed strategy meta from global store
         data = {
           ...data,
@@ -196,15 +189,30 @@ export default function NodeConfigSheet() {
         changed = true;
       }
       
-      if (changed) {
-        setFormData({
-          ...data,
-          leftOperand: left,
-          rightOperand: right,
-        });
-      } else {
-        setFormData(data);
+      let finalData: Record<string, any> = changed ? { ...data, leftOperand: left, rightOperand: right } : { ...data };
+      
+      if (activeNode.type === "actionNode" || activeNode.type === "utilityNode") {
+        const type = finalData.actionType || "buy";
+        if (type === "buy" || type === "sell") {
+          const sizing = finalData.sizing || {};
+          let sizingMode = sizing.mode;
+          let sizingValue = sizing.value;
+          if (!sizingMode) {
+            if (finalData.amount !== undefined && finalData.amount !== null) {
+              sizingMode = "FIXED_QUANTITY";
+              sizingValue = finalData.amount;
+            } else {
+              sizingMode = "PERCENT_OF_EQUITY";
+              sizingValue = 10;
+            }
+          } else if (sizingMode === "PERCENT_OF_EQUITY") {
+            sizingValue = sizingValue !== undefined ? sizingValue * 100 : 10;
+          }
+          finalData.sizing_mode = sizingMode;
+          finalData.sizing_value = sizingValue;
+        }
       }
+      setFormData(finalData);
     }
   }, [activeNode, edges]);
 
@@ -214,6 +222,32 @@ export default function NodeConfigSheet() {
   }, [activeExpiry]);
 
   if (!activeNode) return null;
+
+  const sanitizeNodeData = (data: Record<string, any>, nodeType: string) => {
+    const sanitizedData = { ...data };
+    if (nodeType === "startNode") {
+      delete sanitizedData.position_size_pct;
+    } else if (nodeType === "actionNode" || nodeType === "utilityNode") {
+      const type = sanitizedData.actionType || "buy";
+      if (type === "buy" || type === "sell") {
+        const mode = sanitizedData.sizing_mode || "PERCENT_OF_EQUITY";
+        let val = isNaN(Number(sanitizedData.sizing_value)) ? 10 : Number(sanitizedData.sizing_value);
+        if (mode === "PERCENT_OF_EQUITY") {
+          val = val / 100;
+        }
+        sanitizedData.sizing = {
+          mode: mode,
+          value: val
+        };
+        delete sanitizedData.sizing_mode;
+        delete sanitizedData.sizing_value;
+        delete sanitizedData.amount;
+      } else {
+        delete sanitizedData.sizing;
+      }
+    }
+    return sanitizedData;
+  };
 
   const handleApply = () => {
     if (selectedNodeId) {
@@ -264,7 +298,7 @@ export default function NodeConfigSheet() {
         formData.source = "delta";
       }
 
-      updateNodeData(selectedNodeId, formData);
+      updateNodeData(selectedNodeId, sanitizeNodeData(formData, activeNode.type || ""));
       pendingApplyRef.current = false;
       setSelectedNodeId(null);
     }
@@ -282,7 +316,7 @@ export default function NodeConfigSheet() {
             setStrategyMeta(strategyId, newName, newDesc, isCodeModified);
           }
         }
-        updateNodeData(selectedNodeId, formData);
+        updateNodeData(selectedNodeId, sanitizeNodeData(formData, activeNode?.type || ""));
       }
       setSelectedNodeId(null);
     }
@@ -747,14 +781,45 @@ export default function NodeConfigSheet() {
                 {(formData.actionType === "buy" || formData.actionType === "sell") && (
                   <>
                     <Field>
-                      <FieldLabel>Position Amount (contracts)</FieldLabel>
+                      <FieldLabel>Sizing Mode</FieldLabel>
+                      <Select
+                        value={formData.sizing_mode || "PERCENT_OF_EQUITY"}
+                        onValueChange={(val) => {
+                          updateFormKey("sizing_mode", val);
+                        }}
+                      >
+                        <SelectTrigger className="w-full border-border/80 text-xs">
+                          <SelectValue placeholder="Select Sizing Mode" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="PERCENT_OF_EQUITY">Percent Of Equity</SelectItem>
+                          <SelectItem value="FIXED_USD">Fixed USD</SelectItem>
+                          <SelectItem value="FIXED_QUANTITY">Fixed Quantity</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+
+                    <Field>
+                      <FieldLabel>
+                        {formData.sizing_mode === "PERCENT_OF_EQUITY"
+                          ? "Percent (%)"
+                          : formData.sizing_mode === "FIXED_USD"
+                          ? "Amount ($)"
+                          : "Quantity"}
+                      </FieldLabel>
                       <Input
                         type="number"
-                        step={0.01}
-                        min={0.01}
-                        value={formData.amount ?? 0.10}
-                        onChange={(e) => updateFormKey("amount", parseFloat(e.target.value) || 0.10)}
+                        step={formData.sizing_mode === "PERCENT_OF_EQUITY" ? "1" : formData.sizing_mode === "FIXED_USD" ? "10" : "0.01"}
+                        value={formData.sizing_value ?? ""}
+                        onChange={(e) => updateFormKey("sizing_value", e.target.value)}
                         className="font-mono border-border/80"
+                        placeholder={
+                          formData.sizing_mode === "PERCENT_OF_EQUITY"
+                            ? "e.g. 10 (for 10%)"
+                            : formData.sizing_mode === "FIXED_USD"
+                            ? "e.g. 1000"
+                            : "e.g. 0.1"
+                        }
                       />
                     </Field>
                     
@@ -948,21 +1013,21 @@ export default function NodeConfigSheet() {
               </>
             )}
 
-            {/* 6. STRATEGY-WIDE RISK MANAGEMENT NODE CONFIGURATION */}
-            {(activeNode.type === "riskManagementNode" || activeNode.type === "startNode") && (
+            {/* 6. STRATEGY-WIDE RISK MANAGEMENT CONFIGURATION */}
+            {activeNode.type === "startNode" && (
               <>
                 <Field>
-                  <FieldLabel>Position Size Percentage (position_size_pct)</FieldLabel>
+                  <FieldLabel>Daily Loss Limit ($) (daily_loss_limit)</FieldLabel>
                   <Input
                     type="number"
-                    step={0.01}
-                    min={0.01}
-                    max={1.00}
-                    value={formData.position_size_pct ?? 0.50}
-                    onChange={(e) => updateFormKey("position_size_pct", parseFloat(e.target.value) || 0.50)}
+                    step={1}
+                    min={0}
+                    value={formData.daily_loss_limit ?? ""}
+                    onChange={(e) => updateFormKey("daily_loss_limit", parseFloat(e.target.value) || null)}
                     className="font-mono border-border/80"
+                    placeholder="e.g. 1000"
                   />
-                  <FieldDescription>Enter fractional decimal value, e.g. 0.50 for 50% capital sizing.</FieldDescription>
+                  <FieldDescription>Maximum USD loss threshold before halting strategy execution.</FieldDescription>
                 </Field>
 
                 <Field>

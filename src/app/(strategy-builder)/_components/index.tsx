@@ -16,9 +16,12 @@ import ConditionNode from "./builder/custom-node/condition-node";
 import ActionNode from "./builder/custom-node/action-node";
 import DataNode from "./builder/custom-node/data-node";
 import IndicatorNode from "./builder/custom-node/indicator-node";
-import RiskNode from "./builder/custom-node/risk-node";
 import PlaceholderNode from "./builder/custom-node/placeholder-node";
-import NodeConfigPanel from "./builder/selectors/node-config-panel";
+import StartNodeDialog from "./builder/selectors/start-node-dialog";
+import DataNodeDialog from "./builder/selectors/data-node-dialog";
+import IndicatorNodeDialog from "./builder/selectors/indicator-node-dialog";
+import ConditionNodeDrawer from "./builder/selectors/condition-node-drawer";
+import ActionNodeDrawer from "./builder/selectors/action-node-drawer";
 import NodeCreationDialog from "./builder/selectors/node-creation-dialog";
 import CustomEdge from "./builder/custom-edge/custom-edge";
 import CustomConnectionLine from "./builder/custom-connection-line/custom-connection-line";
@@ -37,7 +40,6 @@ const nodeTypes = {
   utilityNode: ActionNode,
   dataNode: DataNode,
   indicatorNode: IndicatorNode,
-  riskManagementNode: RiskNode,
   placeholderNode: PlaceholderNode,
 };
 
@@ -187,17 +189,11 @@ export default function Canvas({ strategyId }: CanvasProps) {
     }
   }, [strategy?.compiled_code, setCodeContent]);
 
-  // ─── Debounced auto-save (1200ms idle window) ────────────────────────────
-  // Serialize only the semantically meaningful attributes to avoid spurious triggers
   const nodesStateStr = JSON.stringify(
-    nodes
-      .filter((n) => n.type !== "riskManagementNode")
-      .map((n) => ({ id: n.id, type: n.type, position: n.position, data: n.data }))
+    nodes.map((n) => ({ id: n.id, type: n.type, position: n.position, data: n.data }))
   );
   const edgesStateStr = JSON.stringify(
-    edges
-      .filter((e) => !e.source.startsWith("rm") && !e.target.startsWith("rm"))
-      .map((e) => ({ id: e.id, source: e.source, target: e.target, sourceHandle: e.sourceHandle, data: e.data }))
+    edges.map((e) => ({ id: e.id, source: e.source, target: e.target, sourceHandle: e.sourceHandle, data: e.data }))
   );
 
   const autoSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -217,6 +213,7 @@ export default function Canvas({ strategyId }: CanvasProps) {
       try {
         if (activeView === "canvas" || activeView === "both") {
           const canvasPayload = {
+            schema_version: "1.0.0.0",
             nodes: nodes.map((n) => ({
               id: n.id,
               type: n.type,
@@ -314,8 +311,8 @@ export default function Canvas({ strategyId }: CanvasProps) {
           className="relative h-full overflow-hidden shrink-0"
         >
           <ReactFlow
-            nodes={nodes.filter((n) => n.type !== "riskManagementNode")}
-            edges={edges.filter((e) => e.source !== "rm-1" && e.target !== "rm-1" && !e.source.startsWith("rm") && !e.target.startsWith("rm") && !e.source.startsWith("risk-safeguard") && !e.target.startsWith("risk-safeguard"))}
+            nodes={nodes}
+            edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
@@ -433,11 +430,13 @@ export default function Canvas({ strategyId }: CanvasProps) {
 
       </div>
 
-      {/* Node Configuration Panel - positioned on the right side */}
-      <div className="fixed right-0 top-[68px] bottom-0 z-40">
-        <NodeConfigPanel />
-      </div>
-      
+      {/* ── Node Configuration — Dialog & Drawer architecture ── */}
+      <StartNodeDialog />
+      <DataNodeDialog />
+      <IndicatorNodeDialog />
+      <ConditionNodeDrawer />
+      <ActionNodeDrawer />
+
       <NodeCreationDialog />
     </>
   );

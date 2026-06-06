@@ -6,14 +6,14 @@ import {
   IconSettings, 
   IconBug, 
   IconHourglass, 
-  IconPlayerPlay, 
   IconPlayerPause, 
   IconLoader2, 
-  IconActivity, 
-  IconCalendar, 
-  IconCurrencyDollar, 
+  IconActivity,
+  IconCalendar,
+  IconCurrencyDollar,
   IconChartBar,
-  IconRocket
+  IconRocket,
+  IconInfoCircle,
 } from "@tabler/icons-react";
 import { useNodesStore } from "../../../store/nodes-store";
 import { useTriggerBacktest } from "@/api-actions/hooks/strategy-hooks";
@@ -35,11 +35,11 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
 
 interface StartNodeData {
   label?: string;
   isActive?: boolean;
+  exchange?: string;
 }
 
 interface StartNodeProps {
@@ -70,13 +70,10 @@ export default React.memo(function StartNode({ id, data, selected }: StartNodePr
   const strategyName = useNodesStore((state) => state.strategyName);
   const displayLabel = strategyName || label;
 
-  // Backtest config form state
-  const [btSymbol, setBtSymbol] = useState("BTC/USDT");
-  const [btExchange, setBtExchange] = useState("delta");
+  // Backtest config form state — symbol/exchange/leverage resolved from DataNode by backend
   const [btStartDate, setBtStartDate] = useState("2024-01-01");
   const [btEndDate, setBtEndDate] = useState("2024-12-31");
   const [btCapital, setBtCapital] = useState("10000");
-  const [btLeverage, setBtLeverage] = useState("1");
 
   // Celery Backtest trigger hook
   const { mutateAsync: triggerBacktest, isPending: isEnqueuing } = useTriggerBacktest(strategyId || "");
@@ -125,26 +122,23 @@ export default React.memo(function StartNode({ id, data, selected }: StartNodePr
   const handleBacktestSubmit = async () => {
     setBacktestOpen(false);
     setIsBacktesting(true);
-    toast.info("Enqueuing backtest to worker queue...", {
-      description: `${btSymbol} on ${btExchange} — ${btStartDate} → ${btEndDate}`,
+    toast.info("Starting backtest...", {
+      description: `${btStartDate} → ${btEndDate} · $${parseFloat(btCapital).toLocaleString()} capital`,
       duration: 3000,
     });
     try {
       const result = await triggerBacktest({
-        exchange: btExchange,
-        symbol: btSymbol,
         start_date: new Date(btStartDate).toISOString(),
         end_date: new Date(btEndDate).toISOString(),
         initial_capital: parseFloat(btCapital),
-        leverage: parseInt(btLeverage, 10),
       });
       setBacktestTaskId(result.task_id);
-      toast.success("Backtest enqueued successfully!", {
+      toast.success("Backtest completed!", {
         description: `Task ID: ${result.task_id.slice(0, 12)}... — Check the Backtests tab for results.`,
         duration: 6000,
       });
     } catch {
-      toast.error("Failed to enqueue backtest. Please check your strategy code.");
+      toast.error("Failed to run backtest. Ensure your Data Node is configured with a symbol and exchange.");
     } finally {
       setIsBacktesting(false);
     }
@@ -177,7 +171,7 @@ export default React.memo(function StartNode({ id, data, selected }: StartNodePr
       <div
         className={`
           relative bg-white dark:bg-[#1B1D21] border border-border
-          rounded-xl p-4 w-80 h-24 shadow-md transition-all duration-300
+          rounded-xl p-4 w-80 h-auto min-h-[6rem] shadow-md transition-all duration-300
           hover:shadow-lg hover:border-border group cursor-pointer
           ${selected ? "border-primary shadow-[0_0_12px_rgba(59,130,246,0.25)]" : ""}
           ${isActive ? "ring-2 ring-green-500 border-green-500 bg-green-50/10" : ""}
@@ -289,6 +283,14 @@ export default React.memo(function StartNode({ id, data, selected }: StartNodePr
             </Badge>
           </div>
         </div>
+        
+        {data.exchange && (
+          <div className="mt-2 flex items-center gap-2">
+            <Badge variant="outline" className="text-[10px] uppercase font-mono">
+              Broker: {data.exchange}
+            </Badge>
+          </div>
+        )}
       </div>
 
       {/* React Flow source handle and '+' action button */}
@@ -320,31 +322,16 @@ export default React.memo(function StartNode({ id, data, selected }: StartNodePr
           </DialogHeader>
 
           <div className="grid gap-4 py-2">
-            {/* Row 1: Symbol + Exchange */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="bt-symbol" className="text-xs font-semibold">Symbol</Label>
-                <Input
-                  id="bt-symbol"
-                  value={btSymbol}
-                  onChange={(e) => setBtSymbol(e.target.value)}
-                  placeholder="BTC/USDT"
-                  className="h-9 text-sm font-mono"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="bt-exchange" className="text-xs font-semibold">Exchange</Label>
-                <Input
-                  id="bt-exchange"
-                  value={btExchange}
-                  onChange={(e) => setBtExchange(e.target.value)}
-                  placeholder="delta"
-                  className="h-9 text-sm font-mono"
-                />
-              </div>
+            {/* Info Banner: params resolved from DataNode */}
+            <div className="flex items-start gap-2.5 bg-primary/5 border border-primary/20 rounded-xl px-3 py-2.5">
+              <IconInfoCircle className="size-3.5 text-primary shrink-0 mt-0.5" />
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                <span className="font-semibold text-foreground">Symbol, exchange and leverage</span> are read automatically from your{" "}
+                <span className="font-semibold text-foreground">Data Node</span> configuration.
+              </p>
             </div>
 
-            {/* Row 2: Dates */}
+            {/* Simulation Period */}
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="bt-start" className="text-xs font-semibold flex items-center gap-1.5">
@@ -372,40 +359,26 @@ export default React.memo(function StartNode({ id, data, selected }: StartNodePr
               </div>
             </div>
 
-            {/* Row 3: Capital + Leverage */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="bt-capital" className="text-xs font-semibold flex items-center gap-1.5">
-                  <IconCurrencyDollar className="size-3.5 text-muted-foreground" /> Initial Capital (USD)
-                </Label>
-                <Input
-                  id="bt-capital"
-                  type="number"
-                  min={100}
-                  value={btCapital}
-                  onChange={(e) => setBtCapital(e.target.value)}
-                  className="h-9 text-sm font-mono"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="bt-leverage" className="text-xs font-semibold">Leverage (1–20×)</Label>
-                <Input
-                  id="bt-leverage"
-                  type="number"
-                  min={1}
-                  max={20}
-                  value={btLeverage}
-                  onChange={(e) => setBtLeverage(e.target.value)}
-                  className="h-9 text-sm font-mono"
-                />
-              </div>
+            {/* Initial Capital */}
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="bt-capital" className="text-xs font-semibold flex items-center gap-1.5">
+                <IconCurrencyDollar className="size-3.5 text-muted-foreground" /> Initial Capital (USD)
+              </Label>
+              <Input
+                id="bt-capital"
+                type="number"
+                min={100}
+                value={btCapital}
+                onChange={(e) => setBtCapital(e.target.value)}
+                className="h-9 text-sm font-mono"
+              />
             </div>
 
             {/* Summary pill */}
             <div className="flex items-center gap-2 bg-muted/40 border border-border/60 rounded-xl px-3 py-2">
               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Summary</span>
               <span className="text-xs font-mono text-foreground ml-auto">
-                {btSymbol} · {btExchange} · ${parseFloat(btCapital || "0").toLocaleString()} · {btLeverage}× · {btStartDate} → {btEndDate}
+                ${parseFloat(btCapital || "0").toLocaleString()} capital · {btStartDate} → {btEndDate}
               </span>
             </div>
           </div>
