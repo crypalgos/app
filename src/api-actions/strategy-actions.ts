@@ -1,78 +1,59 @@
 import axiosInstance from "@/lib/axios-interceptor";
+import type { CanvasPayload, CompilerDiagnostic } from "@/types/strategy-builder";
 
-// ─── Request types ───────────────────────────────────────────────────────────
+import type {
+  CreateStrategyRequest,
+  SaveCodeRequest,
+  UpdateCanvasRequest,
+  TriggerBacktestRequest,
+  ParameterDefinition,
+  Constraint,
+  OptimizationRequest,
+  WalkForwardRequest,
+  MonteCarloRequest,
+  ApiStrategy,
+  BacktestTriggerResponse,
+  ApiBacktest,
+  OptimizationTriggerResponse,
+  ApiOptimizationRun,
+  WalkForwardTriggerResponse,
+  ApiWalkForwardRun,
+  MonteCarloTriggerResponse,
+  ApiMonteCarloRun,
+  PaginatedStrategiesResponse,
+  PaginatedBacktestsResponse,
+  PaginatedOptimizationRunsResponse,
+  PaginatedWalkForwardRunsResponse,
+  PaginatedMonteCarloRunsResponse,
+  ResearchRun,
+} from "@/types/strategy-actions";
 
-export interface CreateStrategyRequest {
-  name: string;
-  description?: string;
-  canvas_json: Record<string, unknown>;
-}
-
-export interface SaveCodeRequest {
-  code: string;
-}
-
-export interface UpdateCanvasRequest {
-  canvas_json: Record<string, unknown>;
-  name?: string;
-  description?: string;
-}
-
-export interface TriggerBacktestRequest {
-  start_date: string; // ISO 8601
-  end_date: string;   // ISO 8601
-  initial_capital?: number;
-}
-
-// ─── Response types ───────────────────────────────────────────────────────────
-
-export interface ApiStrategy {
-  id: string;
-  user_id: string;
-  name: string;
-  description: string | null;
-  canvas_json: Record<string, unknown>;
-  compiled_code: string;
-  is_code_modified: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface BacktestTriggerResponse {
-  status: string;
-  task_id: string;
-  message: string;
-}
-
-export interface ApiBacktest {
-  id: string;
-  strategy_id: string;
-  exchange: string;
-  symbol: string;
-  start_date: string;
-  end_date: string;
-  initial_capital: number;
-  leverage: number;
-  metrics_json: Record<string, number>;
-  charting_json: Record<string, unknown>;
-  created_at: string;
-}
-
-export interface PaginatedStrategiesResponse {
-  total: number;
-  strategies: ApiStrategy[];
-  current_page: number;
-  limit: number;
-  total_pages: number;
-}
-
-export interface PaginatedBacktestsResponse {
-  total: number;
-  backtests: ApiBacktest[];
-  current_page: number;
-  limit: number;
-  total_pages: number;
-}
+export type {
+  CreateStrategyRequest,
+  SaveCodeRequest,
+  UpdateCanvasRequest,
+  TriggerBacktestRequest,
+  ParameterDefinition,
+  Constraint,
+  OptimizationRequest,
+  WalkForwardRequest,
+  MonteCarloRequest,
+  ApiStrategy,
+  BacktestTriggerResponse,
+  ApiBacktest,
+  OptimizationTriggerResponse,
+  ApiOptimizationRun,
+  WalkForwardTriggerResponse,
+  ApiWalkForwardRun,
+  MonteCarloTriggerResponse,
+  ApiMonteCarloRun,
+  PaginatedStrategiesResponse,
+  PaginatedBacktestsResponse,
+  PaginatedOptimizationRunsResponse,
+  PaginatedWalkForwardRunsResponse,
+  PaginatedMonteCarloRunsResponse,
+  ResearchRun,
+};
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
 
@@ -148,7 +129,7 @@ export const StrategyActions = {
   ): Promise<BacktestTriggerResponse> => {
     const response = await axiosInstance.post<
       ApiResponse<BacktestTriggerResponse>
-    >(`/strategies/${strategyId}/backtest`, data);
+    >(`/strategies/${strategyId}/backtests`, data);
     return response.data.data;
   },
 
@@ -161,11 +142,50 @@ export const StrategyActions = {
     symbol?: string
   ): Promise<PaginatedBacktestsResponse> => {
     const response = await axiosInstance.get<
-      ApiResponse<PaginatedBacktestsResponse>
+      ApiResponse<{
+        total: number;
+        runs: ResearchRun[];
+        current_page: number;
+        limit: number;
+        total_pages: number;
+      }>
     >(`/strategies/${strategyId}/backtests`, {
       params: { page, limit, exchange, symbol },
     });
-    return response.data.data;
+
+    const data = response.data.data;
+    const backtests: ApiBacktest[] = (data.runs || []).map((run) => {
+      const summary = run.summary_json || {};
+      return {
+        id: run.id,
+        strategy_id: run.strategy_id,
+        exchange: summary.exchange || "delta",
+        symbol: summary.symbol || "BTCUSD",
+        start_date: summary.start_date || run.created_at,
+        end_date: summary.end_date || run.created_at,
+        initial_capital: summary.initial_capital ?? 10000,
+        leverage: summary.leverage ?? 1,
+        metrics_json: {
+          net_profit: summary.net_profit ?? 0,
+          profit_pct: summary.total_return_pct ?? 0,
+          win_rate: summary.win_rate ?? 0,
+          sharpe_ratio: summary.sharpe_ratio ?? 0,
+          max_drawdown: summary.max_drawdown_pct ?? 0,
+          total_trades: summary.trade_count ?? 0,
+          error: summary.error,
+        },
+        charting_json: {},
+        created_at: run.created_at,
+      };
+    });
+
+    return {
+      total: data.total,
+      backtests,
+      current_page: data.current_page,
+      limit: data.limit,
+      total_pages: data.total_pages,
+    };
   },
 
   /** Fetch a specific backtest run with curves intact. */
@@ -173,10 +193,51 @@ export const StrategyActions = {
     strategyId: string,
     backtestId: string
   ): Promise<ApiBacktest> => {
-    const response = await axiosInstance.get<ApiResponse<ApiBacktest>>(
-      `/strategies/${strategyId}/backtests/${backtestId}`
-    );
-    return response.data.data;
+    const response = await axiosInstance.get<
+      ApiResponse<{
+        id: string;
+        status: string;
+        type: string;
+        summary_json?: Record<string, any> | null;
+        metadata: Record<string, any>;
+        report: Record<string, any>;
+        created_at: string;
+      }>
+    >(`/strategies/${strategyId}/backtests/${backtestId}`);
+
+    const data = response.data.data;
+    const meta = data.metadata || {};
+    const report = data.report || {};
+    const summary = data.summary_json || {};
+
+    const raw_metrics = report.metrics || {};
+    const g_metrics = raw_metrics.global || raw_metrics.global_metrics || raw_metrics;
+
+    return {
+      id: data.id,
+      strategy_id: strategyId,
+      exchange: meta.exchange || summary.exchange || "delta",
+      symbol: meta.symbol || summary.symbol || "BTCUSD",
+      start_date: meta.start_date || summary.start_date || data.created_at,
+      end_date: meta.end_date || summary.end_date || data.created_at,
+      initial_capital: meta.initial_capital ?? summary.initial_capital ?? 10000,
+      leverage: meta.leverage ?? summary.leverage ?? 1,
+      metrics_json: {
+        net_profit: g_metrics.net_profit ?? summary.net_profit ?? 0,
+        profit_pct: g_metrics.total_return_pct ?? summary.total_return_pct ?? 0,
+        win_rate: g_metrics.win_rate ?? summary.win_rate ?? 0,
+        sharpe_ratio: g_metrics.sharpe_ratio ?? summary.sharpe_ratio ?? 0,
+        max_drawdown: g_metrics.max_drawdown_pct ?? summary.max_drawdown_pct ?? 0,
+        total_trades: g_metrics.total_trades ?? summary.trade_count ?? 0,
+        error: summary.error,
+      },
+      charting_json: {
+        trades: report.charting?.trades?.recent_trades || report.charting?.trades || [],
+        equity_curve: report.charting?.datasets?.global_equity_curve || [],
+        drawdown_curve: report.charting?.datasets?.global_drawdown_curve || [],
+      },
+      created_at: data.created_at,
+    };
   },
 
   /** Delete a specific backtest run. */
@@ -190,5 +251,116 @@ export const StrategyActions = {
   /** Delete a strategy owned by the authenticated user. */
   deleteStrategy: async (strategyId: string): Promise<void> => {
     await axiosInstance.delete(`/strategies/${strategyId}`);
+  },
+
+  /** Enqueue parameter optimization job. */
+  triggerOptimization: async (
+    strategyId: string,
+    data: OptimizationRequest
+  ): Promise<OptimizationTriggerResponse> => {
+    const response = await axiosInstance.post<
+      ApiResponse<OptimizationTriggerResponse>
+    >(`/strategies/${strategyId}/optimizations`, data);
+    return response.data.data;
+  },
+
+  /** List all optimization runs. */
+  listOptimizationRuns: async (
+    strategyId: string,
+    page = 1,
+    limit = 8,
+    search = ""
+  ): Promise<PaginatedOptimizationRunsResponse> => {
+    const response = await axiosInstance.get<
+      ApiResponse<PaginatedOptimizationRunsResponse>
+    >(`/strategies/${strategyId}/optimizations`, {
+      params: { page, limit, search },
+    });
+    return response.data.data;
+  },
+
+  /** Fetch a specific optimization run. */
+  getOptimizationRun: async (
+    strategyId: string,
+    runId: string
+  ): Promise<ApiOptimizationRun> => {
+    const response = await axiosInstance.get<
+      ApiResponse<ApiOptimizationRun>
+    >(`/strategies/${strategyId}/optimizations/${runId}`);
+    return response.data.data;
+  },
+
+  /** Enqueue rolling out-of-sample walkforward optimization job. */
+  triggerWalkForward: async (
+    strategyId: string,
+    data: WalkForwardRequest
+  ): Promise<WalkForwardTriggerResponse> => {
+    const response = await axiosInstance.post<
+      ApiResponse<WalkForwardTriggerResponse>
+    >(`/strategies/${strategyId}/walkforwards`, data);
+    return response.data.data;
+  },
+
+  /** List all walkforward runs. */
+  listWalkForwardRuns: async (
+    strategyId: string,
+    page = 1,
+    limit = 8,
+    search = ""
+  ): Promise<PaginatedWalkForwardRunsResponse> => {
+    const response = await axiosInstance.get<
+      ApiResponse<PaginatedWalkForwardRunsResponse>
+    >(`/strategies/${strategyId}/walkforwards`, {
+      params: { page, limit, search },
+    });
+    return response.data.data;
+  },
+
+  /** Fetch a specific walkforward run. */
+  getWalkForwardRun: async (
+    strategyId: string,
+    runId: string
+  ): Promise<ApiWalkForwardRun> => {
+    const response = await axiosInstance.get<
+      ApiResponse<ApiWalkForwardRun>
+    >(`/strategies/${strategyId}/walkforwards/${runId}`);
+    return response.data.data;
+  },
+
+  /** Enqueue Monte Carlo simulation job. */
+  triggerMonteCarlo: async (
+    strategyId: string,
+    data: MonteCarloRequest
+  ): Promise<MonteCarloTriggerResponse> => {
+    const response = await axiosInstance.post<
+      ApiResponse<MonteCarloTriggerResponse>
+    >(`/strategies/${strategyId}/montecarlos`, data);
+    return response.data.data;
+  },
+
+  /** List all Monte Carlo runs. */
+  listMonteCarloRuns: async (
+    strategyId: string,
+    page = 1,
+    limit = 8,
+    search = ""
+  ): Promise<PaginatedMonteCarloRunsResponse> => {
+    const response = await axiosInstance.get<
+      ApiResponse<PaginatedMonteCarloRunsResponse>
+    >(`/strategies/${strategyId}/montecarlos`, {
+      params: { page, limit, search },
+    });
+    return response.data.data;
+  },
+
+  /** Fetch a specific Monte Carlo run. */
+  getMonteCarloRun: async (
+    strategyId: string,
+    runId: string
+  ): Promise<ApiMonteCarloRun> => {
+    const response = await axiosInstance.get<
+      ApiResponse<ApiMonteCarloRun>
+    >(`/strategies/${strategyId}/montecarlos/${runId}`);
+    return response.data.data;
   },
 };
