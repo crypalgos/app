@@ -258,7 +258,7 @@ export function StrategyCard({
         </div>
 
         {/* Mini Equity Curve Graph */}
-        <div className="h-16 px-4 pt-4 relative">
+        <div className="h-28 px-4 pt-4 relative">
           {strat.equity_preview && strat.equity_preview.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={strat.equity_preview.map(([time, value]) => ({ value }))}>
@@ -284,26 +284,6 @@ export function StrategyCard({
               No equity curve preview
             </div>
           )}
-        </div>
-
-        {/* Exec counts */}
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 px-4 pt-3.5 text-[10px] text-muted-foreground/80 border-t border-border/20 mt-3">
-          <div className="flex items-center justify-between">
-            <span className="font-semibold">Backtests</span>
-            <span className="font-mono font-bold text-foreground">{strat.research_counts?.backtests ?? 0}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="font-semibold">Monte Carlo</span>
-            <span className="font-mono font-bold text-foreground">{strat.research_counts?.montecarlos ?? 0}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="font-semibold">Walk Forward</span>
-            <span className="font-mono font-bold text-foreground">{strat.research_counts?.walkforwards ?? 0}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="font-semibold">Optimizations</span>
-            <span className="font-mono font-bold text-foreground">{strat.research_counts?.optimizations ?? 0}</span>
-          </div>
         </div>
 
         {/* Updated timestamp */}
