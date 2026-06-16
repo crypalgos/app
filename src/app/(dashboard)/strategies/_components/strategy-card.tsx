@@ -228,6 +228,13 @@ export function StrategyCard({
           <span>{timeframe}</span>
         </div>
 
+        {/* Description */}
+        {strat.description && (
+          <p className="px-4 pt-2 text-xs text-muted-foreground/80 line-clamp-2 leading-relaxed min-h-[32px]">
+            {strat.description}
+          </p>
+        )}
+
         {/* Performance metrics row */}
         <div className="grid grid-cols-3 gap-2 px-4 pt-4">
           <div>
