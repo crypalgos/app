@@ -36,12 +36,15 @@ import {
   IconCode,
   IconLayoutKanban,
   IconAlertTriangle,
+  IconStar,
+  IconStarFilled,
 } from "@tabler/icons-react";
 import { StatusBadge } from "./strategy-badges";
 import type { Strategy, StrategyActions } from "./types";
-import { useRenameStrategy, useTriggerBacktest } from "@/api-actions/hooks/strategy-hooks";
+import { useRenameStrategy, useTriggerBacktest, useSetGoldenVersion } from "@/api-actions/hooks/strategy-hooks";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { AreaChart, Area, ResponsiveContainer } from "recharts";
 
 interface StrategyCardProps extends StrategyActions {
   strategy: Strategy;
@@ -65,14 +68,17 @@ export function StrategyCard({
   onToggleLive,
   onEdit,
   onDelete,
+  onRestore,
 }: StrategyCardProps) {
   const router = useRouter();
+  const [isFavorite, setIsFavorite] = useState(strat.is_golden || false);
 
   // ── Edit meta dialog ─────────────────────────────────────────────────────
   const [editOpen, setEditOpen] = useState(false);
   const [editName, setEditName] = useState(strat.name);
   const [editDesc, setEditDesc] = useState(strat.description);
   const { mutateAsync: renameStrategy, isPending: isRenaming } = useRenameStrategy();
+  const { mutateAsync: setGolden } = useSetGoldenVersion();
 
   const handleSaveMeta = async () => {
     if (!editName.trim()) return;
@@ -123,25 +129,59 @@ export function StrategyCard({
     }
   };
 
+  const dataNode = strat.canvas_json?.nodes?.find((n: any) => n.type === "dataNode");
+  const symbol = (dataNode?.data as any)?.symbol || "BTCUSD";
+  const timeframe = (dataNode?.data as any)?.timeframe || "1H";
+
   return (
     <>
       {/* ─── Card ─────────────────────────────────────────────────────────── */}
       <div
-        onClick={() => onEdit(strat.id)}
+        onClick={() => router.push(`/strategies/${strat.id}`)}
         className={cn(
-          "group relative flex flex-col rounded-2xl border bg-gradient-to-br transition-all duration-300 cursor-pointer select-none",
-          "hover:shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_8px_32px_rgba(0,0,0,0.4)]",
+          "group relative flex flex-col rounded-2xl border bg-card/30 backdrop-blur-xs transition-all duration-300 cursor-pointer select-none overflow-hidden",
+          "hover:shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_8px_32px_rgba(0,0,0,0.4)] border-border/50 hover:border-primary/40",
           getAccentClasses(strat.type)
         )}
       >
-        {/* Top row: type badge + status + menu */}
-        <div className="flex items-center justify-between px-4 pt-4 pb-0">
-          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-border/60 bg-muted/40 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            {getTypeIcon(strat.type)}
-            <span className="ml-0.5">{strat.type}</span>
+        {/* Top row: Favorite + Title + Menu */}
+        <div className="flex items-start justify-between px-4 pt-4">
+          <div className="flex items-center gap-2 min-w-0">
+            <button 
+              onClick={async (e) => {
+                e.stopPropagation();
+                const targetState = !isFavorite;
+                setIsFavorite(targetState);
+                try {
+                  await setGolden({ strategyId: strat.id, version: strat.current_version || 0 });
+                  toast.success(targetState ? "Golden version set." : "Golden version removed.");
+                } catch {
+                  setIsFavorite(!targetState);
+                  toast.error("Failed to update golden version.");
+                }
+              }}
+              className="p-1 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-amber-500 cursor-pointer shrink-0"
+            >
+              {isFavorite ? (
+                <IconStarFilled className="w-3.5 h-3.5 text-amber-500" />
+              ) : (
+                <IconStar className="w-3.5 h-3.5" />
+              )}
+            </button>
+            <h3 className="font-bold text-[15px] leading-snug text-foreground group-hover:text-primary transition-colors line-clamp-1 truncate">
+              {strat.name}
+            </h3>
+            <span className="text-[10px] font-mono text-muted-foreground/60 shrink-0">
+              v1.0
+            </span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <StatusBadge status={strat.status} />
+
+          <div className="flex items-center gap-1 shrink-0">
+            {strat.is_golden && (
+              <span className="font-bold text-[9px] py-0.5 px-1.5 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-md shrink-0">
+                Golden
+              </span>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                 <button className="size-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all opacity-0 group-hover:opacity-100 cursor-pointer">
@@ -149,66 +189,147 @@ export function StrategyCard({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48" onClick={(e) => e.stopPropagation()}>
-                <DropdownMenuItem
-                  onClick={() => { setEditName(strat.name); setEditDesc(strat.description); setEditOpen(true); }}
-                  className="cursor-pointer"
-                >
-                  <IconEdit className="size-3.5 mr-2" /> Edit Name & Description
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onEdit(strat.id)} className="cursor-pointer">
-                  <IconExternalLink className="size-3.5 mr-2" /> Open Builder
-                </DropdownMenuItem>
+                {strat.is_archived ? (
+                  <DropdownMenuItem onClick={() => onRestore?.(strat.id)} className="cursor-pointer">
+                    <IconRocket className="size-3.5 mr-2 text-emerald-500" /> Restore Strategy
+                  </DropdownMenuItem>
+                ) : (
+                  <>
+                    <DropdownMenuItem
+                      onClick={() => { setEditName(strat.name); setEditDesc(strat.description); setEditOpen(true); }}
+                      className="cursor-pointer"
+                    >
+                      <IconEdit className="size-3.5 mr-2" /> Edit Name & Description
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onEdit(strat.id)} className="cursor-pointer">
+                      <IconExternalLink className="size-3.5 mr-2" /> Open Builder
+                    </DropdownMenuItem>
+                  </>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => setDeleteOpen(true)}
                   variant="destructive"
                   className="cursor-pointer"
                 >
-                  <IconTrash className="size-3.5 mr-2" /> Delete Strategy
+                  <IconTrash className="size-3.5 mr-2" /> {strat.is_archived ? "Permanently Delete" : "Delete Strategy"}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </div>
 
-        {/* Name + Description */}
-        <div className="px-4 pt-3 pb-4">
-          <h3 className="font-bold text-[15px] leading-snug text-foreground group-hover:text-primary transition-colors line-clamp-1">
-            {strat.name}
-          </h3>
-          <p className="text-[11px] text-muted-foreground/80 leading-relaxed line-clamp-2 mt-1 min-h-[32px]">
-            {strat.description || "No description yet — open the builder and double-click the Start Node to add one."}
-          </p>
-
-          {/* Created date inline — minimal */}
-          <p className="text-[10px] text-muted-foreground/50 mt-2 font-mono">
-            Created {strat.created}
-          </p>
+        {/* Subheader: Type • Symbol • Timeframe */}
+        <div className="flex items-center gap-1.5 px-4 pt-1.5 text-xs text-muted-foreground">
+          <span>{strat.type}</span>
+          <span>•</span>
+          <span>{symbol}</span>
+          <span>•</span>
+          <span>{timeframe}</span>
         </div>
 
-        {/* Action buttons */}
-        <div className="grid grid-cols-2 gap-2 px-4 pb-4" onClick={(e) => e.stopPropagation()}>
-          <Button
-            onClick={() => setBacktestOpen(true)}
-            size="sm"
-            className="cursor-pointer font-bold text-xs h-9 rounded-xl"
-          >
-            <IconChartBar className="size-3.5 mr-1.5" /> Backtest
-          </Button>
-          <Button
-            onClick={() => onToggleLive(strat.id)}
-            variant="outline"
-            size="sm"
-            className="cursor-pointer font-bold text-xs h-9 rounded-xl"
-          >
-            {strat.status === "active" ? (
-              <><IconPlayerPause className="size-3.5 mr-1.5" /> Pause</>
-            ) : (
-              <><IconRocket className="size-3.5 mr-1.5" /> Go Live</>
-            )}
-          </Button>
+        {/* Performance metrics row */}
+        <div className="grid grid-cols-3 gap-2 px-4 pt-4">
+          <div>
+            <div className="text-base font-bold text-emerald-500">
+              {strat.latest_metrics?.return_pct !== undefined ? `${strat.latest_metrics.return_pct > 0 ? "+" : ""}${strat.latest_metrics.return_pct.toFixed(1)}%` : "--"}
+            </div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Return</div>
+          </div>
+          <div>
+            <div className="text-base font-bold text-foreground">
+              {strat.latest_metrics?.sharpe !== undefined && strat.latest_metrics.sharpe !== null ? strat.latest_metrics.sharpe.toFixed(2) : "--"}
+            </div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Sharpe</div>
+          </div>
+          <div>
+            <div className="text-base font-bold text-rose-500">
+              {strat.latest_metrics?.drawdown !== undefined ? `${strat.latest_metrics.drawdown.toFixed(1)}%` : "--"}
+            </div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Max DD</div>
+          </div>
+        </div>
+
+        {/* Mini Equity Curve Graph */}
+        <div className="h-16 px-4 pt-4 relative">
+          {strat.equity_preview && strat.equity_preview.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={strat.equity_preview.map(([time, value]) => ({ value }))}>
+                <defs>
+                  <linearGradient id={`colorPreview-${strat.id}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="var(--primary)"
+                  strokeWidth={1.5}
+                  fillOpacity={1}
+                  fill={`url(#colorPreview-${strat.id})`}
+                  dot={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="w-100 h-100 flex items-center justify-center border border-dashed border-border/40 rounded-lg text-[10px] text-muted-foreground/50">
+              No equity curve preview
+            </div>
+          )}
+        </div>
+
+        {/* Exec counts */}
+        <div className="flex items-center gap-3 px-4 pt-4 text-[10px] font-mono text-muted-foreground/70">
+          <span>BT:{strat.research_counts?.backtests ?? 0}</span>
+          <span>MC:{strat.research_counts?.montecarlos ?? 0}</span>
+          <span>WF:{strat.research_counts?.walkforwards ?? 0}</span>
+          <span>OPT:{strat.research_counts?.optimizations ?? 0}</span>
+        </div>
+
+        {/* Updated timestamp */}
+        <div className="px-4 pt-2 text-[10px] text-muted-foreground/40 font-medium">
+          Updated recently
+        </div>
+
+        {/* Button to open or restore strategy */}
+        <div className="p-4 mt-auto flex gap-2">
+          {strat.is_archived ? (
+            <>
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRestore?.(strat.id);
+                }}
+                className="flex-1 text-xs font-bold h-9 rounded-xl cursor-pointer"
+              >
+                Restore Strategy
+              </Button>
+              <Button
+                variant="outline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push(`/strategies/${strat.id}`);
+                }}
+                className="text-xs font-bold h-9 px-3 rounded-xl cursor-pointer shrink-0"
+              >
+                <IconExternalLink className="size-3.5" />
+              </Button>
+            </>
+          ) : (
+            <Button
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push(`/strategies/${strat.id}`);
+              }}
+              className="w-full text-xs font-bold h-9 rounded-xl cursor-pointer"
+            >
+              Open Strategy
+            </Button>
+          )}
         </div>
       </div>
+
 
       {/* ─── Delete Confirmation Dialog ───────────────────────────────────── */}
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>

@@ -1,5 +1,7 @@
 // Shared types and constants for the dashboard strategies feature
 
+import type { CanvasPayload } from "@/types/strategy-builder";
+
 // ─── UI model (drives cards, tables) ─────────────────────────────────────────
 
 export interface Strategy {
@@ -12,7 +14,22 @@ export interface Strategy {
   author: string;
   type: string;
   description: string;
-  canvas_json?: Record<string, any>;
+  canvas_json?: CanvasPayload;
+  is_golden?: boolean;
+  current_version?: number;
+  is_archived?: boolean;
+  latest_metrics?: {
+    return_pct: number;
+    sharpe: number | null;
+    drawdown: number;
+  } | null;
+  equity_preview?: Array<[number, number]> | null;
+  research_counts?: {
+    backtests: number;
+    montecarlos: number;
+    walkforwards: number;
+    optimizations: number;
+  };
 }
 
 // ─── API model (mirrors FastAPI StrategyResponseSchema) ───────────────────────
@@ -22,11 +39,26 @@ export interface ApiStrategy {
   user_id: string;
   name: string;
   description: string | null;
-  canvas_json: Record<string, unknown>;
+  canvas_json: CanvasPayload;
   compiled_code: string;
   is_code_modified: boolean;
   created_at: string;
   updated_at: string;
+  is_golden?: boolean;
+  current_version?: number;
+  is_archived?: boolean;
+  latest_metrics?: {
+    return_pct: number;
+    sharpe: number | null;
+    drawdown: number;
+  } | null;
+  equity_preview?: Array<[number, number]> | null;
+  research_counts?: {
+    backtests: number;
+    montecarlos: number;
+    walkforwards: number;
+    optimizations: number;
+  };
 }
 
 /** Convert an API strategy to the UI display model. */
@@ -40,12 +72,18 @@ export function toUiStrategy(api: ApiStrategy): Strategy {
       day: "numeric",
       year: "numeric",
     }),
-    performance: 0,
-    trades: 0,
+    performance: api.latest_metrics?.return_pct ?? 0,
+    trades: api.research_counts?.backtests ?? 0,
     author: api.user_id.slice(0, 8),
     type: api.is_code_modified ? "Custom Code" : "Visual Builder",
     description: api.description ?? "No description provided.",
-    canvas_json: api.canvas_json as Record<string, any>,
+    canvas_json: api.canvas_json as CanvasPayload,
+    is_golden: api.is_golden,
+    current_version: api.current_version,
+    is_archived: api.is_archived,
+    latest_metrics: api.latest_metrics,
+    equity_preview: api.equity_preview,
+    research_counts: api.research_counts,
   };
 }
 
@@ -57,7 +95,7 @@ export interface TemplateStrategy {
   performance: number;
   description: string;
   trades: number;
-  canvas_json: Record<string, unknown>;
+  canvas_json: CanvasPayload;
 }
 
 // Auto-layout helper: stacks nodes vertically with Y spacing
@@ -70,7 +108,7 @@ function withPositions(
     sourceHandle?: string;
     [key: string]: unknown;
   }>
-): Record<string, unknown> {
+): CanvasPayload {
   // Determine column for multi-branch nodes via topological pass
   const col: Record<string, number> = {};
   const row: Record<string, number> = {};
@@ -106,13 +144,14 @@ function withPositions(
   const BASE_X = 400;
 
   return {
+    canvas_version: "4.1",
     nodes: nodes.map((n) => ({
       ...n,
       position: {
-        x: BASE_X + (col[n.id] ?? 0) * X_GAP,
-        y: 60 + (row[n.id] ?? 0) * Y_GAP,
+        x: BASE_X + (col[n.id] || 0) * 350,
+        y: (row[n.id] || 0) * 180,
       },
-    })),
+    })) as any,
     edges: edges.map((e) => ({
       ...e,
       type: "custom",
@@ -250,4 +289,6 @@ export interface StrategyActions {
   onToggleLive: (id: string) => void;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
+  onRestore?: (id: string) => void;
 }
+

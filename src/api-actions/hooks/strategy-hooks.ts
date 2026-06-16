@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { CanvasPayload } from "@/types/strategy-builder";
 import {
   StrategyActions,
   type CreateStrategyRequest,
@@ -17,10 +18,10 @@ export const STRATEGY_KEYS = {
 // ─── Queries ─────────────────────────────────────────────────────────────────
 
 /** Fetch all strategies for the authenticated user with pagination and search. */
-export const useStrategies = (page = 1, limit = 8, search = "") =>
+export const useStrategies = (page = 1, limit = 8, search = "", archived = false) =>
   useQuery({
-    queryKey: [...STRATEGY_KEYS.list(), page, limit, search],
-    queryFn: () => StrategyActions.listStrategies(page, limit, search),
+    queryKey: [...STRATEGY_KEYS.list(), page, limit, search, archived],
+    queryFn: () => StrategyActions.listStrategies(page, limit, search, archived),
     staleTime: 1000 * 30, // 30 seconds
   });
 
@@ -34,6 +35,19 @@ export const useStrategy = (strategyId: string | null) =>
   });
 
 // ─── Mutations ───────────────────────────────────────────────────────────────
+
+/** Toggle/Set golden version of a strategy. */
+export const useSetGoldenVersion = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ strategyId, version }: { strategyId: string; version: number }) =>
+      StrategyActions.setGoldenVersion(strategyId, version),
+    onSuccess: (_data, { strategyId }) => {
+      queryClient.invalidateQueries({ queryKey: STRATEGY_KEYS.list() });
+      queryClient.invalidateQueries({ queryKey: STRATEGY_KEYS.detail(strategyId) });
+    },
+  });
+};
 
 /** Create a new strategy canvas. Invalidates the list on success. */
 export const useCreateStrategy = () => {
@@ -90,12 +104,11 @@ export const useRenameStrategy = () => {
       name: string;
       description: string;
     }) => {
-      // Read existing canvas_json from React Query cache to avoid wiping canvas
-      const cached = queryClient.getQueryData<{ canvas_json: Record<string, unknown> }>(
+      const cached = queryClient.getQueryData<{ canvas_json: CanvasPayload }>(
         STRATEGY_KEYS.detail(strategyId)
       );
       return StrategyActions.updateCanvas(strategyId, {
-        canvas_json: cached?.canvas_json ?? {},
+        canvas_json: cached?.canvas_json ?? { canvas_version: "4.1", nodes: [], edges: [] },
         name,
         description,
       });
@@ -140,6 +153,19 @@ export const useDeleteStrategy = () => {
     },
   });
 };
+
+/** Restore/unarchive a strategy from soft delete. Invalidates the list. */
+export const useRestoreStrategy = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (strategyId: string) =>
+      StrategyActions.restoreStrategy(strategyId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: STRATEGY_KEYS.list() });
+    },
+  });
+};
+
 
 /** Fetch all backtest runs for a specific strategy with pagination and filtering. */
 export const useStrategyBacktests = (
