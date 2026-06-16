@@ -7,8 +7,6 @@ import {
   IconGitBranch,
   IconBolt,
   IconShield,
-  IconActivity,
-  IconArrowRight,
   IconCalendarTime,
 } from "@tabler/icons-react";
 import { Badge } from "@/components/ui/badge";
@@ -210,10 +208,10 @@ export function StrategyFlowMap({ canvasJson }: StrategyFlowMapProps) {
       {/* Page Header Accent */}
       <div className="flex items-center gap-3 text-primary font-bold font-mono text-xs tracking-[0.25em] pl-1 select-none">
         <div className="relative flex size-5 items-center justify-center bg-primary/10 rounded border border-primary/20">
-          <IconCpu className="size-3.5 text-primary" />
+          <IconCpu className="size-3.5 text-primary animate-pulse" />
           <span className="absolute -inset-0.5 rounded bg-primary/20 blur opacity-45"></span>
         </div>
-        <span>STRATEGY PIPELINE & GRAPH BLUEPRINT</span>
+        <span>STRATEGY BLUEPRINTS & LOGIC</span>
       </div>
 
       <div className="flex flex-col gap-8">
@@ -284,159 +282,52 @@ export function StrategyFlowMap({ canvasJson }: StrategyFlowMapProps) {
                 </div>
               </div>
 
-              {/* Pipeline Logical Flow Grid */}
-              <div className="p-6 grid grid-cols-1 xl:grid-cols-4 gap-6 relative">
-                {/* Visual Data Connectors (Visible on Large Screens) */}
-                <div className="hidden xl:block absolute top-1/2 left-[25%] -translate-y-1/2 text-muted-foreground/30 pointer-events-none z-10">
-                  <IconArrowRight className="size-5 animate-pulse text-muted-foreground/45" />
-                </div>
-                <div className="hidden xl:block absolute top-1/2 left-[50%] -translate-y-1/2 text-muted-foreground/30 pointer-events-none z-10">
-                  <IconArrowRight className="size-5 animate-pulse text-muted-foreground/45" />
-                </div>
-                <div className="hidden xl:block absolute top-1/2 left-[75%] -translate-y-1/2 text-muted-foreground/30 pointer-events-none z-10">
-                  <IconArrowRight className="size-5 animate-pulse text-muted-foreground/45" />
-                </div>
-
-                {/* Column 1: Market Inputs & Indicators */}
-                <Card className="bg-card/40 border border-border/50 rounded-xl overflow-hidden hover:border-border transition-colors flex flex-col h-full">
-                  <div className="px-4 py-3 bg-muted/40 border-b border-border/50 flex items-center gap-2">
-                    <IconChartBar className="size-4 text-primary" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground font-sans">Market Indicators</span>
-                  </div>
-                  <CardContent className="p-4 flex-1 flex flex-col justify-start gap-3">
-                    {indicators.length > 0 ? (
-                      <div className="flex flex-col gap-2">
-                        {indicators.flatMap((n: any) => n.data?.indicators || []).map((ind: any, i: number) => (
-                          <div
+              {/* 2x2 Grid Layout Contents */}
+              <CardContent className="p-6 flex flex-col gap-6">
+                
+                {/* Row 1: Market Inputs & Exit Safeguards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-b border-border/30 pb-6">
+                  
+                  {/* Left Column: Indicators Configured */}
+                  <div className="flex flex-col gap-3">
+                    <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.15em] flex items-center gap-2">
+                      <IconChartBar className="size-4 text-primary" />
+                      Indicators Configured
+                    </span>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {indicators.length > 0 ? (
+                        indicators.flatMap((n: any) => n.data?.indicators || []).map((ind: any, i: number) => (
+                          <Badge
                             key={i}
-                            className="group/ind flex items-center justify-between p-2.5 rounded-lg border border-border/30 bg-muted/20 hover:bg-muted/40 transition-colors"
+                            variant="outline"
+                            className="text-[10px] font-mono font-bold py-1.5 px-3 bg-muted/40 border border-border/50 text-primary rounded-md shadow-inner"
                           >
-                            <div className="flex flex-col">
-                              <span className="text-xs font-mono font-bold text-primary">
-                                {ind.indicator || ind.name || "Indicator"}
-                              </span>
-                              <span className="text-[10px] text-muted-foreground font-mono mt-0.5">
-                                period: {ind.period || 14} {ind.std !== undefined ? `| std: ${ind.std}` : ""}
-                              </span>
-                            </div>
-                            <div className="size-1.5 rounded-full bg-primary/80 shadow-[0_0_6px_rgba(56,189,248,0.4)]"></div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center p-6 text-center border border-dashed border-border rounded-lg flex-1">
-                        <IconActivity className="size-5 text-muted-foreground/40 mb-1" />
-                        <span className="text-[10px] text-muted-foreground font-mono">No Indicators</span>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Column 2: Execution Rules */}
-                <Card className="bg-card/40 border border-border/50 rounded-xl overflow-hidden hover:border-border transition-colors flex flex-col h-full">
-                  <div className="px-4 py-3 bg-muted/40 border-b border-border/50 flex items-center gap-2">
-                    <IconGitBranch className="size-4 text-indigo-500" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground font-sans">Execution Logic</span>
+                            {ind.indicator || ind.name || "Indicator"} ({ind.period || 14})
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic pl-1">No technical indicators configured.</span>
+                      )}
+                    </div>
                   </div>
-                  <CardContent className="p-4 flex-1 flex flex-col gap-3">
-                    {conditions.length > 0 ? (
-                      conditions.map((node: any) => {
-                        let cond = node.data?.condition;
-                        if (!cond && node.data?.ast_root) {
-                          cond = renderAST(node.data.ast_root, canvasJson?.nodes || []);
-                        }
-                        return (
-                          <div
-                            key={node.id}
-                            className="relative bg-muted/30 border border-border border-l-[3px] border-l-indigo-500 rounded-r-lg p-3 font-mono text-[11px] leading-relaxed break-all shadow-sm transition-colors hover:border-border/80"
-                          >
-                            <div className="flex items-center justify-between mb-1.5 text-[8px] text-muted-foreground font-bold uppercase tracking-wider">
-                              <span>EVALUATOR</span>
-                              <span className="size-1 rounded-full bg-indigo-500"></span>
-                            </div>
-                            <div className="text-foreground">{highlightCondition(cond)}</div>
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div className="flex-1 flex items-center justify-center bg-muted/10 border border-dashed border-border rounded-lg p-5 font-mono text-[11px] text-muted-foreground text-center">
-                        Pass through logic
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
 
-                {/* Column 3: Dispatch Actions */}
-                <Card className="bg-card/40 border border-border/50 rounded-xl overflow-hidden hover:border-border transition-colors flex flex-col h-full">
-                  <div className="px-4 py-3 bg-muted/40 border-b border-border/50 flex items-center gap-2">
-                    <IconBolt className="size-4 text-emerald-500" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground font-sans">Routing & Dispatch</span>
-                  </div>
-                  <CardContent className="p-4 flex-1 flex flex-col gap-3">
-                    {actions.length > 0 ? (
-                      actions.map((act: any) => {
-                        const { actionType = "buy", sizing } = act.data || {};
-                        const sizeVal = sizing?.value !== undefined ? sizing.value : "Market";
-                        const sizeMode = sizing?.mode === "PERCENT_OF_EQUITY" ? "% Eq" : sizing?.mode === "FIXED_USD" ? " USD" : " Qty";
-                        const sizeStr = sizing ? `${sizeVal}${sizeMode}` : "Market Sizing";
-                        const isBuy = actionType.toLowerCase() === "buy";
-
-                        return (
-                          <div
-                            key={act.id}
-                            className="bg-muted/30 border border-border border-l-[3px] border-l-emerald-500 rounded-r-lg p-3 font-mono text-[11px] leading-relaxed shadow-sm"
-                          >
-                            <div className="flex items-center justify-between mb-1.5 text-[8px] text-muted-foreground font-bold uppercase tracking-wider">
-                              <span>ORDER DISPATCH</span>
-                              <span className="size-1 rounded-full bg-emerald-500"></span>
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                              <div>
-                                <span className="text-emerald-500 font-extrabold">THEN</span>
-                                <span className="text-muted-foreground"> dispatch:</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Badge
-                                  className={`text-[9px] font-extrabold uppercase py-0 px-2 rounded font-mono ${
-                                    isBuy
-                                      ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 dark:text-emerald-400"
-                                      : "bg-amber-500/10 text-amber-600 border border-amber-500/20 dark:text-amber-400"
-                                  }`}
-                                >
-                                  {actionType}
-                                </Badge>
-                                <span className="text-[10px] text-muted-foreground font-sans">at {sizeStr}</span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div className="flex-1 flex items-center justify-center p-6 text-center border border-dashed border-border rounded-lg">
-                        <span className="text-[10px] text-muted-foreground font-mono">No Actions Defined</span>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Column 4: Exit Safeguards */}
-                <Card className="bg-card/40 border border-border/50 rounded-xl overflow-hidden hover:border-border transition-colors flex flex-col h-full">
-                  <div className="px-4 py-3 bg-muted/40 border-b border-border/50 flex items-center gap-2">
-                    <IconShield className="size-4 text-destructive" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground font-sans">Risk Safeguards</span>
-                  </div>
-                  <CardContent className="p-4 flex-1 flex flex-col gap-3">
-                    {(() => {
-                      const allPolicies = policies.flatMap((n: any) => n.data?.policies || []);
-                      return allPolicies.length > 0 ? (
-                        <div className="flex flex-col gap-2">
-                          {allPolicies.map((pol: any, i: number) => {
+                  {/* Right Column: Exit Safeguards */}
+                  <div className="flex flex-col gap-3">
+                    <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.15em] flex items-center gap-2">
+                      <IconShield className="size-4 text-destructive" />
+                      Exit Safeguards
+                    </span>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {(() => {
+                        const allPolicies = policies.flatMap((n: any) => n.data?.policies || []);
+                        return allPolicies.length > 0 ? (
+                          allPolicies.map((pol: any, i: number) => {
                             const isStopLoss = pol.type === "stop_loss";
                             const typeLabelStr = isStopLoss ? "Stop Loss"
                               : pol.type === "take_profit" ? "Take Profit"
                               : pol.type === "trailing_stop" ? "Trailing Stop"
                               : pol.type === "break_even" ? "Break Even"
-                              : pol.type || "Exit Policy";
+                              : pol.type || "Exit";
 
                             let detail = "";
                             if (pol.type === "break_even") {
@@ -454,32 +345,114 @@ export function StrategyFlowMap({ canvasJson }: StrategyFlowMapProps) {
                             }
 
                             return (
-                              <div
+                              <Badge
                                 key={i}
-                                className={`flex items-start gap-2.5 p-2.5 rounded-lg border ${
+                                variant="outline"
+                                className={`font-mono text-[10px] font-bold py-1.5 px-3 rounded-md border shadow-inner ${
                                   isStopLoss
-                                    ? "bg-destructive/5 border-destructive/15 text-destructive"
-                                    : "bg-amber-500/5 border-amber-500/15 text-amber-600 dark:text-amber-400"
+                                    ? "border-destructive/20 bg-destructive/5 text-destructive"
+                                    : "border-amber-500/20 bg-amber-500/5 text-amber-600 dark:text-amber-400"
                                 }`}
                               >
-                                <IconShield className="size-3.5 mt-0.5 shrink-0" />
-                                <div className="flex flex-col">
-                                  <span className="text-[10px] font-bold font-mono tracking-wide">{typeLabelStr}</span>
-                                  <span className="text-[10px] text-muted-foreground font-mono mt-0.5">{detail}</span>
-                                </div>
-                              </div>
+                                {typeLabelStr}: {detail}
+                              </Badge>
                             );
-                          })}
-                        </div>
+                          })
+                        ) : (
+                          <span className="text-xs text-muted-foreground italic pl-1">No custom exit policies configured.</span>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* Row 2: Logic Rules & Dispatch Actions */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  
+                  {/* Left Column: Execution Rules */}
+                  <div className="flex flex-col gap-3">
+                    <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.15em] flex items-center gap-2">
+                      <IconGitBranch className="size-4 text-indigo-500" />
+                      Execution Rules
+                    </span>
+                    <div className="flex flex-col gap-3">
+                      {conditions.length > 0 ? (
+                        conditions.map((node: any) => {
+                          let cond = node.data?.condition;
+                          if (!cond && node.data?.ast_root) {
+                            cond = renderAST(node.data.ast_root, canvasJson?.nodes || []);
+                          }
+                          return (
+                            <div
+                              key={node.id}
+                              className="relative bg-muted/30 border border-border border-l-2 border-l-primary/80 rounded-r-xl rounded-l-md p-5 font-mono text-xs text-foreground shadow-sm"
+                            >
+                              <div className="flex items-center justify-between mb-2 text-[9px] text-muted-foreground font-bold tracking-wider uppercase">
+                                <span>Rule Evaluator</span>
+                                <span className="size-1.5 rounded-full bg-primary" />
+                              </div>
+                              <span className="text-primary font-bold dark:text-sky-400">IF</span> {highlightCondition(cond)}
+                            </div>
+                          );
+                        })
                       ) : (
-                        <div className="flex-1 flex items-center justify-center p-6 text-center border border-dashed border-border rounded-lg">
-                          <span className="text-[10px] text-muted-foreground font-mono">No exit limits set</span>
+                        <div className="bg-muted/10 border border-dashed border-border rounded-lg p-5 font-mono text-xs text-muted-foreground text-center">
+                          Always True (Pass Through)
                         </div>
-                      );
-                    })()}
-                  </CardContent>
-                </Card>
-              </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right Column: Dispatch Actions */}
+                  <div className="flex flex-col gap-3">
+                    <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.15em] flex items-center gap-2">
+                      <IconBolt className="size-4 text-emerald-500" />
+                      Dispatch Actions
+                    </span>
+                    <div className="flex flex-col gap-3">
+                      {actions.length > 0 ? (
+                        actions.map((act: any) => {
+                          const { actionType = "buy", sizing } = act.data || {};
+                          const sizeVal = sizing?.value !== undefined ? sizing.value : "Market";
+                          const sizeMode = sizing?.mode === "PERCENT_OF_EQUITY" ? "% Eq" : sizing?.mode === "FIXED_USD" ? " USD" : " Qty";
+                          const sizeStr = sizing ? `${sizeVal}${sizeMode}` : "Market Sizing";
+                          const isBuy = actionType.toLowerCase() === "buy";
+
+                          return (
+                            <div
+                              key={act.id}
+                              className="relative bg-muted/30 border border-border border-l-2 border-l-success/80 rounded-r-xl rounded-l-md p-5 font-mono text-xs text-foreground shadow-sm"
+                            >
+                              <div className="flex items-center justify-between mb-2 text-[9px] text-muted-foreground font-bold tracking-wider uppercase">
+                                <span>Order Dispatcher</span>
+                                <span className="size-1.5 rounded-full bg-success" />
+                              </div>
+                              <div>
+                                <span className="text-success font-bold">THEN</span> Execute order:{" "}
+                                <Badge
+                                  className={`text-[9px] font-extrabold uppercase py-0 px-2 rounded font-mono ${
+                                    isBuy
+                                      ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 dark:text-emerald-400"
+                                      : "bg-amber-500/10 text-amber-600 border border-amber-500/20 dark:text-amber-400"
+                                  }`}
+                                >
+                                  {actionType}
+                                </Badge>{" "}
+                                <span className="text-muted-foreground text-[11px]">({sizeStr} sizing)</span>
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic pl-1">No dispatch actions mapped.</span>
+                      )}
+                    </div>
+                  </div>
+
+                </div>
+
+              </CardContent>
             </div>
           );
         })}
