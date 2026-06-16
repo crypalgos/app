@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 import { LaunchConsole } from "./_components/launch-console";
+import { QuantumOrbitLoader } from "@/components/orbit-loader/QuantumOrbitLoader";
 import { WorkspaceToolbar } from "./_components/workspace-toolbar";
 import { StrategyCard } from "./_components/strategy-card";
 import { StrategyTable } from "./_components/strategy-table";
@@ -27,6 +28,7 @@ import {
   useStrategies,
   useCreateStrategy,
   useDeleteStrategy,
+  useRestoreStrategy,
 } from "@/api-actions/hooks/strategy-hooks";
 
 export default function DashboardPage() {
@@ -34,12 +36,14 @@ export default function DashboardPage() {
   const [viewMode, setViewMode] = useState<"card" | "table">("card");
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
-  const limit = 6;
+  const [showArchived, setShowArchived] = useState(false);
+  const limit = 8;
 
   // ─── API data ───────────────────────────────────────────────────────────────
-  const { data: apiStrategies, isLoading } = useStrategies(page, limit, searchQuery);
+  const { data: apiStrategies, isLoading } = useStrategies(page, limit, searchQuery, showArchived);
   const { mutateAsync: createStrategy, isPending: isCreating } = useCreateStrategy();
   const { mutate: deleteStrategy } = useDeleteStrategy();
+  const { mutate: restoreStrategy } = useRestoreStrategy();
 
   // Map API strategies to UI model
   const strategies = (apiStrategies?.strategies ?? []).map(toUiStrategy);
@@ -59,12 +63,13 @@ export default function DashboardPage() {
           ? "AI-generated trading strategy"
           : "Custom visual strategy",
         canvas_json: {
+          canvas_version: "4.1",
           nodes: [
             {
               id: "start-1",
               type: "startNode",
               position: { x: 400, y: 50 },
-              data: { label: "Start Strategy", isActive: false },
+              data: { label: "Start Strategy", isActive: false, exchange: "delta" } as any,
             },
           ],
           edges: [],
@@ -96,8 +101,23 @@ export default function DashboardPage() {
 
   const handleDelete = (id: string) => {
     deleteStrategy(id, {
-      onSuccess: () => toast.success("Strategy deleted."),
+      onSuccess: () => {
+        toast.success(showArchived ? "Strategy permanently deleted." : "Strategy archived.");
+        // If deleting the last item on the current page, go back a page
+        if (strategies.length === 1 && page > 1) {
+          setPage((p) => p - 1);
+        }
+      },
       onError: () => toast.error("Failed to delete strategy."),
+    });
+  };
+
+  const handleRestore = (id: string) => {
+    restoreStrategy(id, {
+      onSuccess: () => {
+        toast.success("Strategy restored successfully.");
+      },
+      onError: () => toast.error("Failed to restore strategy."),
     });
   };
 
@@ -126,7 +146,7 @@ export default function DashboardPage() {
 
       <Separator />
 
-      {/* Active Workspace */}
+      {/* Workspace Listing */}
       <section className="flex flex-col gap-5">
         <WorkspaceToolbar
           totalCount={apiStrategies?.total ?? 0}
@@ -134,14 +154,17 @@ export default function DashboardPage() {
           onSearchChange={handleSearchChange}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
+          showArchived={showArchived}
+          onShowArchivedChange={(val) => {
+            setShowArchived(val);
+            setPage(1);
+          }}
         />
 
-        {/* Loading skeletons */}
+        {/* Loading spinner */}
         {isLoading ? (
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-[220px] rounded-xl" />
-            ))}
+          <div className="flex flex-col items-center justify-center min-h-[300px] border border-dashed border-border/60 rounded-xl">
+            <QuantumOrbitLoader size="md" text={showArchived ? "Loading archive..." : "Loading active workspace..."} />
           </div>
         ) : strategies.length === 0 ? (
           <Empty className="border border-dashed border-border/60 min-h-[320px]">
@@ -150,15 +173,21 @@ export default function DashboardPage() {
                 <IconTerminal2 />
               </EmptyMedia>
               <EmptyTitle>
-                {searchQuery ? "No Strategies Match" : "No Active Strategies"}
+                {searchQuery
+                  ? "No Strategies Match"
+                  : showArchived
+                  ? "No Archived Strategies"
+                  : "No Active Strategies"}
               </EmptyTitle>
               <EmptyDescription>
                 {searchQuery
                   ? "Try a different keyword or deploy a new strategy from templates."
+                  : showArchived
+                  ? "Strategies you archive will appear here. You can permanently delete them from the archive."
                   : "Create a custom strategy, generate one with AI, or deploy a pre-built template to get started."}
               </EmptyDescription>
             </EmptyHeader>
-            {!searchQuery && (
+            {!searchQuery && !showArchived && (
               <EmptyContent>
                 <Button
                   onClick={() => handleCreateStrategy("create")}
@@ -187,6 +216,7 @@ export default function DashboardPage() {
                   onToggleLive={handleToggleLive}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
+                  onRestore={handleRestore}
                 />
               ))}
             </div>
@@ -203,6 +233,7 @@ export default function DashboardPage() {
                 onToggleLive={handleToggleLive}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                onRestore={handleRestore}
               />
             </div>
 

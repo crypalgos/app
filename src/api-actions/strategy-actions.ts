@@ -62,13 +62,25 @@ export const StrategyActions = {
   listStrategies: async (
     page = 1,
     limit = 8,
-    search = ""
+    search = "",
+    archived = false
   ): Promise<PaginatedStrategiesResponse> => {
     const response = await axiosInstance.get<
       ApiResponse<PaginatedStrategiesResponse>
     >("/strategies", {
-      params: { page, limit, search },
+      params: { page, limit, search, archived },
     });
+    return response.data.data;
+  },
+
+  /** Set a strategy version snapshot as the golden candidate. */
+  setGoldenVersion: async (
+    strategyId: string,
+    version: number
+  ): Promise<any> => {
+    const response = await axiosInstance.post<ApiResponse<any>>(
+      `/strategies/${strategyId}/versions/${version}/golden`
+    );
     return response.data.data;
   },
 
@@ -251,6 +263,14 @@ export const StrategyActions = {
   /** Delete a strategy owned by the authenticated user. */
   deleteStrategy: async (strategyId: string): Promise<void> => {
     await axiosInstance.delete(`/strategies/${strategyId}`);
+  },
+
+  /** Restore/unarchive a strategy from soft delete. */
+  restoreStrategy: async (strategyId: string): Promise<ApiStrategy> => {
+    const response = await axiosInstance.post<ApiResponse<ApiStrategy>>(
+      `/strategies/${strategyId}/restore`
+    );
+    return response.data.data;
   },
 
   /** Enqueue parameter optimization job. */

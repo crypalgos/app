@@ -71,7 +71,8 @@ function StrategyRow({
   onToggleLive,
   onEdit,
   onDelete,
-}: { strat: Strategy } & Pick<StrategyActions, "onToggleLive" | "onEdit" | "onDelete">) {
+  onRestore,
+}: { strat: Strategy } & Pick<StrategyActions, "onToggleLive" | "onEdit" | "onDelete" | "onRestore">) {
   const router = useRouter();
 
   // Delete confirm
@@ -127,7 +128,7 @@ function StrategyRow({
         <td className="px-5 py-3.5">
           <div
             className="flex items-center gap-3 cursor-pointer"
-            onClick={() => onEdit(strat.id)}
+            onClick={() => router.push(`/strategies/${strat.id}`)}
           >
             <TypeAvatar type={strat.type} />
             <div className="flex flex-col gap-0.5 min-w-0">
@@ -166,24 +167,36 @@ function StrategyRow({
         {/* Actions */}
         <td className="px-5 py-3.5">
           <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button
-              onClick={() => setBacktestOpen(true)}
-              size="sm"
-              className="cursor-pointer h-7 text-[11px] font-bold rounded-lg gap-1 px-2.5"
-            >
-              <IconChartBar className="size-3" /> Backtest
-            </Button>
-            <Button
-              onClick={() => onToggleLive(strat.id)}
-              variant="outline"
-              size="sm"
-              className="cursor-pointer h-7 text-[11px] font-bold rounded-lg gap-1 px-2.5"
-            >
-              {strat.status === "active"
-                ? <><IconPlayerPause className="size-3" /> Pause</>
-                : <><IconRocket className="size-3" /> Go Live</>
-              }
-            </Button>
+            {strat.is_archived ? (
+              <Button
+                onClick={() => onRestore?.(strat.id)}
+                size="sm"
+                className="cursor-pointer h-7 text-[11px] font-bold rounded-lg gap-1 px-2.5"
+              >
+                <IconRocket className="size-3" /> Restore
+              </Button>
+            ) : (
+              <>
+                <Button
+                  onClick={() => setBacktestOpen(true)}
+                  size="sm"
+                  className="cursor-pointer h-7 text-[11px] font-bold rounded-lg gap-1 px-2.5"
+                >
+                  <IconChartBar className="size-3" /> Backtest
+                </Button>
+                <Button
+                  onClick={() => onToggleLive(strat.id)}
+                  variant="outline"
+                  size="sm"
+                  className="cursor-pointer h-7 text-[11px] font-bold rounded-lg gap-1 px-2.5"
+                >
+                  {strat.status === "active"
+                    ? <><IconPlayerPause className="size-3" /> Pause</>
+                    : <><IconRocket className="size-3" /> Go Live</>
+                  }
+                </Button>
+              </>
+            )}
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -192,22 +205,30 @@ function StrategyRow({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem
-                  onClick={() => { setEditName(strat.name); setEditDesc(strat.description); setEditOpen(true); }}
-                  className="cursor-pointer"
-                >
-                  <IconEdit className="size-3.5 mr-2" /> Edit Name & Description
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onEdit(strat.id)} className="cursor-pointer">
-                  <IconExternalLink className="size-3.5 mr-2" /> Open Builder
-                </DropdownMenuItem>
+                {strat.is_archived ? (
+                  <DropdownMenuItem onClick={() => onRestore?.(strat.id)} className="cursor-pointer">
+                    <IconRocket className="size-3.5 mr-2 text-emerald-500" /> Restore Strategy
+                  </DropdownMenuItem>
+                ) : (
+                  <>
+                    <DropdownMenuItem
+                      onClick={() => { setEditName(strat.name); setEditDesc(strat.description); setEditOpen(true); }}
+                      className="cursor-pointer"
+                    >
+                      <IconEdit className="size-3.5 mr-2" /> Edit Name & Description
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onEdit(strat.id)} className="cursor-pointer">
+                      <IconExternalLink className="size-3.5 mr-2" /> Open Builder
+                    </DropdownMenuItem>
+                  </>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => setDeleteOpen(true)}
                   variant="destructive"
                   className="cursor-pointer"
                 >
-                  <IconTrash className="size-3.5 mr-2" /> Delete Strategy
+                  <IconTrash className="size-3.5 mr-2" /> {strat.is_archived ? "Permanently Delete" : "Delete Strategy"}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -330,6 +351,7 @@ export function StrategyTable({
   onToggleLive,
   onEdit,
   onDelete,
+  onRestore,
 }: StrategyTableProps) {
   return (
     <div className="overflow-x-auto rounded-2xl border border-border/60 bg-card shadow-sm">
@@ -351,6 +373,7 @@ export function StrategyTable({
               onToggleLive={onToggleLive}
               onEdit={onEdit}
               onDelete={onDelete}
+              onRestore={onRestore}
             />
           ))}
         </tbody>
