@@ -219,6 +219,13 @@ export function StrategyCard({
           </div>
         </div>
 
+        {/* Description */}
+        {strat.description && (
+          <p className="px-4 pt-1 text-xs text-muted-foreground/85 line-clamp-2 leading-relaxed">
+            {strat.description}
+          </p>
+        )}
+
         {/* Subheader: Type • Symbol • Timeframe */}
         <div className="flex items-center gap-1.5 px-4 pt-1.5 text-xs text-muted-foreground">
           <span>{strat.type}</span>
@@ -227,13 +234,6 @@ export function StrategyCard({
           <span>•</span>
           <span>{timeframe}</span>
         </div>
-
-        {/* Description */}
-        {strat.description && (
-          <p className="px-4 pt-2 text-xs text-muted-foreground/80 line-clamp-2 leading-relaxed min-h-[32px]">
-            {strat.description}
-          </p>
-        )}
 
         {/* Performance metrics row */}
         <div className="grid grid-cols-3 gap-2 px-4 pt-4">
