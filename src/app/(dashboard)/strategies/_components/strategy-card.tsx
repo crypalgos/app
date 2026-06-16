@@ -287,16 +287,65 @@ export function StrategyCard({
         </div>
 
         {/* Exec counts */}
-        <div className="flex items-center gap-3 px-4 pt-4 text-[10px] font-mono text-muted-foreground/70">
-          <span>BT:{strat.research_counts?.backtests ?? 0}</span>
-          <span>MC:{strat.research_counts?.montecarlos ?? 0}</span>
-          <span>WF:{strat.research_counts?.walkforwards ?? 0}</span>
-          <span>OPT:{strat.research_counts?.optimizations ?? 0}</span>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 px-4 pt-3.5 text-[10px] text-muted-foreground/80 border-t border-border/20 mt-3">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold">Backtests</span>
+            <span className="font-mono font-bold text-foreground">{strat.research_counts?.backtests ?? 0}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="font-semibold">Monte Carlo</span>
+            <span className="font-mono font-bold text-foreground">{strat.research_counts?.montecarlos ?? 0}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="font-semibold">Walk Forward</span>
+            <span className="font-mono font-bold text-foreground">{strat.research_counts?.walkforwards ?? 0}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="font-semibold">Optimizations</span>
+            <span className="font-mono font-bold text-foreground">{strat.research_counts?.optimizations ?? 0}</span>
+          </div>
         </div>
 
         {/* Updated timestamp */}
-        <div className="px-4 pt-2 pb-5 text-[10px] text-muted-foreground/40 font-medium">
+        <div className="px-4 pt-3 text-[10px] text-muted-foreground/40 font-medium">
           Updated recently
+        </div>
+
+        {/* Button to open or restore strategy */}
+        <div className="p-4 mt-auto flex gap-2">
+          {strat.is_archived ? (
+            <>
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRestore?.(strat.id);
+                }}
+                className="flex-1 text-xs font-bold h-9 rounded-xl cursor-pointer"
+              >
+                Restore Strategy
+              </Button>
+              <Button
+                variant="outline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push(`/strategies/${strat.id}`);
+                }}
+                className="text-xs font-bold h-9 px-3 rounded-xl cursor-pointer shrink-0"
+              >
+                <IconExternalLink className="size-3.5" />
+              </Button>
+            </>
+          ) : (
+            <Button
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push(`/strategies/${strat.id}`);
+              }}
+              className="w-full text-xs font-bold h-9 rounded-xl cursor-pointer"
+            >
+              Open Strategy
+            </Button>
+          )}
         </div>
       </div>
 
