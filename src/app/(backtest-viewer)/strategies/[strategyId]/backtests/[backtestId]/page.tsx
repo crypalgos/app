@@ -1,8 +1,10 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
+import { useState } from "react";
 import { useStrategyBacktest, useRunDataset } from "@/api-actions/hooks/strategy-hooks";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Table,
   TableHeader,
@@ -27,6 +29,81 @@ import { Button } from "@/components/ui/button";
 import { IconArrowLeft } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
+
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function MonthlyHeatmap({ heatmapData }: { heatmapData: Record<string, Record<string, number | null>> }) {
+  if (!heatmapData || Object.keys(heatmapData).length === 0) return null;
+  const years = Object.keys(heatmapData).sort();
+
+  return (
+    <div className="bg-muted/5 border border-border/10 rounded-2xl p-6 mt-6 hover:bg-muted/10 transition-colors">
+      <h3 className="font-semibold text-sm mb-4 uppercase tracking-wider text-muted-foreground">Monthly Returns (%)</h3>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-b border-border/10 hover:bg-transparent">
+              <TableHead className="w-[80px] font-mono">Year</TableHead>
+              {MONTHS.map((m) => (
+                <TableHead key={m} className="text-center text-xs">{m}</TableHead>
+              ))}
+              <TableHead className="text-right text-xs font-bold">YTD</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {years.map((year) => {
+              const months = heatmapData[year];
+              let ytdMultiplier = 1;
+              let hasData = false;
+              
+              const cells = Array.from({ length: 12 }).map((_, i) => {
+                const val = months[String(i + 1)];
+                if (val !== null && val !== undefined) {
+                  ytdMultiplier *= (1 + val / 100);
+                  hasData = true;
+                  return val;
+                }
+                return null;
+              });
+              
+              const ytd = (ytdMultiplier - 1) * 100;
+
+              return (
+                <TableRow key={year} className="border-b border-border/5 hover:bg-muted/5">
+                  <TableCell className="font-mono text-sm font-medium">{year}</TableCell>
+                  {cells.map((val, i) => {
+                    if (val === null) return <TableCell key={i} className="text-center text-muted-foreground/30">-</TableCell>;
+                    const bgOpacity = Math.min(Math.abs(val) / 20, 1) * 0.4;
+                    const bgColor = val > 0 
+                      ? `rgba(16, 185, 129, ${bgOpacity})` 
+                      : val < 0 ? `rgba(239, 68, 68, ${bgOpacity})` : 'transparent';
+                    const textColor = val > 0 ? "text-emerald-500" : val < 0 ? "text-destructive" : "text-muted-foreground";
+                    
+                    return (
+                      <TableCell key={i} className="text-center p-0 align-middle">
+                        <div className="m-1 rounded-md py-1.5 text-xs font-mono font-medium" style={{ backgroundColor: bgColor }}>
+                          <span className={textColor}>{val > 0 ? '+' : ''}{val.toFixed(2)}</span>
+                        </div>
+                      </TableCell>
+                    );
+                  })}
+                  <TableCell className="text-right font-mono text-sm font-bold">
+                    {hasData ? (
+                      <span className={ytd > 0 ? "text-emerald-500" : ytd < 0 ? "text-destructive" : ""}>
+                        {ytd > 0 ? '+' : ''}{ytd.toFixed(2)}%
+                      </span>
+                    ) : "-"}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
 
 function MetricCard({ title, value, color }: { title: string; value: React.ReactNode; color?: string }) {
   return (
@@ -70,8 +147,18 @@ export default function BacktestDetailPage() {
   const capMetrics = metrics.capacity ?? {};
   const symbols = metrics.symbols ?? {};
 
+
   // Fetch full resolution chart if dataset_id is available (unconditional hook call)
   const { data: fullEquityCurve } = useRunDataset(backtestId, datasetId);
+
+  const [selectedRolling, setSelectedRolling] = useState<string>("sharpe");
+  const [selectedWindow, setSelectedWindow] = useState<string>("30D");
+
+  const datasets = charting.datasets || {};
+  const rollingGroup = datasets[`rolling_${selectedRolling}`];
+  const rollingDatasetId = rollingGroup?.[selectedWindow]?.dataset_id;
+  const { data: rollingCurveData } = useRunDataset(backtestId, rollingDatasetId);
+
 
   if (isLoading) {
     return (
@@ -99,11 +186,19 @@ export default function BacktestDetailPage() {
     balance: value,
   }));
 
+
   const drawdownData = (charting.drawdown_curve ?? []).map(([time, value]: any) => ({
     time,
     formattedTime: new Date(time).toLocaleDateString(),
     drawdown: value,
   }));
+
+  const rollingData = (rollingCurveData || []).map(([time, value]: any) => ({
+    time,
+    formattedTime: new Date(time).toLocaleDateString(),
+    value: value,
+  }));
+
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background">
@@ -197,6 +292,8 @@ export default function BacktestDetailPage() {
               </div>
             </div>
           </div>
+          
+          <MonthlyHeatmap heatmapData={datasets.monthly_heatmap || {}} />
         </TabsContent>
 
         {/* Charts Tab */}
@@ -250,6 +347,58 @@ export default function BacktestDetailPage() {
                       <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11 }} tickFormatter={(val) => `${val}%`} />
                       <RechartsTooltip />
                       <Area type="monotone" dataKey="drawdown" stroke="#ef4444" strokeWidth={2} fillOpacity={1} fill="url(#colorDrawdown)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-muted/10 border border-border/20 rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-sm">Rolling Metrics</h3>
+                <div className="flex gap-2">
+                  <Select value={selectedRolling} onValueChange={setSelectedRolling}>
+                    <SelectTrigger className="w-[140px] h-8 text-xs bg-background/50 border-border/20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sharpe">Sharpe Ratio</SelectItem>
+                      <SelectItem value="sortino">Sortino Ratio</SelectItem>
+                      <SelectItem value="drawdown">Drawdown</SelectItem>
+                      <SelectItem value="volatility">Volatility</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={selectedWindow} onValueChange={setSelectedWindow}>
+                    <SelectTrigger className="w-[90px] h-8 text-xs bg-background/50 border-border/20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="30D">30 Days</SelectItem>
+                      <SelectItem value="60D">60 Days</SelectItem>
+                      <SelectItem value="90D">90 Days</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="h-[350px] w-full">
+                {rollingData.length === 0 ? (
+                  <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                    Select a metric and window to load rolling data.
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={rollingData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorRolling" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                      <XAxis dataKey="formattedTime" tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
+                      <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
+                      <RechartsTooltip />
+                      <Area type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorRolling)" />
                     </AreaChart>
                   </ResponsiveContainer>
                 )}
