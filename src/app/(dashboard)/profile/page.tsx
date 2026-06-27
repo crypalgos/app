@@ -37,6 +37,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { QuantumOrbitLoader } from "@/components/orbit-loader/QuantumOrbitLoader";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 // Define simulated Exchange type
@@ -166,8 +167,7 @@ export default function ProfilePage() {
   if (isUserLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-        <Loader2 className="size-8 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground animate-pulse">Loading profile settings...</p>
+        <QuantumOrbitLoader size="md" text="Loading profile settings..." />
       </div>
     );
   }

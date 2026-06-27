@@ -12,7 +12,12 @@ import {
   IconChartLine,
   IconBook,
   IconPlus,
-  IconChevronDown
+  IconChevronDown,
+  IconTestPipe,
+  IconSearch,
+  IconBell,
+  IconBuildingStore,
+  IconSettings
 } from "@tabler/icons-react";
 
 import {
@@ -39,9 +44,9 @@ const NAV_ITEMS = [
     icon: IconCpu,
   },
   {
-    title: "Backtests",
-    url: "/backtests",
-    icon: IconFlask,
+    title: "Paper Trading",
+    url: "/paper-trading",
+    icon: IconTestPipe,
   },
   {
     title: "Live Trading",
@@ -50,19 +55,34 @@ const NAV_ITEMS = [
     badge: "ACTIVE",
   },
   {
+    title: "Coin Research",
+    url: "/coin-research",
+    icon: IconSearch,
+  },
+  {
+    title: "Coin Alerts",
+    url: "/coin-alerts",
+    icon: IconBell,
+  },
+  {
     title: "Exchanges",
     url: "/exchanges",
     icon: IconArrowsExchange,
   },
   {
-    title: "Analytics",
-    url: "/analytics",
-    icon: IconChartLine,
+    title: "Marketplace",
+    url: "/marketplace",
+    icon: IconBuildingStore,
   },
   {
     title: "Documentation",
     url: "/docs",
     icon: IconBook,
+  },
+  {
+    title: "Settings",
+    url: "/settings",
+    icon: IconSettings,
   }
 ];
 

@@ -1,10 +1,10 @@
-import { cn } from "@/lib/utils"
-import { IconLoader } from "@tabler/icons-react"
+import { QuantumOrbitLoader } from "@/components/orbit-loader/QuantumOrbitLoader"
 
-function Spinner({ className, ...props }: React.ComponentProps<"svg">) {
+function Spinner({ className, ...props }: React.ComponentProps<"span">) {
   return (
-    <IconLoader role="status" aria-label="Loading" className={cn("size-4 animate-spin", className)} {...props} />
+    <QuantumOrbitLoader variant="inline" size="sm" className={className} />
   )
 }
 
 export { Spinner }
+

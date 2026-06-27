@@ -259,6 +259,8 @@ export const NavbarLogo = () => {
         width={190}
         height={190}
         className="block dark:hidden w-[150px] lg:w-[190px] h-auto"
+        style={{ height: "auto" }}
+        loading="eager"
       />
       <img
         src="/logo_dark.svg"
@@ -266,6 +268,8 @@ export const NavbarLogo = () => {
         width={190}
         height={190}
         className="hidden dark:block w-[150px] lg:w-[190px] h-auto"
+        style={{ height: "auto" }}
+        loading="eager"
       />
     </Link>
   );

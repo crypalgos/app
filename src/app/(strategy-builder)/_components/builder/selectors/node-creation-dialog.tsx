@@ -32,6 +32,7 @@ import {
 
   IconPlus,
   IconClick,
+  IconShield,
 } from "@tabler/icons-react";
 import { useNodesStore } from "../../../store/nodes-store";
 
@@ -123,6 +124,10 @@ export default function NodeCreationDialog() {
         sl: 0.98,
         tp: 1.05,
       },
+      policyGroup: {
+        label: "Risk Policy Group",
+        policies: [],
+      },
     };
     setFormData(defaults[category] || {});
   };
@@ -160,6 +165,10 @@ export default function NodeCreationDialog() {
           amount: 0.1,
           sl: 0.98,
           tp: 1.05,
+        },
+        policyGroup: {
+          label: "Risk Policy Group",
+          policies: [],
         },
       };
       setFormData(defaults[activeCreationType === "selector" ? "data" : activeCreationType] || {});
@@ -228,9 +237,11 @@ export default function NodeCreationDialog() {
       
       newNode.data.condition = expression;
     } else if (chosenType === "action") {
-      // actionNode and utilityNode classifications both map to actionNode or utilityNode type on canvas
+      // actionNode classifications both map to actionNode type on canvas
       const isUtility = ["log_info", "trigger_webhook", "send_notification"].includes(formData.actionType);
-      newNode.type = isUtility ? "utilityNode" : "actionNode";
+      newNode.type = "actionNode";
+    } else if (chosenType === "policyGroup") {
+      newNode.type = "policyGroupNode";
     }
 
     addNode(newNode);
@@ -262,6 +273,7 @@ export default function NodeCreationDialog() {
               edgeLabel = "Signal";
               break;
             case "actionNode":
+            case "policyGroupNode":
               edgeType = "success";
               edgeLabel = "Action Flow";
               break;
@@ -305,7 +317,7 @@ export default function NodeCreationDialog() {
             outEdgeLabel = "True Path"; // Default true path branch
             break;
           case "actionNode":
-          case "utilityNode":
+          case "policyGroupNode":
             outEdgeType = "success";
             outEdgeLabel = "Action Flow";
             break;
@@ -359,6 +371,8 @@ export default function NodeCreationDialog() {
         return <IconGitBranch className="size-5 text-blue-400" />;
       case "action":
         return <IconBolt className="size-5 text-emerald-400" />;
+      case "policyGroup":
+        return <IconShield className="size-5 text-orange-400" />;
       default:
         return <IconSettings className="size-5 text-primary" />;
     }
@@ -423,6 +437,13 @@ export default function NodeCreationDialog() {
                     desc: "Dispatch market execution orders, trailing stop limits, or trigger webhook alert logs.",
                     icon: <IconBolt className="size-5 text-white" />,
                     color: "bg-emerald-600",
+                  },
+                  {
+                    id: "policyGroup",
+                    title: "Risk Policy Group",
+                    desc: "Configure advanced exits downstream from an entry order (Stop Loss, Take Profit, Trailing).",
+                    icon: <IconShield className="size-5 text-white" />,
+                    color: "bg-orange-600",
                   },
                 ].map((cat) => (
                   <button

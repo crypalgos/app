@@ -29,8 +29,7 @@ export function Providers({
     return client;
   });
 
-  const hasInitialized = React.useRef(false);
-  if (!hasInitialized.current) {
+  React.useState(() => {
     if (initialUser) {
       useAuthStore.setState({
         user: initialUser,
@@ -42,8 +41,8 @@ export function Providers({
         isLoading: false,
       });
     }
-    hasInitialized.current = true;
-  }
+    return true;
+  });
 
   return (
     <NextThemesProvider {...props}>

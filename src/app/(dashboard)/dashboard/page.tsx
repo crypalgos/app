@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 import { LaunchConsole } from "./_components/launch-console";
+import { QuantumOrbitLoader } from "@/components/orbit-loader/QuantumOrbitLoader";
 import { WorkspaceToolbar } from "./_components/workspace-toolbar";
 import { StrategyCard } from "./_components/strategy-card";
 import { StrategyTable } from "./_components/strategy-table";
@@ -34,7 +35,7 @@ export default function DashboardPage() {
   const [viewMode, setViewMode] = useState<"card" | "table">("card");
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
-  const limit = 6;
+  const limit = 8;
 
   // ─── API data ───
   const { data: apiStrategies, isLoading } = useStrategies(page, limit, searchQuery);
@@ -59,12 +60,13 @@ export default function DashboardPage() {
           ? "AI-generated trading strategy"
           : "Custom visual strategy",
         canvas_json: {
+          canvas_version: "4.1",
           nodes: [
             {
               id: "start-1",
               type: "startNode",
               position: { x: 400, y: 50 },
-              data: { label: "Start Strategy", isActive: false },
+              data: { label: "Start Strategy", isActive: false, exchange: "delta" } as any,
             },
           ],
           edges: [],
@@ -109,7 +111,13 @@ export default function DashboardPage() {
 
   const handleDelete = (id: string) => {
     deleteStrategy(id, {
-      onSuccess: () => toast.success("Strategy deleted."),
+      onSuccess: () => {
+        toast.success("Strategy deleted.");
+        // If deleting the last item on the current page, go back a page
+        if (filteredStrategies.length === 1 && page > 1) {
+          setPage((p) => p - 1);
+        }
+      },
       onError: () => toast.error("Failed to delete strategy."),
     });
   };
@@ -156,12 +164,10 @@ export default function DashboardPage() {
           onViewModeChange={setViewMode}
         />
 
-        {/* Loading skeletons */}
+        {/* Loading spinner */}
         {isLoading ? (
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-[220px] rounded-xl" />
-            ))}
+          <div className="flex flex-col items-center justify-center min-h-[300px] border border-dashed border-border/60 rounded-xl">
+            <QuantumOrbitLoader size="md" text="Loading active workspace..." />
           </div>
         ) : filteredStrategies.length === 0 ? (
           <Empty className="border border-dashed border-border/60 min-h-[320px]">

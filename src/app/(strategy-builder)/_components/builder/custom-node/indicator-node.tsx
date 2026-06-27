@@ -3,15 +3,9 @@ import { Handle, Position } from "@xyflow/react";
 import { IconChartBar, IconTrash, IconSettings, IconCopy } from "@tabler/icons-react";
 import { Badge } from "@/components/ui/badge";
 import { useNodesStore } from "../../../store/nodes-store";
+import { getRecommendedSuccessor } from "../../../utils/node-factory";
 
-interface IndicatorNodeData {
-  label?: string;
-  type?: string;
-  dataSourceId?: string;
-  parameters?: Record<string, any>;
-  value?: string;
-  indicators?: any[];
-}
+import type { IndicatorNodeData, CompilerDiagnostic } from "@/types/strategy-builder";
 
 interface IndicatorNodeProps {
   id: string;
@@ -22,17 +16,29 @@ interface IndicatorNodeProps {
 export default React.memo(function IndicatorNode({ id, data, selected }: IndicatorNodeProps) {
   const {
     label = "Moving Average",
-    type = "SMA",
-    parameters = { period: 20 },
+    indicator = "SMA",
+    period = 14,
+    std = undefined,
     value = "Pending calculation",
   } = data || {};
 
   const [isHovered, setIsHovered] = useState(false);
 
+  const compileDiagnostics = useNodesStore((state) => state.compileDiagnostics);
+  const nodeDiagnostics = compileDiagnostics?.filter((d) => d.node_id === id) || [];
+  
+  const highestDiagnostic = nodeDiagnostics.reduce<CompilerDiagnostic | null>((highest, current) => {
+    if (!highest) return current;
+    if (highest.severity === "ERROR") return highest;
+    if (current.severity === "ERROR") return current;
+    if (current.severity === "WARNING") return current;
+    return highest;
+  }, null);
+
   const setSelectedNodeId = useNodesStore((state) => state.setSelectedNodeId);
   const removeNode = useNodesStore((state) => state.removeNode);
   const duplicateNode = useNodesStore((state) => state.duplicateNode);
-  const addPlaceholderNode = useNodesStore((state) => state.addPlaceholderNode);
+  const addDirectNode = useNodesStore((state) => state.addDirectNode);
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -47,10 +53,12 @@ export default React.memo(function IndicatorNode({ id, data, selected }: Indicat
 
   // Convert parameters object to a short string description
   const getParamsString = () => {
-    return Object.entries(parameters)
-      .map(([k, v]) => `${k}:${v}`)
-      .join(", ");
+    if (indicator === "BollingerBands") return `p=${period}, std=${std}`;
+    if (indicator === "RSI" || indicator === "SMA" || indicator === "EMA") return `p=${period}`;
+    return "";
   };
+
+  const isConfigured = !!indicator || (data.indicators && data.indicators.length > 0);
 
   return (
     <div 
@@ -59,15 +67,50 @@ export default React.memo(function IndicatorNode({ id, data, selected }: Indicat
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
+
+
+      {/* Rich hover diagnostics tooltip */}
+      {isHovered && nodeDiagnostics.length > 0 && (
+        <div className="absolute bottom-full left-0 mb-8 w-80 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white rounded-lg p-3 shadow-xl z-50 text-xs flex flex-col gap-1.5 pointer-events-none border border-zinc-200 dark:border-zinc-700 animate-in fade-in zoom-in-95 duration-150">
+          {nodeDiagnostics.map((diag, index) => (
+            <div key={index} className="flex flex-col gap-0.5 border-b border-zinc-200 dark:border-zinc-800 last:border-0 pb-1.5 last:pb-0">
+              <div className="flex items-center gap-1.5 font-semibold">
+                <span className={
+                  diag.severity === "ERROR" ? "text-red-600 dark:text-red-400" :
+                  diag.severity === "WARNING" ? "text-amber-600 dark:text-amber-400" : "text-blue-600 dark:text-blue-400"
+                }>
+                  {diag.severity === "ERROR" ? "Error" : diag.severity === "WARNING" ? "Warning" : "Info"}
+                </span>
+                <span className="text-zinc-500 dark:text-zinc-400 text-[10px] font-mono">[{diag.error_code}]</span>
+              </div>
+              <p className="text-zinc-700 dark:text-zinc-200 leading-normal">{diag.message}</p>
+              {diag.suggestions && diag.suggestions.length > 0 && (
+                <div className="mt-1 flex flex-col gap-0.5 pl-2 border-l border-zinc-300 dark:border-zinc-700">
+                  {diag.suggestions.map((sug, sIdx) => (
+                    <p key={sIdx} className="text-zinc-500 dark:text-zinc-400 text-[10px] italic">💡 {sug}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
       <div
         className={`
           relative bg-white dark:bg-[#1B1D21] border
-          rounded-tl-xl rounded-bl-xl rounded-br-xl p-4 w-80 h-24 shadow-md transition-all duration-300
+          rounded-tl-xl rounded-bl-xl rounded-br-xl p-4 w-80 min-h-[6rem] h-auto shadow-md transition-all duration-300
           hover:shadow-lg group cursor-pointer
           ${isHovered || selected ? "rounded-tr-none" : "rounded-tr-xl"}
-          ${selected 
-            ? "border-primary shadow-[0_0_12px_rgba(59,130,246,0.25)]" 
-            : "border-border hover:border-border"}
+          ${highestDiagnostic
+            ? highestDiagnostic.severity === "ERROR"
+              ? "border-red-500 shadow-[0_0_12px_rgba(239,68,68,0.3)] dark:border-red-500 animate-pulse"
+              : highestDiagnostic.severity === "WARNING"
+              ? "border-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.3)] dark:border-amber-500"
+              : "border-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.3)] dark:border-blue-500"
+            : selected 
+              ? "border-primary shadow-[0_0_12px_rgba(59,130,246,0.25)]" 
+              : "border-border hover:border-border"}
         `}
       >
         {/* Floating Toolbar top-right of the card (n8n style, connected) */}
@@ -117,13 +160,19 @@ export default React.memo(function IndicatorNode({ id, data, selected }: Indicat
             </div>
             <div className="flex flex-col select-none overflow-hidden">
               <h3 className="text-foreground font-semibold text-sm truncate max-w-[180px]">
-                {(data.indicators || []).length > 0 ? "Applied Indicators" : label}
+                {isConfigured ? ((data.indicators || []).length > 0 ? "Applied Indicators" : label) : "Unconfigured Node"}
               </h3>
-              <p className="text-[10px] text-muted-foreground font-mono truncate max-w-[180px]">
-                {(data.indicators || []).length > 0
-                  ? (data.indicators || []).map((i: any) => `${i.indicator === "BollingerBands" ? "BB" : i.indicator}(${i.period})`).join(", ")
-                  : `${type} (${getParamsString()})`}
-              </p>
+              {isConfigured ? (
+                <p className="text-[10px] text-muted-foreground font-mono truncate max-w-[180px]">
+                  {(data.indicators || []).length > 0
+                    ? (data.indicators || []).map((i: any) => `${i.indicator === "BollingerBands" ? "BB" : i.indicator}(${i.period})`).join(", ")
+                    : `${indicator} (${getParamsString()})`}
+                </p>
+              ) : (
+                <p className="text-[10px] text-orange-400 font-mono">
+                  Click gear to configure
+                </p>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-1 select-none shrink-0">
@@ -132,6 +181,14 @@ export default React.memo(function IndicatorNode({ id, data, selected }: Indicat
             </Badge>
           </div>
         </div>
+        {nodeDiagnostics.length > 0 && (
+          <div className={`text-[10px] font-medium truncate max-w-[280px] mt-1 select-none ${
+            highestDiagnostic?.severity === "ERROR" ? "text-red-500" :
+            highestDiagnostic?.severity === "WARNING" ? "text-amber-500" : "text-blue-500"
+          }`} title={highestDiagnostic?.message || ""}>
+            {highestDiagnostic?.message}
+          </div>
+        )}
       </div>
 
       {/* React Flow Handles */}
@@ -150,9 +207,16 @@ export default React.memo(function IndicatorNode({ id, data, selected }: Indicat
         style={{ bottom: -10, pointerEvents: 'all' }}
         onClick={(e) => {
           e.stopPropagation();
-          addPlaceholderNode(id, null, "condition");
+          const recommendedType = getRecommendedSuccessor("indicatorNode");
+          if (recommendedType) {
+            addDirectNode({
+              parentNodeId: id,
+              parentHandle: null,
+              recommendedType
+            });
+          }
         }}
-        title="Drag to connect or click to spawn placeholder"
+        title="Click to add next step"
       >
         +
       </Handle>

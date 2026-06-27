@@ -220,3 +220,13 @@ export const useDeleteBacktest = (strategyId: string) => {
     },
   });
 };
+
+/** Fetch a specific chart dataset for a backtest/research run */
+export const useRunDataset = (runId: string, datasetName: string | undefined) => {
+  return useQuery({
+    queryKey: ["run-dataset", runId, datasetName],
+    queryFn: () => StrategyActions.getRunDatasetChart(runId, datasetName!),
+    enabled: !!datasetName,
+    staleTime: Infinity, // Datasets never change once generated
+  });
+};

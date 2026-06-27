@@ -26,6 +26,7 @@ import {
 import { useNodesStore } from "../../../store/nodes-store";
 import { getCoinLogoUrl } from "@/lib/instruments";
 import { fetchConfigRegistry, Broker, Instrument } from "@/api-actions/config-actions";
+import { cn } from "@/lib/utils";
 
 // Dynamic timeframes fetched from API
 
@@ -36,10 +37,12 @@ export default function DataNodeDialog() {
     setSelectedNodeId,
     updateNodeData,
     setIsSynced,
+    compileError,
   } = useNodesStore();
 
   const activeNode = nodes.find((n) => n.id === selectedNodeId);
   const isOpen = !!(activeNode && activeNode.type === "dataNode");
+  const hasError = compileError && selectedNodeId ? compileError.includes(selectedNodeId) : false;
 
   // Determine active broker from StartNode
   const startNode = React.useMemo(() => nodes.find(n => n.type === "startNode"), [nodes]);
@@ -62,13 +65,20 @@ export default function DataNodeDialog() {
   useEffect(() => {
     if (isOpen && activeNode) {
       const data = activeNode.data || {};
-      setFormData({ ...data });
+      let initialAssetClass = data.assetClass || "PERPETUAL";
+      if (initialAssetClass === "PERPETUAL" && activeBrokerId === "delta") {
+        initialAssetClass = "FUTURES";
+      }
+      setFormData({ 
+        ...data,
+        assetClass: initialAssetClass
+      });
       setInputStates({
         leverage: data.leverage?.toString() || "",
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, selectedNodeId]);
+  }, [isOpen, selectedNodeId, activeBrokerId]);
 
   const update = (key: string, value: any) =>
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -89,12 +99,19 @@ export default function DataNodeDialog() {
       isPerp = activeBroker.instruments.perpetual.some((i: Instrument) => i.symbol === data.symbol);
     }
     
+    const primaryTf = data.timeframe || "1h";
+    let tfs = data.timeframes || [primaryTf];
+    if (!tfs.includes(primaryTf)) {
+      tfs = [...tfs, primaryTf];
+    }
+    
     return {
       ...data,
       source: activeBrokerId,
       dataType: "OHLCV",
       assetClass: isPerp ? "PERPETUAL" : "FUTURES", // Defaults to futures if not perp
       leverage: data.leverage === "" || isNaN(Number(data.leverage)) ? 10 : Number(data.leverage),
+      timeframes: tfs,
     };
   };
 
@@ -130,6 +147,13 @@ export default function DataNodeDialog() {
           </DialogDescription>
         </DialogHeader>
 
+        {hasError && (
+          <div className="mx-1 p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-500 text-xs font-semibold flex gap-2 items-start">
+            <span className="mt-0.5 font-bold">⚠️</span>
+            <div className="flex-1 leading-normal">{compileError}</div>
+          </div>
+        )}
+
         <div className="space-y-6 py-4 max-h-[70vh] overflow-y-auto scrollbar-thin px-2">
           
           <div className="flex flex-col gap-3">
@@ -162,10 +186,12 @@ export default function DataNodeDialog() {
                     }}
                     className="w-full"
                   >
-                    <TabsList className="w-full grid grid-cols-4 h-9">
+                    <TabsList className={cn("w-full grid h-9", activeBrokerId === "delta" ? "grid-cols-3" : "grid-cols-4")}>
                       <TabsTrigger value="SPOT" disabled={!activeBroker?.instruments?.spot?.length} className="text-xs">Spot</TabsTrigger>
                       <TabsTrigger value="FUTURES" disabled={!activeBroker?.instruments?.futures?.length} className="text-xs">Futures</TabsTrigger>
-                      <TabsTrigger value="PERPETUAL" disabled={!activeBroker?.instruments?.perpetual?.length} className="text-xs">Perps</TabsTrigger>
+                      {activeBrokerId !== "delta" && (
+                        <TabsTrigger value="PERPETUAL" disabled={!activeBroker?.instruments?.perpetual?.length} className="text-xs">Perps</TabsTrigger>
+                      )}
                       <TabsTrigger value="OPTIONS" disabled={!activeBroker?.instruments?.options?.length} className="text-xs">Options</TabsTrigger>
                     </TabsList>
                   </Tabs>
@@ -192,8 +218,22 @@ export default function DataNodeDialog() {
                         };
                         
                         const currentType = typeMapping[formData.assetClass || "PERPETUAL"];
-                        const instruments = (activeBroker.instruments as any)[currentType] as Instrument[] || [];
+                        let instruments = (activeBroker.instruments as any)[currentType] as Instrument[] || [];
                         
+                        if (formData.assetClass === "FUTURES" && activeBrokerId === "delta") {
+                          const futures = activeBroker.instruments.futures || [];
+                          const perpetuals = activeBroker.instruments.perpetual || [];
+                          // Merge and deduplicate by symbol
+                          const seen = new Set();
+                          instruments = [];
+                          [...futures, ...perpetuals].forEach(inst => {
+                            if (!seen.has(inst.symbol)) {
+                              seen.add(inst.symbol);
+                              instruments.push(inst);
+                            }
+                          });
+                        }
+
                         if (instruments.length === 0) {
                           return <div className="p-4 text-center text-xs text-muted-foreground">No instruments available</div>;
                         }
@@ -244,10 +284,16 @@ export default function DataNodeDialog() {
 
               {/* Timeframe */}
               <div className="flex flex-col gap-2">
-                <Label className="text-sm font-semibold">Timeframe</Label>
+                <Label className="text-sm font-semibold">Timeframe (Primary)</Label>
                 <Select
                   value={formData.timeframe || "1h"}
-                  onValueChange={(val) => update("timeframe", val)}
+                  onValueChange={(val) => {
+                    update("timeframe", val);
+                    const tfs = formData.timeframes || [formData.timeframe || "1h"];
+                    if (!tfs.includes(val)) {
+                      update("timeframes", [...tfs, val]);
+                    }
+                  }}
                 >
                   <SelectTrigger className="w-full border-border font-mono text-sm h-10">
                     <SelectValue placeholder="Timeframe" />
@@ -260,6 +306,51 @@ export default function DataNodeDialog() {
                 </Select>
               </div>
             </div>
+
+            {/* Additional Timeframes */}
+            <div className="flex flex-col gap-2">
+              <Label className="text-sm font-semibold">Additional Timeframes</Label>
+              <div className="grid grid-cols-6 gap-1.5 mt-1">
+                {timeframes.map((tf) => {
+                  const isPrimary = (formData.timeframe || "1h") === tf;
+                  const selectedTfs = formData.timeframes || [formData.timeframe || "1h"];
+                  const isSelected = selectedTfs.includes(tf) || isPrimary;
+                  return (
+                    <button
+                      key={tf}
+                      type="button"
+                      disabled={isPrimary}
+                      onClick={() => {
+                        let newTfs = [...selectedTfs];
+                        if (newTfs.includes(tf)) {
+                          newTfs = newTfs.filter((t) => t !== tf);
+                        } else {
+                          newTfs.push(tf);
+                        }
+                        // Ensure primary is always in there
+                        const primary = formData.timeframe || "1h";
+                        if (!newTfs.includes(primary)) {
+                          newTfs.push(primary);
+                        }
+                        update("timeframes", newTfs);
+                      }}
+                      className={`px-2.5 py-1 text-xs font-mono font-bold rounded-lg border transition-all duration-200 cursor-pointer ${
+                        isPrimary
+                          ? "bg-muted text-muted-foreground border-border cursor-not-allowed opacity-50"
+                          : isSelected
+                            ? "bg-primary border-primary text-primary-foreground shadow-sm"
+                            : "bg-background border-border text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {tf.toUpperCase()}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1 leading-normal">
+                Select any extra timeframes required by indicator nodes connected to this data feed.
+              </p>
+            </div>
           </div>
 
           {/* Summary badge */}
@@ -270,7 +361,7 @@ export default function DataNodeDialog() {
               </span>
               <Badge variant="secondary" className="text-xs font-mono ml-auto">
                 {formData.symbol} · {activeBroker?.instruments?.perpetual?.some((i: Instrument) => i.symbol === formData.symbol) ? "PERPETUAL" : "FUTURES"} ·{" "}
-                {formData.timeframe || "1h"} · {formData.leverage || 10}×
+                {(formData.timeframes || [formData.timeframe || "1h"]).join(", ")} · {formData.leverage || 10}×
               </Badge>
             </div>
           )}

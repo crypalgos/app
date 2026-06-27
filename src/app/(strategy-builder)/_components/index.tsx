@@ -5,7 +5,6 @@ import {
   ReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import BuilderSidebar from "./sidebar/builder-sidebar";
 import SubNav from "./sub-nav/sub-nav";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
@@ -17,30 +16,34 @@ import ActionNode from "./builder/custom-node/action-node";
 import DataNode from "./builder/custom-node/data-node";
 import IndicatorNode from "./builder/custom-node/indicator-node";
 import PlaceholderNode from "./builder/custom-node/placeholder-node";
+import PolicyGroupNode from "./builder/custom-node/policy-group-node";
 import StartNodeDialog from "./builder/selectors/start-node-dialog";
 import DataNodeDialog from "./builder/selectors/data-node-dialog";
 import IndicatorNodeDialog from "./builder/selectors/indicator-node-dialog";
 import ConditionNodeDrawer from "./builder/selectors/condition-node-drawer";
 import ActionNodeDrawer from "./builder/selectors/action-node-drawer";
+import PolicyGroupDrawer from "./builder/selectors/policy-group-drawer";
 import NodeCreationDialog from "./builder/selectors/node-creation-dialog";
 import CustomEdge from "./builder/custom-edge/custom-edge";
 import CustomConnectionLine from "./builder/custom-connection-line/custom-connection-line";
 import { useTheme } from "next-themes";
 import { useNodesStore } from "../store/nodes-store";
 import { useSaveCode, useStrategy, useUpdateCanvas } from "@/api-actions/hooks/strategy-hooks";
+import { QuantumOrbitLoader } from "@/components/orbit-loader/QuantumOrbitLoader";
 import Editor from "@monaco-editor/react";
-import { IconCode, IconLoader2, IconX } from "@tabler/icons-react";
+import { IconCode, IconX } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 // Define custom node types
 const nodeTypes = {
   startNode: StartNode,
   conditionNode: ConditionNode,
   actionNode: ActionNode,
-  utilityNode: ActionNode,
   dataNode: DataNode,
   indicatorNode: IndicatorNode,
   placeholderNode: PlaceholderNode,
+  policyGroupNode: PolicyGroupNode,
 };
 
 // Define custom edge types
@@ -76,6 +79,12 @@ export default function Canvas({ strategyId }: CanvasProps) {
     strategyDescription,
     selectedNodeId,
     setSelectedNodeId,
+    setCompileError,
+    compileDiagnostics,
+    setCompileDiagnostics,
+    isProblemsOpen,
+    setIsProblemsOpen,
+    setDiagnosticsPanelHeight,
   } = useNodesStore();
   const { theme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -212,8 +221,8 @@ export default function Canvas({ strategyId }: CanvasProps) {
 
       try {
         if (activeView === "canvas" || activeView === "both") {
-          const canvasPayload = {
-            schema_version: "1.0.0.0",
+          const canvasPayload: any = {
+            canvas_version: "4.1",
             nodes: nodes.map((n) => ({
               id: n.id,
               type: n.type,
@@ -236,12 +245,16 @@ export default function Canvas({ strategyId }: CanvasProps) {
             description: strategyDescription,
           });
           setCodeContent(updated.compiled_code);
+          setCompileError(updated.compile_error ?? null);
+          setCompileDiagnostics(updated.compile_diagnostics ?? null);
         } else {
           await saveCode(codeContent);
+          setCompileError(null);
+          setCompileDiagnostics(null);
         }
         setIsSynced(true);
-      } catch {
-        // Silently fail — user can retry by making another change
+      } catch (err: any) {
+        // Silenced compilation toasts per spec
       } finally {
         setIsSaving(false);
       }
@@ -254,7 +267,7 @@ export default function Canvas({ strategyId }: CanvasProps) {
   }, [nodesStateStr, edgesStateStr, codeContent, isSynced, activeView, strategyName, strategyDescription]);
 
   const onInit = useCallback(
-    (instance: ReactFlowInstance) => {
+    (instance: any) => {
       setReactFlowInstance(instance);
       // Delayed fitView ensures visual builder centers perfectly on initial load after container sizing is painted
       setTimeout(() => {
@@ -280,10 +293,11 @@ export default function Canvas({ strategyId }: CanvasProps) {
         <SubNav strategyId={strategyId} />
 
         <div className="fixed inset-0 top-[68px] flex items-center justify-center bg-background">
-          <div className="flex flex-col items-center gap-4 text-muted-foreground">
-            <IconLoader2 className="size-8 animate-spin text-primary" />
-            <p className="text-sm font-medium">Loading strategy workspace...</p>
-          </div>
+          <QuantumOrbitLoader
+            variant="default"
+            size="lg"
+            text="Loading strategy workspace..."
+          />
         </div>
       </>
     );
@@ -337,7 +351,6 @@ export default function Canvas({ strategyId }: CanvasProps) {
             <Background bgColor={bgColor} color={dotsColor} size={1.5} gap={12} />
           </ReactFlow>
           <CanvasControls />
-          <BuilderSidebar />
         </motion.div>
 
         {/* ─── Drag Resizer Handle ─── */}
@@ -436,6 +449,7 @@ export default function Canvas({ strategyId }: CanvasProps) {
       <IndicatorNodeDialog />
       <ConditionNodeDrawer />
       <ActionNodeDrawer />
+      <PolicyGroupDrawer />
 
       <NodeCreationDialog />
     </>

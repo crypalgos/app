@@ -1,175 +1,68 @@
 import { create } from "zustand";
 import { applyNodeChanges, applyEdgeChanges, addEdge } from "@xyflow/react";
-import type { Edge, Node, ReactFlowInstance } from "@xyflow/react";
-import { ensureCustomEdge } from "../_components/builder/custom-edge/edge-utils";
+import type { Edge, NodeChange, EdgeChange, Connection } from "@xyflow/react";
+import type { AppNode, CanvasPayload, CompilerDiagnostic } from "@/types/strategy-builder";
+import { parseCanvasPayload } from "../utils/canvas-parser";
+import {  createDuplicateNode, createInsertPlaceholderNode, createNode } from "../utils/node-factory";
+import { createCustomEdge, createInsertPlaceholderEdges } from "../utils/edge-factory";
+import { UISlice, createUISlice } from "./slices/ui-slice";
 
-
-
-type NodesState = {
-  nodes: Node[];
+export interface NodesEdgesSlice {
+  nodes: AppNode[];
   edges: Edge[];
-  reactFlowInstance: ReactFlowInstance | null;
-  isSynced: boolean;
-  activeView: string;
-  isRunning: boolean;
-  isBacktesting: boolean;
-  isSaving: boolean;
-  codeContent: string;
-  selectedNodeId: string | null;
-  activeCreationType: string | null;
-  activeCreationSource: { nodeId: string; handleId: string | null; placeholderId?: string | null; originalTargetId?: string | null } | null;
-  // Strategy meta — populated after loading from API
-  strategyId: string | null;
-  strategyName: string;
-  strategyDescription: string;
-  isCodeModified: boolean;
-  setIsCodeModified: (modified: boolean) => void;
-  backtestTaskId: string | null;
-  setReactFlowInstance: (instance: ReactFlowInstance) => void;
-  setIsSynced: (synced: boolean) => void;
-  setActiveView: (view: string) => void;
-  setIsRunning: (running: boolean) => void;
-  setIsBacktesting: (backtesting: boolean) => void;
-  setIsSaving: (saving: boolean) => void;
-  setCodeContent: (code: string) => void;
-  setStrategyMeta: (id: string, name: string, description: string, isCodeModified: boolean) => void;
-  setBacktestTaskId: (taskId: string | null) => void;
-  setSelectedNodeId: (id: string | null) => void;
-  setActiveCreationType: (type: string | null) => void;
-  setActiveCreationSource: (source: { nodeId: string; handleId: string | null; placeholderId?: string | null; originalTargetId?: string | null } | null) => void;
-  addPlaceholderNode: (sourceNodeId: string, handleId: string | null, expectedType: string) => void;
+  
   initializeFromStrategy: (strategy: {
     id: string;
     name: string;
     description: string | null;
-    canvas_json: Record<string, unknown>;
+    canvas_json: Partial<CanvasPayload>;
     compiled_code: string;
     is_code_modified: boolean;
+    compile_error?: string | null;
+    compile_diagnostics?: CompilerDiagnostic[] | null;
   }) => void;
-  addNode: (node: Node) => void;
-  updateNode: (id: string, patch: Partial<Node>) => void;
+  
+  addNode: (node: AppNode) => void;
+  updateNode: (id: string, patch: Partial<AppNode>) => void;
   updateNodeData: (id: string, dataPatch: Record<string, any>) => void;
   removeNode: (id: string) => void;
+  duplicateNode: (id: string) => void;
+  addDirectNode: (params: { parentNodeId: string, parentHandle: string | null, recommendedType: string }) => void;
+  
   addEdge: (edge: Edge) => void;
   deleteEdge: (id: string) => void;
-  insertPlaceholderOnEdge: (edgeId: string) => void;
   updateEdgeLabel: (id: string, label: string) => void;
-  duplicateNode: (id: string) => void;
-  onNodesChange: (changes: any) => void;
-  onEdgesChange: (changes: any) => void;
-  onConnect: (params: any) => void;
-  // Canvas control methods
-  zoomIn: () => void;
-  zoomOut: () => void;
-  fitView: () => void;
-  resetView: () => void;
-};
+  insertPlaceholderOnEdge: (edgeId: string) => void;
+  
+  onNodesChange: (changes: NodeChange[]) => void;
+  onEdgesChange: (changes: EdgeChange[]) => void;
+  onConnect: (connection: Connection) => void;
+}
 
-export const useNodesStore = create<NodesState>((set, get) => ({
+export type StoreState = UISlice & NodesEdgesSlice;
+
+export const useNodesStore = create<StoreState>((set, get, api) => ({
+  ...createUISlice(set as unknown as any, get as unknown as any, api as unknown as any),
+  
   nodes: [],
   edges: [],
-  reactFlowInstance: null,
-  isSynced: true,
-  activeView: "canvas",
-  isRunning: false,
-  isBacktesting: false,
-  isSaving: false,
-  selectedNodeId: null,
-  activeCreationType: null,
-  activeCreationSource: null,
-  strategyId: null,
-  strategyName: "New Strategy",
-  strategyDescription: "",
-  isCodeModified: false,
-  backtestTaskId: null,
-  codeContent: ``,
-
-  setReactFlowInstance: (instance) =>
-    set(() => ({ reactFlowInstance: instance })),
-  setIsSynced: (synced) => set(() => ({ isSynced: synced })),
-  setActiveView: (activeView) => set(() => ({ activeView })),
-  setIsRunning: (isRunning) => set(() => ({ isRunning })),
-  setIsBacktesting: (isBacktesting) => set(() => ({ isBacktesting })),
-  setIsSaving: (isSaving) => set(() => ({ isSaving })),
-  setCodeContent: (codeContent) => set(() => ({ codeContent, isSynced: false })),
-  setIsCodeModified: (isCodeModified) => set(() => ({ isCodeModified, isSynced: false })),
-
-  setStrategyMeta: (id, name, description, isCodeModified) =>
-    set(() => ({ strategyId: id, strategyName: name, strategyDescription: description, isCodeModified, isSynced: false })),
-
-  setBacktestTaskId: (backtestTaskId) => set(() => ({ backtestTaskId })),
 
   initializeFromStrategy: (strategy) => {
-    const canvasJson = strategy.canvas_json as {
-      nodes?: Node[];
-      edges?: Edge[];
-    };
-    
-    let rawNodes = canvasJson.nodes ?? [
-      {
-        id: "start-1",
-        type: "startNode",
-        position: { x: 400, y: 50 },
-        deletable: false,
-        data: { label: "Start Strategy", isActive: false },
-      },
-    ];
-    let rawEdges = canvasJson.edges ?? [];
+    const { nodes, edges } = parseCanvasPayload(strategy.canvas_json);
 
-    const startNode = rawNodes.find(n => n.type === "startNode");
-    const riskNode = rawNodes.find(n => n.type === "riskManagementNode");
-
-    if (riskNode) {
-      if (startNode) {
-        startNode.data = {
-          ...startNode.data,
-          ...riskNode.data,
-        };
-      }
-      // Bypass risk node edges
-      const sourcesToRm = rawEdges.filter(e => e.target === riskNode.id);
-      const targetsFromRm = rawEdges.filter(e => e.source === riskNode.id);
-      
-      const edgesToKeep = rawEdges.filter(e => e.source !== riskNode.id && e.target !== riskNode.id);
-      const newBypassedEdges: Edge[] = [];
-      
-      sourcesToRm.forEach(srcEdge => {
-        targetsFromRm.forEach(tgtEdge => {
-          newBypassedEdges.push(ensureCustomEdge({
-            id: `edge-${srcEdge.source}-${tgtEdge.target}`,
-            source: srcEdge.source,
-            sourceHandle: srcEdge.sourceHandle,
-            target: tgtEdge.target,
-            targetHandle: tgtEdge.targetHandle,
-            type: "custom",
-            data: {
-              type: "info",
-              animated: false,
-              label: "Data Flow",
-            },
-          }));
-        });
-      });
-
-      rawNodes = rawNodes.filter(n => n.type !== "riskManagementNode");
-      rawEdges = [...edgesToKeep, ...newBypassedEdges];
-    }
-
-    set(() => ({
+    set({
       strategyId: strategy.id,
       strategyName: strategy.name,
       strategyDescription: strategy.description ?? "",
       isCodeModified: strategy.is_code_modified,
       codeContent: strategy.compiled_code,
-      nodes: rawNodes.map((n, idx) => {
-        const position = n.position || { x: 400, y: 50 + (idx * 150) };
-        const base = { ...n, position };
-        return base.id === "start-1" ? { ...base, deletable: false } : base;
-      }),
-      edges: rawEdges,
+      nodes,
+      edges,
       isSynced: true,
       activeView: strategy.is_code_modified ? "code" : "canvas",
-    }));
+      compileError: strategy.compile_error ?? null,
+      compileDiagnostics: strategy.compile_diagnostics ?? null,
+    });
   },
 
   addNode: (node) =>
@@ -180,77 +73,21 @@ export const useNodesStore = create<NodesState>((set, get) => ({
 
   updateNode: (id, patch) =>
     set((state) => ({
-      nodes: state.nodes.map((n) => (n.id === id ? { ...n, ...patch } : n)),
+      nodes: state.nodes.map((n) => (n.id === id ? { ...n, ...patch } as AppNode : n)),
       isSynced: false,
     })),
 
   updateNodeData: (id, dataPatch) =>
     set((state) => ({
       nodes: state.nodes.map((n) =>
-        n.id === id ? { ...n, data: { ...n.data, ...dataPatch } } : n
+        n.id === id ? { ...n, data: { ...n.data, ...dataPatch } } as AppNode : n
       ),
       isSynced: false,
     })),
 
-  setSelectedNodeId: (selectedNodeId) => set(() => ({ selectedNodeId })),
-
-  setActiveCreationType: (activeCreationType) => set(() => ({ activeCreationType })),
-
-  setActiveCreationSource: (activeCreationSource) => set(() => ({ activeCreationSource })),
-
-  addPlaceholderNode: (sourceNodeId, handleId, expectedType) =>
-    set((state) => {
-      const parentNode = state.nodes.find((n) => n.id === sourceNodeId);
-      if (!parentNode) return {};
-
-      // Check for existing placeholder on same parent/handle
-      const existingPlaceholder = state.nodes.find(
-        (n) =>
-          n.type === "placeholderNode" &&
-          n.data?.parentSourceId === sourceNodeId &&
-          n.data?.parentSourceHandleId === handleId
-      );
-      if (existingPlaceholder) return {};
-
-      const placeholderId = `placeholder-${Date.now()}`;
-      const x = parentNode.position.x + (Math.random() * 20 - 10);
-      const y = parentNode.position.y + 130;
-
-      const newPlaceholder = {
-        id: placeholderId,
-        type: "placeholderNode",
-        position: { x, y },
-        data: {
-          expectedType,
-          parentSourceId: sourceNodeId,
-          parentSourceHandleId: handleId,
-        },
-      };
-
-      const newEdge = {
-        id: `edge-${sourceNodeId}-${placeholderId}`,
-        source: sourceNodeId,
-        sourceHandle: handleId || undefined,
-        target: placeholderId,
-        type: "custom",
-        data: {
-          type: "placeholder",
-          animated: false,
-          label: "Add Node",
-        },
-      };
-
-      return {
-        nodes: [...state.nodes, newPlaceholder],
-        edges: [...state.edges, newEdge],
-        isSynced: false,
-      };
-    }),
-
   removeNode: (id) =>
     set((state) => {
-      // Deletion protection for the start strategy root node
-      if (id === "start-1") return {};
+      if (id === "start-1") return state; // Deletion protection for start node
       return {
         nodes: state.nodes.filter((n) => n.id !== id),
         edges: state.edges.filter((e) => e.source !== id && e.target !== id),
@@ -261,22 +98,26 @@ export const useNodesStore = create<NodesState>((set, get) => ({
   duplicateNode: (id) =>
     set((state) => {
       const sourceNode = state.nodes.find((n) => n.id === id);
-      if (!sourceNode || sourceNode.type === "startNode") return {};
+      if (!sourceNode || sourceNode.type === "startNode") return state;
 
-      // Clone parameters and spawn the copy at a 50px visual offset
-      const duplicateId = `${sourceNode.type}-${Date.now()}`;
-      const clone = {
-        ...sourceNode,
-        id: duplicateId,
-        position: {
-          x: sourceNode.position.x + 50,
-          y: sourceNode.position.y + 50,
-        },
-        selected: false,
-      };
-
+      const clone = createDuplicateNode(sourceNode);
       return {
         nodes: [...state.nodes, clone],
+        isSynced: false,
+      };
+    }),
+
+  addDirectNode: ({ parentNodeId, parentHandle, recommendedType }) =>
+    set((state) => {
+      const parentNode = state.nodes.find((n) => n.id === parentNodeId);
+      if (!parentNode) return state;
+
+      const newNode = createNode(recommendedType, parentNode.position.x + (Math.random() * 20 - 10), parentNode.position.y + 150);
+      const newEdge = createCustomEdge(parentNodeId, newNode.id, parentHandle);
+
+      return {
+        nodes: [...state.nodes, newNode],
+        edges: [...state.edges, newEdge],
         isSynced: false,
       };
     }),
@@ -304,57 +145,24 @@ export const useNodesStore = create<NodesState>((set, get) => ({
   insertPlaceholderOnEdge: (edgeId) =>
     set((state) => {
       const edge = state.edges.find((e) => e.id === edgeId);
-      if (!edge) return {};
+      if (!edge) return state;
 
       const sourceNode = state.nodes.find((n) => n.id === edge.source);
       const targetNode = state.nodes.find((n) => n.id === edge.target);
-      if (!sourceNode || !targetNode) return {};
+      if (!sourceNode || !targetNode) return state;
 
-      // Compute midpoint coordinates
-      const x = (sourceNode.position.x + targetNode.position.x) / 2;
-      const y = (sourceNode.position.y + targetNode.position.y) / 2;
+      const newPlaceholder = createInsertPlaceholderNode(
+        edge.source,
+        edge.sourceHandle,
+        edge.target,
+        sourceNode.position.x,
+        sourceNode.position.y,
+        targetNode.position.x,
+        targetNode.position.y
+      );
 
-      const placeholderId = `placeholder-${Date.now()}`;
+      const [edge1, edge2] = createInsertPlaceholderEdges(edge, newPlaceholder.id);
 
-      // Create new placeholder node
-      const newPlaceholder = {
-        id: placeholderId,
-        type: "placeholderNode",
-        position: { x, y },
-        data: {
-          parentSourceId: edge.source,
-          parentSourceHandleId: edge.sourceHandle || null,
-          originalTargetId: edge.target,
-        },
-      };
-
-      // Create two dashed placeholder edges: Source -> Placeholder and Placeholder -> Target
-      const edge1 = {
-        id: `edge-${edge.source}-${placeholderId}`,
-        source: edge.source,
-        sourceHandle: edge.sourceHandle || undefined,
-        target: placeholderId,
-        type: "custom",
-        data: {
-          type: "placeholder",
-          animated: false,
-          label: "Add Node",
-        },
-      };
-
-      const edge2 = {
-        id: `edge-${placeholderId}-${edge.target}`,
-        source: placeholderId,
-        target: edge.target,
-        type: "custom",
-        data: {
-          type: "placeholder",
-          animated: false,
-          label: "To Target",
-        },
-      };
-
-      // Remove the original edge and add the placeholder node & both draft edges
       const nextEdges = state.edges.filter((e) => e.id !== edgeId).concat(edge1, edge2);
 
       return {
@@ -366,13 +174,11 @@ export const useNodesStore = create<NodesState>((set, get) => ({
 
   onNodesChange: (changes) =>
     set((state) => {
-      // Keyboard deletion protection: block removals of start-1
-      const safeChanges = changes.filter(
-        (c: any) => !(c.type === "remove" && c.id === "start-1")
-      );
-      const isMutation = safeChanges.some((c: any) => c.type === 'remove' || c.type === 'position' || c.type === 'select');
+      const safeChanges = changes.filter((c) => !(c.type === "remove" && c.id === "start-1"));
+      const isMutation = safeChanges.some((c) => c.type === 'remove' || c.type === 'position' || c.type === 'select');
+      // @ts-ignore
       return {
-        nodes: applyNodeChanges(safeChanges, state.nodes),
+        nodes: applyNodeChanges(safeChanges, state.nodes as any) as AppNode[],
         isSynced: isMutation ? false : state.isSynced,
       };
     }),
@@ -383,98 +189,42 @@ export const useNodesStore = create<NodesState>((set, get) => ({
       isSynced: false,
     })),
 
-  onConnect: (params) =>
+  onConnect: (connection) =>
     set((state) => {
-      // Determine edge type based on source handle
-      let edgeType = "default";
+      let edgeType: "default" | "success" | "error" | "info" | "warning" = "default";
       let edgeLabel = "Connection";
 
-      if (params.sourceHandle === "true") {
+      if (connection.sourceHandle === "true") {
         edgeType = "success";
         edgeLabel = "True Path";
-      } else if (params.sourceHandle === "false") {
+      } else if (connection.sourceHandle === "false") {
         edgeType = "error";
         edgeLabel = "False Path";
       } else {
-        // Find source node to determine edge type
-        const sourceNode = state.nodes.find(
-          (node) => node.id === params.source,
-        );
+        const sourceNode = state.nodes.find((node) => node.id === connection.source);
         if (sourceNode) {
           switch (sourceNode.type) {
-            case "startNode":
-              edgeType = "info";
-              edgeLabel = "Start Flow";
-              break;
-            case "dataNode":
-              edgeType = "info";
-              edgeLabel = "Data Flow";
-              break;
-            case "indicatorNode":
-              edgeType = "warning";
-              edgeLabel = "Signal";
-              break;
-            case "actionNode":
-              edgeType = "success";
-              edgeLabel = "Action Flow";
-              break;
-            case "riskManagementNode":
-              edgeType = "error";
-              edgeLabel = "Risk Safeguard";
-              break;
-            default:
-              edgeType = "default";
-              edgeLabel = "Connection";
+            case "startNode": edgeType = "info"; edgeLabel = "Start Flow"; break;
+            case "dataNode": edgeType = "info"; edgeLabel = "Data Flow"; break;
+            case "indicatorNode": edgeType = "warning"; edgeLabel = "Signal"; break;
+            case "actionNode": edgeType = "success"; edgeLabel = "Action Flow"; break;
+            default: edgeType = "default"; edgeLabel = "Connection";
           }
         }
       }
 
+      const newEdge = createCustomEdge(
+        connection.source,
+        connection.target,
+        connection.sourceHandle,
+        connection.targetHandle,
+        edgeType,
+        edgeLabel
+      );
+
       return {
         isSynced: false,
-        edges: addEdge(
-          ensureCustomEdge({
-            ...params,
-            type: "custom",
-            data: {
-              type: edgeType,
-              animated: false,
-              label: edgeLabel,
-            },
-          }),
-          state.edges,
-        ),
+        edges: addEdge(newEdge, state.edges),
       };
     }),
-
-  // Canvas control methods
-  zoomIn: () => {
-    const { reactFlowInstance } = get();
-    if (reactFlowInstance) {
-      reactFlowInstance.zoomIn();
-    }
-  },
-
-  zoomOut: () => {
-    const { reactFlowInstance } = get();
-    if (reactFlowInstance) {
-      reactFlowInstance.zoomOut();
-    }
-  },
-
-  fitView: () => {
-    const { reactFlowInstance } = get();
-    if (reactFlowInstance) {
-      reactFlowInstance.fitView({ padding: 0.1, maxZoom: 0.95 });
-    }
-  },
-
-  resetView: () => {
-    const { reactFlowInstance } = get();
-    if (reactFlowInstance) {
-      reactFlowInstance.setCenter(0, 0, { zoom: 1 });
-    }
-  },
 }));
-
-export const nodesInitial: Node[] = [];
-export const edgesInitial: Edge[] = [];

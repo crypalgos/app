@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { z } from "zod";
 import {
   Dialog,
   DialogContent,
@@ -30,7 +31,9 @@ import { cn } from "@/lib/utils";
 
 const ACTION_TYPES = [
   { value: "buy", label: "Market Buy / Long Position", group: "Trading" },
-  { value: "sell", label: "Market Sell / Short Position", group: "Trading" },
+  { value: "sell", label: "Market Sell / Close Long", group: "Trading" },
+  { value: "short", label: "Market Short / Short Position", group: "Trading" },
+  { value: "cover", label: "Market Cover / Close Short", group: "Trading" },
   { value: "place_limit_order", label: "Limit Order Placement", group: "Trading" },
   { value: "close_all", label: "Close All Positions", group: "Trading" },
   { value: "reduce_position", label: "Reduce Active Sizing", group: "Trading" },
@@ -55,13 +58,15 @@ export default function ActionNodeDrawer() {
     setSelectedNodeId,
     updateNodeData,
     setIsSynced,
+    compileError,
   } = useNodesStore();
 
   const activeNode = nodes.find((n) => n.id === selectedNodeId);
   const isOpen = !!(
     activeNode &&
-    (activeNode.type === "actionNode" || activeNode.type === "utilityNode")
+    (activeNode.type === "actionNode")
   );
+  const hasError = compileError && selectedNodeId ? compileError.includes(selectedNodeId) : false;
 
   const [formData, setFormData] = useState<Record<string, any>>({});
 
@@ -99,26 +104,20 @@ export default function ActionNodeDrawer() {
           sizing_value: sizingValue,
           steps: undefined,
         });
+      } else if (Object.keys(data).length === 0 || !data.actionType) {
+        setFormData({});
       } else {
         const sizing = (data.sizing || {}) as any;
         let sizingMode = sizing.mode;
         let sizingValue = sizing.value;
-        if (!sizingMode) {
-          if (data.amount !== undefined && data.amount !== null) {
-            sizingMode = "FIXED_QUANTITY";
-            sizingValue = data.amount;
-          } else {
-            sizingMode = "PERCENT_OF_EQUITY";
-            sizingValue = 10;
-          }
-        } else if (sizingMode === "PERCENT_OF_EQUITY") {
-          sizingValue = sizingValue !== undefined ? sizingValue * 100 : 10;
+        if (sizingMode === "PERCENT_OF_EQUITY") {
+          sizingValue = sizingValue !== undefined ? sizingValue * 100 : undefined;
         }
 
         setFormData({
-          actionType: "buy",
-          trigger: "IMMEDIATE",
           ...data,
+          actionType: data.actionType,
+          trigger: data.trigger,
           sizing_mode: sizingMode,
           sizing_value: sizingValue,
         });
@@ -150,12 +149,27 @@ export default function ActionNodeDrawer() {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
+  const buySellSchema = z.object({
+    sizing_mode: z.enum(["PERCENT_OF_EQUITY", "FIXED_USD", "FIXED_QUANTITY"]).default("PERCENT_OF_EQUITY"),
+    sizing_value: z.coerce.number().min(0.0001).catch(10),
+  });
+
+  const limitOrderSchema = z.object({
+    limit_price: z.coerce.number().min(0.0001).catch(55000),
+    amount: z.coerce.number().min(0.0001).catch(0.5),
+  });
+
+  const reducePositionSchema = z.object({
+    percentage: z.coerce.number().min(0.01).max(1.0).catch(0.25),
+  });
+
   const sanitize = (data: Record<string, any>) => {
     const type = data.actionType || "buy";
     const result = { ...data };
-    if (type === "buy" || type === "sell") {
-      const mode = data.sizing_mode || "PERCENT_OF_EQUITY";
-      let val = isNaN(Number(data.sizing_value)) ? 10 : Number(data.sizing_value);
+    if (type === "buy" || type === "sell" || type === "short" || type === "cover") {
+      const parsed = buySellSchema.parse(data);
+      const mode = parsed.sizing_mode;
+      let val = parsed.sizing_value;
       if (mode === "PERCENT_OF_EQUITY") {
         val = val / 100;
       }
@@ -163,17 +177,20 @@ export default function ActionNodeDrawer() {
         mode: mode,
         value: val
       };
+      
+      delete result.sl;
+      delete result.tp;
       delete result.sizing_mode;
       delete result.sizing_value;
       delete result.amount;
-      if (result.sl !== undefined && result.sl !== "") result.sl = Number(result.sl);
-      if (result.tp !== undefined && result.tp !== "") result.tp = Number(result.tp);
     } else if (type === "place_limit_order") {
-      result.limit_price = isNaN(Number(result.limit_price)) ? 55000 : Number(result.limit_price);
-      result.amount = isNaN(Number(result.amount)) ? 0.5 : Number(result.amount);
+      const parsed = limitOrderSchema.parse(data);
+      result.limit_price = parsed.limit_price;
+      result.amount = parsed.amount;
       delete result.sizing;
     } else if (type === "reduce_position") {
-      result.percentage = isNaN(Number(result.percentage)) ? 0.25 : Number(result.percentage);
+      const parsed = reducePositionSchema.parse(data);
+      result.percentage = parsed.percentage;
       delete result.sizing;
     } else {
       delete result.sizing;
@@ -200,7 +217,7 @@ export default function ActionNodeDrawer() {
     }
   };
 
-  const actionType = formData.actionType || "buy";
+  const actionType = formData.actionType || "";
 
   // Dynamic live summary card
   const renderLiveSummary = () => {
@@ -212,15 +229,21 @@ export default function ActionNodeDrawer() {
         <div className="space-y-1">
           <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Active Configuration</div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-black text-foreground">{matchedType?.label || actionType}</span>
-            <span className="text-muted-foreground/30 font-mono">|</span>
-            <span className="text-xs font-medium text-muted-foreground">{matchedTrigger?.label || formData.trigger}</span>
+            {actionType ? (
+              <>
+                <span className="text-sm font-black text-foreground">{matchedType?.label || actionType}</span>
+                <span className="text-muted-foreground/30 font-mono">|</span>
+                <span className="text-xs font-medium text-muted-foreground">{matchedTrigger?.label || formData.trigger}</span>
+              </>
+            ) : (
+              <span className="text-sm font-medium text-muted-foreground italic">No Action Selected</span>
+            )}
           </div>
         </div>
         
         {/* Badges/Details */}
         <div className="flex flex-wrap items-center gap-2.5">
-          {(actionType === "buy" || actionType === "sell") && (
+          {(actionType === "buy" || actionType === "sell" || actionType === "short" || actionType === "cover") && (
             <>
               <Badge variant="outline" className="font-mono text-xs border-blue-500/20 bg-blue-500/5 text-blue-600 dark:text-blue-400 font-semibold py-1 px-2.5 rounded-lg">
                 Sizing: {(() => {
@@ -243,16 +266,6 @@ export default function ActionNodeDrawer() {
                     : `${val} Qty`;
                 })()}
               </Badge>
-              {formData.sl && (
-                <Badge variant="outline" className="font-mono text-xs border-red-500/20 bg-red-500/5 text-red-600 dark:text-red-400 font-semibold py-1 px-2.5 rounded-lg">
-                  SL: {formData.sl}
-                </Badge>
-              )}
-              {formData.tp && (
-                <Badge variant="outline" className="font-mono text-xs border-emerald-500/20 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 font-semibold py-1 px-2.5 rounded-lg">
-                  TP: {formData.tp}
-                </Badge>
-              )}
             </>
           )}
           {actionType === "place_limit_order" && (
@@ -305,6 +318,13 @@ export default function ActionNodeDrawer() {
             <IconX className="size-4" />
           </Button>
         </div>
+
+        {hasError && (
+          <div className="mx-6 mt-4 p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-500 text-xs font-semibold flex gap-2 items-start shrink-0">
+            <span className="mt-0.5 font-bold">⚠️</span>
+            <div className="flex-1 leading-normal">{compileError}</div>
+          </div>
+        )}
 
         {/* 2-Column Split Layout */}
         <div className="grow overflow-hidden flex bg-background">
@@ -410,7 +430,7 @@ export default function ActionNodeDrawer() {
                       <FieldDescription className="text-[10px] text-muted-foreground">
                         When should this action execute?
                       </FieldDescription>
-                      <Select value={formData.trigger || "IMMEDIATE"} onValueChange={(val) => updateField("trigger", val)}>
+                      <Select value={formData.trigger || ""} onValueChange={(val) => updateField("trigger", val)}>
                         <SelectTrigger className="w-full text-xs h-10 bg-background border-input text-foreground rounded-xl">
                           <SelectValue placeholder="Select trigger" />
                         </SelectTrigger>
@@ -426,7 +446,7 @@ export default function ActionNodeDrawer() {
                   <Separator className="my-6" />
 
                   {/* Action-specific fields */}
-                  {(actionType === "buy" || actionType === "sell") && (
+                  {(actionType === "buy" || actionType === "sell" || actionType === "short" || actionType === "cover") && (
                     <div className="space-y-5">
                       <div className="grid grid-cols-2 gap-4">
                         <Field>
@@ -466,30 +486,6 @@ export default function ActionNodeDrawer() {
                                 ? "e.g. 1000" 
                                 : "e.g. 0.1"
                             }
-                          />
-                        </Field>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <Field>
-                          <FieldLabel className="text-xs font-bold text-foreground">Stop Loss (ratio)</FieldLabel>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={formData.sl ?? ""}
-                            onChange={(e) => updateField("sl", e.target.value)}
-                            className="font-mono text-xs h-10 rounded-xl"
-                            placeholder="e.g. 0.98"
-                          />
-                        </Field>
-                        <Field>
-                          <FieldLabel className="text-xs font-bold text-foreground">Take Profit (ratio)</FieldLabel>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={formData.tp ?? ""}
-                            onChange={(e) => updateField("tp", e.target.value)}
-                            className="font-mono text-xs h-10 rounded-xl"
-                            placeholder="e.g. 1.05"
                           />
                         </Field>
                       </div>

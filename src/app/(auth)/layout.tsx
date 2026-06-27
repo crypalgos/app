@@ -21,6 +21,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
               width={190}
               height={190}
               className="w-[150px] lg:w-[190px] h-auto"
+              style={{ height: "auto" }}
             />
           </Link>
         </div>
@@ -46,6 +47,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
                width={150}
                height={150}
                className="block dark:hidden w-[140px] h-auto"
+               style={{ height: "auto" }}
              />
              <img
                src="/logo_dark.svg"
@@ -53,6 +55,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
                width={150}
                height={150}
                className="hidden dark:block w-[140px] h-auto"
+               style={{ height: "auto" }}
              />
            </Link>
          </div>

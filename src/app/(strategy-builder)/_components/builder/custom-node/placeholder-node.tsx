@@ -3,12 +3,7 @@ import { Handle, Position } from "@xyflow/react";
 import { Plus } from "lucide-react";
 import { useNodesStore } from "../../../store/nodes-store";
 
-interface PlaceholderNodeData {
-  expectedType?: string;
-  parentSourceId?: string;
-  parentSourceHandleId?: string | null;
-  originalTargetId?: string | null;
-}
+import type { PlaceholderNodeData } from "@/types/strategy-builder";
 
 interface PlaceholderNodeProps {
   id: string;

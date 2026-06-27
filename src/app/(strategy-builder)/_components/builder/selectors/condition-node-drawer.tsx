@@ -17,6 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -34,6 +36,7 @@ import {
 } from "@tabler/icons-react";
 import { useNodesStore } from "../../../store/nodes-store";
 import { cn } from "@/lib/utils";
+import { fetchConfigRegistry, ConfigRegistry } from "@/api-actions/config-actions";
 
 // ─── AST Types ───
 interface ConditionOperand {
@@ -42,6 +45,7 @@ interface ConditionOperand {
   nodeId?: string;
   indicator?: string;
   output?: string;
+  offset?: number;
 }
 
 interface ConditionLeaf {
@@ -61,6 +65,7 @@ type ConditionAST = ConditionLeaf | ConditionGroup;
 
 interface UnifiedIndicator {
   nodeId: string;
+  indicatorId?: string;
   indicator: string;
   period?: number;
   std?: number;
@@ -68,7 +73,7 @@ interface UnifiedIndicator {
   key: string;
 }
 
-// ─── Indicator Output Mapping ───
+// ─── Indicator Output Mapping (Fallback) ───
 const INDICATOR_OUTPUTS: Record<string, string[]> = {
   EMA: ["value"],
   SMA: ["value"],
@@ -86,10 +91,13 @@ const OPERATORS = [
   { value: "<=", label: "Less Or Equal (≤)" },
   { value: "==", label: "Equal (==)" },
   { value: "!=", label: "Not Equal (≠)" },
+  { value: "CROSSES_ABOVE", label: "Crosses Above (↑)" },
+  { value: "CROSSES_BELOW", label: "Crosses Below (↓)" },
 ] as const;
 
 const OP_SYMBOLS: Record<string, string> = {
   ">": ">", "<": "<", ">=": ">=", "<=": "<=", "==": "==", "!=": "!=",
+  "CROSSES_ABOVE": "↑", "CROSSES_BELOW": "↓",
   GREATER_THAN: ">", LESS_THAN: "<", GREATER_THAN_EQUAL: ">=",
   LESS_THAN_EQUAL: "<=", EQUAL_TO: "==", NOT_EQUAL_TO: "!=",
 };
@@ -106,80 +114,102 @@ const OPERATOR_MAP: Record<string, string> = {
   "==": "==",
   "!=": "!=",
   ">=": ">=",
-  "<=": "<="
+  "<=": "<=",
+  "CROSSES_ABOVE": "CROSSES_ABOVE",
+  "CROSSES_BELOW": "CROSSES_BELOW"
 };
 
 const PRICE_FIELDS = ["Open", "High", "Low", "Close", "Volume"];
 
 // ─── Helpers ───
-function getIndicatorNodeLabel(node: any, indicatorType?: string): string {
+function getIndicatorNodeLabel(node: any, indicatorType?: string, indicatorId?: string, registry?: any): string {
   const data = node?.data || {};
   
-  if (indicatorType && Array.isArray(data.indicators)) {
-    const matched = data.indicators.find((item: any) => item.indicator === indicatorType);
+  if (node?.type === "dataNode") {
+    return data.symbol || data.label || "Data";
+  }
+
+  const extractParams = (matchedData: any, type: string) => {
+    const params: string[] = [];
+    if (registry?.indicators) {
+       const def = Object.entries(registry.indicators).find(([key, d]: [string, any]) => key === type || d.class === type) as [string, any] | undefined;
+       if (def) {
+         def[1].params.forEach((p: string) => {
+           if (matchedData[p] !== undefined) params.push(String(matchedData[p]));
+         });
+         return params.length > 0 ? `(${params.join(",")})` : "";
+       }
+    }
+    
+    // Fallback if registry not loaded
+    if (matchedData.period !== undefined) params.push(String(matchedData.period));
+    if (matchedData.fast_period !== undefined) params.push(String(matchedData.fast_period));
+    if (matchedData.slow_period !== undefined) params.push(String(matchedData.slow_period));
+    if (matchedData.signal_period !== undefined) params.push(String(matchedData.signal_period));
+    if (matchedData.std !== undefined) params.push(String(matchedData.std));
+    
+    return params.length > 0 ? `(${params.join(",")})` : "";
+  };
+
+  if (Array.isArray(data.indicators)) {
+    const matched = indicatorId 
+      ? data.indicators.find((item: any) => item.id === indicatorId)
+      : (indicatorType ? data.indicators.find((item: any) => item.indicator === indicatorType) : null);
     if (matched) {
       const name = matched.indicator;
-      const params: string[] = [];
-      if (matched.period !== undefined) params.push(String(matched.period));
-      if (matched.std !== undefined) params.push(String(matched.std));
-      return `${name}${params.length > 0 ? `(${params.join(",")})` : ""}`;
+      return `${name}${extractParams(matched, name)}`;
     }
   }
   
   const name = data.indicator || data.label || "Indicator";
-  const params: string[] = [];
-  if (data.period !== undefined) params.push(String(data.period));
-  if (data.std !== undefined) params.push(String(data.std));
-  if (data.fast_period !== undefined) params.push(String(data.fast_period));
-  if (data.slow_period !== undefined) params.push(String(data.slow_period));
-  if (data.signal_period !== undefined) params.push(String(data.signal_period));
-  
-  const paramStr = params.length > 0 ? `(${params.join(",")})` : "";
-  return `${name}${paramStr}`;
+  return `${name}${extractParams(data, data.indicator as string)}`;
 }
 
-function renderOperand(op: any, nodes: any[] = []): string {
+function renderOperand(op: any, nodes: any[] = [], registry?: any): string {
   if (typeof op === "number" || typeof op === "string") return String(op) || "?";
   if (op && typeof op === "object") {
     if (op.nodeId) {
       const node = nodes.find((n) => n.id === op.nodeId);
-      const label = node ? getIndicatorNodeLabel(node, op.indicator) : op.nodeId;
-      return `${label || "?"}.${op.output || "?"}`;
+      const label = node ? getIndicatorNodeLabel(node, op.indicator, op.indicatorId, registry) : op.nodeId;
+      const offsetStr = op.offset ? `[${op.offset}]` : "";
+      return `${label || "?"}.${op.output || "?"}${offsetStr}`;
     }
     if (op.field) {
-      return op.source ? `${op.source}.${op.field}` : op.field;
+      const offsetStr = op.offset ? `[${op.offset}]` : "";
+      return op.source ? `${op.source}.${op.field}${offsetStr}` : `${op.field}${offsetStr}`;
     }
     if (op.source) {
-      return `${op.source}.?`;
+      const offsetStr = op.offset ? `[${op.offset}]` : "";
+      return `${op.source}.?${offsetStr}`;
     }
   }
   return "?";
 }
 
-function renderAST(node: ConditionAST, nodes: any[] = []): string {
+function renderAST(node: ConditionAST, nodes: any[] = [], registry?: any): string {
   if (node.type === "CONDITION") {
-    return `${renderOperand(node.left, nodes)} ${OP_SYMBOLS[node.operator] || node.operator || "?"} ${renderOperand(node.right, nodes)}`;
+    return `${renderOperand(node.left, nodes, registry)} ${OP_SYMBOLS[node.operator] || node.operator || "?"} ${renderOperand(node.right, nodes, registry)}`;
   }
   if (node.type === "GROUP") {
-    const parts = (node.children || []).map((child) => renderAST(child, nodes));
+    const parts = (node.children || []).map((child) => renderAST(child, nodes, registry));
     if (parts.length === 0) return "Empty";
-    if (parts.length === 1) return `(${parts[0]})`;
-    return `(${parts.join(` ${node.operator} `)})`;
+    const op = node.operator === "AND" ? " AND " : " OR ";
+    return `(${parts.join(op)})`;
   }
   return "?";
 }
 
-function makeDefaultLeaf(sourceSymbol: string = "BTCUSD"): ConditionLeaf {
+function makeDefaultLeaf(dataNodeId: string = ""): ConditionLeaf {
   return {
     type: "CONDITION",
-    left: { source: sourceSymbol, field: "" },
+    left: "",
     operator: "",
     right: "",
   };
 }
 
-function makeDefaultGroup(sourceSymbol: string = "BTCUSD", op: "AND" | "OR" = "AND"): ConditionGroup {
-  return { type: "GROUP", operator: op, children: [makeDefaultLeaf(sourceSymbol)] };
+function makeDefaultGroup(dataNodeId: string = "", op: "AND" | "OR" = "AND"): ConditionGroup {
+  return { type: "GROUP", operator: op, children: [] };
 }
 
 // Helper to move a node inside the AST recursively for HTML5 drag-and-drop
@@ -226,19 +256,21 @@ function moveNodeInAST(root: ConditionGroup, srcPath: number[], destPath: number
 }
 
 // ─── Theme-Adaptive Syntax Highlighter Preview (Recursive, One-Liner) ───
-function renderASTWithHighlight(node: ConditionAST, nodes: any[] = []): React.ReactNode {
+function renderASTWithHighlight(node: ConditionAST, nodes: any[] = [], registry?: any): React.ReactNode {
   if (node.type === "CONDITION") {
     const formatOp = (op: any) => {
       if (typeof op === "number" || typeof op === "string") {
         return <span className="text-amber-600 dark:text-amber-500 font-mono font-semibold">{op || "?"}</span>;
       }
       if (op && typeof op === "object") {
+        const offsetStr = op.offset ? `[${op.offset}]` : "";
         if (op.nodeId) {
           const matchedNode = nodes.find((n) => n.id === op.nodeId);
-          const label = matchedNode ? getIndicatorNodeLabel(matchedNode, op.indicator) : op.nodeId;
+          const label = matchedNode ? getIndicatorNodeLabel(matchedNode, op.indicator, op.indicatorId, registry) : op.nodeId;
           return (
             <span className="text-cyan-600 dark:text-cyan-400 font-mono">
               {label || "?"}.<span className="text-blue-600 dark:text-blue-400 font-semibold">{op.output || "?"}</span>
+              <span className="text-muted-foreground ml-0.5">{offsetStr}</span>
             </span>
           );
         }
@@ -246,6 +278,7 @@ function renderASTWithHighlight(node: ConditionAST, nodes: any[] = []): React.Re
           return (
             <span className="text-emerald-600 dark:text-emerald-400 font-mono font-medium">
               {op.source ? `${op.source}.${op.field}` : op.field}
+              <span className="text-muted-foreground ml-0.5">{offsetStr}</span>
             </span>
           );
         }
@@ -253,6 +286,7 @@ function renderASTWithHighlight(node: ConditionAST, nodes: any[] = []): React.Re
           return (
             <span className="text-emerald-600 dark:text-emerald-400 font-mono font-medium">
               {op.source}.<span className="text-red-500 font-bold">?</span>
+              <span className="text-muted-foreground ml-0.5">{offsetStr}</span>
             </span>
           );
         }
@@ -284,7 +318,7 @@ function renderASTWithHighlight(node: ConditionAST, nodes: any[] = []): React.Re
       return (
         <span className="inline-flex items-center gap-1 font-mono text-xs">
           <span className="text-indigo-600 dark:text-indigo-400 font-bold">(</span>
-          {renderASTWithHighlight(children[0], nodes)}
+          {renderASTWithHighlight(children[0], nodes, registry)}
           <span className="text-indigo-600 dark:text-indigo-400 font-bold">)</span>
         </span>
       );
@@ -295,15 +329,17 @@ function renderASTWithHighlight(node: ConditionAST, nodes: any[] = []): React.Re
         <span className="text-indigo-600 dark:text-indigo-400 font-bold">(</span>
         {children.map((child, idx) => (
           <React.Fragment key={idx}>
-            {renderASTWithHighlight(child, nodes)}
-            {idx < children.length - 1 && (
-              <span className={cn(
-                "font-bold uppercase mx-1.5 select-none font-mono text-[11px]",
-                node.operator === "AND" ? "text-blue-500 dark:text-blue-400" : "text-amber-500 dark:text-amber-400"
-              )}>
+            {idx > 0 && (
+              <span
+                className={cn(
+                  "font-bold uppercase mx-1.5 select-none font-mono text-[11px]",
+                  node.operator === "AND" ? "text-blue-500 dark:text-blue-400" : "text-amber-500 dark:text-amber-400"
+                )}
+              >
                 {node.operator}
               </span>
             )}
+            {renderASTWithHighlight(child, nodes, registry)}
           </React.Fragment>
         ))}
         <span className="text-indigo-600 dark:text-indigo-400 font-bold">)</span>
@@ -311,7 +347,7 @@ function renderASTWithHighlight(node: ConditionAST, nodes: any[] = []): React.Re
     );
   }
 
-  return null;
+  return <span className="text-red-500">?</span>;
 }
 
 
@@ -328,6 +364,7 @@ function ConditionLeafEditor({
   onDrop,
   availableIndicators,
   upstreamSymbol,
+  upstreamDataNodeId,
 }: {
   leaf: ConditionLeaf;
   onChange: (updated: ConditionLeaf) => void;
@@ -339,6 +376,7 @@ function ConditionLeafEditor({
   onDrop: (e: React.DragEvent, targetPath: number[]) => void;
   availableIndicators: UnifiedIndicator[];
   upstreamSymbol: string;
+  upstreamDataNodeId: string;
 }) {
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -372,7 +410,7 @@ function ConditionLeafEditor({
           const outputs = INDICATOR_OUTPUTS[ind.indicator] || ["value"];
           return outputs.map(out => ({
             label: `${ind.label}.${out}`,
-            value: `indicator:${ind.nodeId}:${ind.indicator}:${out}`
+            value: `indicator:${ind.nodeId}:${ind.indicator}:${out}:${ind.indicatorId || ""}`
           }));
         })
       });
@@ -383,20 +421,44 @@ function ConditionLeafEditor({
   // Helper to convert operand object/value to select string value
   const getSelectedValue = (op: any) => {
     if (op && typeof op === "object") {
-      if (op.nodeId) return `indicator:${op.nodeId}:${op.indicator}:${op.output}`;
+      if (op.nodeId && !op.indicator) return `price:${op.output}`;
+      if (op.nodeId && op.indicator) return `indicator:${op.nodeId}:${op.indicator}:${op.output}:${op.indicatorId || ""}`;
       if (op.field) return `price:${op.field}`;
     }
     return "";
   };
 
+  const getSelectedLabel = (op: any) => {
+    const val = getSelectedValue(op);
+    if (!val) return "";
+    for (const group of variableOptions) {
+      const item = group.items.find(i => i.value === val);
+      if (item) return item.label;
+    }
+    return val;
+  };
+
   // Helper to convert select string value back to operand object
   const handleSelectChange = (key: string, side: "left" | "right") => {
+    const existingOffset = (leaf[side] as any)?.offset || 0;
     if (key.startsWith("price:")) {
-      const field = key.split(":")[1];
-      onChange({ ...leaf, [side]: { source: upstreamSymbol, field } });
+      const output = key.split(":")[1];
+      onChange({ ...leaf, [side]: { nodeId: upstreamDataNodeId, output, offset: existingOffset } });
     } else if (key.startsWith("indicator:")) {
-      const [, nodeId, indicator, output] = key.split(":");
-      onChange({ ...leaf, [side]: { nodeId, indicator, output } });
+      const parts = key.split(":");
+      const nodeId = parts[1];
+      const indicator = parts[2];
+      const output = parts[3];
+      const indicatorId = parts[4] || undefined;
+      onChange({ ...leaf, [side]: { nodeId, indicator, output, indicatorId, offset: existingOffset } });
+    }
+  };
+
+  const handleOffsetChange = (side: "left" | "right", value: string) => {
+    let offset = parseInt(value) || 0;
+    if (offset < 0) offset = 0;
+    if (typeof leaf[side] === "object") {
+      onChange({ ...leaf, [side]: { ...(leaf[side] as any), offset } });
     }
   };
 
@@ -416,127 +478,174 @@ function ConditionLeafEditor({
         onDrop(e, path);
       }}
       className={cn(
-        "p-3 border border-border bg-card rounded-xl flex flex-col md:flex-row items-center gap-3 relative group transition-all duration-200",
-        isDragOver && "border-blue-500/80 bg-blue-500/[0.02] shadow-md scale-[1.01]"
+        "p-2.5 border border-border bg-card rounded-xl flex items-center gap-3 relative group transition-all duration-200 shadow-sm",
+        isDragOver && "border-blue-500/80 bg-blue-500/5 shadow-md scale-[1.01]"
       )}
     >
-      {/* Drag & Number indicator */}
-      <div className="flex items-center gap-2 shrink-0 self-start md:self-center">
-        <div className="cursor-grab text-muted-foreground/40 hover:text-muted-foreground transition-colors shrink-0">
+      {/* Drag Handle */}
+      <div className="flex items-center gap-1 shrink-0">
+        <div className="cursor-grab text-muted-foreground/40 hover:text-muted-foreground transition-colors p-1">
           <IconGripVertical className="size-4" />
         </div>
-        <span className="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-wider font-mono">#{index + 1}</span>
       </div>
 
-      {/* Left Operand Select */}
-      <div className="w-full md:w-auto md:flex-1 min-w-[200px]">
-        <Select
-          value={getSelectedValue(leaf.left)}
-          onValueChange={(val) => handleSelectChange(val, "left")}
-        >
-          <SelectTrigger className="w-full text-xs h-9 bg-background border-input text-foreground font-mono px-3 rounded-xl">
-            <SelectValue placeholder="Select Left Variable" />
-          </SelectTrigger>
-          <SelectContent position="popper" className="bg-popover border border-border text-popover-foreground font-mono text-xs max-h-[300px] min-w-[240px] z-50 rounded-xl">
-            {variableOptions.map(group => (
-              <SelectGroup key={group.group}>
-                <SelectLabel className="text-[10px] uppercase font-bold text-muted-foreground/80 tracking-wider px-3 py-1.5 border-b border-border/40 mb-1">{group.group}</SelectLabel>
-                {group.items.map(item => (
-                  <SelectItem key={item.value} value={item.value} className="text-xs px-3 py-2">
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Operator Select (Inline and sleek) */}
-      <div className="shrink-0 w-24">
-        <Select
-          value={currentOp}
-          onValueChange={(val) => onChange({ ...leaf, operator: val })}
-        >
-          <SelectTrigger className="w-full text-xs h-9 bg-background border-input text-foreground px-3 flex justify-between font-bold rounded-xl">
-            <span className="font-bold">{currentOp || "Op"}</span>
-          </SelectTrigger>
-          <SelectContent position="popper" className="bg-popover border border-border text-popover-foreground text-xs min-w-[140px] z-50 rounded-xl">
-            {OPERATORS.map(op => (
-              <SelectItem key={op.value} value={op.value}>
-                {op.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Right Operand Wrapper (Unified with Static/Variable Toggle) */}
-      <div className="w-full md:w-auto md:flex-1 min-w-[240px] flex items-center gap-2">
-        {/* Toggle between Static (123) and Variable (VAR) */}
-        <Button
-          variant="outline"
-          size="icon"
-          className={cn(
-            "h-9 w-9 shrink-0 rounded-xl transition-all border",
-            isRightStatic 
-              ? "bg-amber-500/10 dark:bg-amber-500/20 border-amber-500/30 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400"
-              : "bg-blue-500/10 dark:bg-blue-500/20 border-blue-500/30 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400"
-          )}
-          onClick={() => {
-            if (isRightStatic) {
-              // Switch to Variable
-              onChange({ ...leaf, right: { source: upstreamSymbol, field: "" } });
-            } else {
-              // Switch to Static (Constant)
-              onChange({ ...leaf, right: "" });
-            }
-          }}
-          title={isRightStatic ? "Switch to Variable (Price/Indicator)" : "Switch to Static Value (Number)"}
-        >
-          {isRightStatic ? (
-            <span className="font-mono text-xs font-bold">123</span>
-          ) : (
-            <span className="font-mono text-[10px] font-bold">VAR</span>
-          )}
-        </Button>
-
-        {/* Dynamic Right Input based on selected type */}
-        <div className="flex-1">
-          {isRightStatic ? (
-            <Input
-              type="text"
-              value={leaf.right !== undefined && leaf.right !== null ? String(leaf.right) : ""}
-              onChange={(e) => {
-                const val = e.target.value;
-                const num = Number(val);
-                onChange({ ...leaf, right: isNaN(num) || val === "" ? val : num });
-              }}
-              className="font-mono text-xs h-9 bg-background border-input text-foreground w-full px-3 rounded-xl"
-              placeholder="e.g. 1000"
-            />
-          ) : (
-            <Select
-              value={getSelectedValue(leaf.right)}
-              onValueChange={(val) => handleSelectChange(val, "right")}
-            >
-              <SelectTrigger className="w-full text-xs h-9 bg-background border-input text-foreground font-mono px-3 rounded-xl">
-                <SelectValue placeholder="Select Right Variable" />
-              </SelectTrigger>
-              <SelectContent position="popper" className="bg-popover border border-border text-popover-foreground font-mono text-xs max-h-[300px] min-w-[240px] z-50 rounded-xl">
-                {variableOptions.map(group => (
-                  <SelectGroup key={group.group}>
-                    <SelectLabel className="text-[10px] uppercase font-bold text-muted-foreground/80 tracking-wider px-3 py-1.5 border-b border-border/40 mb-1">{group.group}</SelectLabel>
-                    {group.items.map(item => (
-                      <SelectItem key={item.value} value={item.value} className="text-xs px-3 py-2">
-                        {item.label}
-                      </SelectItem>
+      {/* Inline Sentence Builder */}
+      <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-0">
+        
+        {/* Left Operand Pill */}
+        <div className="flex items-center gap-1.5 bg-zinc-100/50 dark:bg-zinc-800/30 p-1.5 rounded-lg border border-border/50 flex-1 min-w-[200px] max-w-sm">
+          <div className="flex-1 min-w-0">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full text-xs h-8 bg-background border-input text-foreground font-medium px-2.5 rounded-md min-w-0 justify-between">
+                  <span className="truncate">{getSelectedLabel(leaf.left) || "Select Variable"}</span>
+                  <IconChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent 
+                className="bg-popover border border-border text-popover-foreground p-0 max-h-[300px] min-w-[240px] z-50 rounded-xl w-(--radix-popover-trigger-width)"
+                onWheel={(e) => e.stopPropagation()}
+                onTouchMove={(e) => e.stopPropagation()}
+              >
+                <Command>
+                  <CommandInput placeholder="Search variable..." className="h-9 text-xs" />
+                  <CommandList className="max-h-[250px] overflow-y-auto custom-scrollbar">
+                    <CommandEmpty className="py-2 text-center text-xs">No variable found.</CommandEmpty>
+                    {variableOptions.map(group => (
+                      <CommandGroup key={group.group} heading={group.group}>
+                        {group.items.map(item => (
+                          <CommandItem 
+                            key={item.value} 
+                            value={item.value} 
+                            onSelect={() => handleSelectChange(item.value, "left")}
+                            className="text-xs px-3 py-2 cursor-pointer"
+                          >
+                            {item.label}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
                     ))}
-                  </SelectGroup>
-                ))}
-              </SelectContent>
-            </Select>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+          {typeof leaf.left === 'object' && (
+            <Input 
+              type="number"
+              min="0"
+              value={(leaf.left as any)?.offset ?? 0}
+              onChange={(e) => handleOffsetChange("left", e.target.value)}
+              className="w-14 h-8 text-xs rounded-md bg-background border-input text-center text-muted-foreground font-mono shrink-0"
+              title="Offset (e.g. 1 for previous bar)"
+              placeholder="0"
+            />
           )}
+        </div>
+
+        {/* Operator Select */}
+        <div className="shrink-0">
+          <Select
+            value={currentOp}
+            onValueChange={(val) => onChange({ ...leaf, operator: val })}
+          >
+            <SelectTrigger className="w-28 text-xs h-8 bg-blue-500/5 border-blue-500/20 text-blue-700 dark:text-blue-400 font-bold px-2.5 flex justify-center rounded-lg text-center">
+              <span>{currentOp || "Op"}</span>
+            </SelectTrigger>
+            <SelectContent position="popper" className="bg-popover border border-border text-popover-foreground text-xs min-w-[140px] z-50 rounded-xl">
+              {OPERATORS.map(op => (
+                <SelectItem key={op.value} value={op.value}>
+                  {op.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Right Operand Pill */}
+        <div className="flex items-center gap-1.5 bg-zinc-100/50 dark:bg-zinc-800/30 p-1.5 rounded-lg border border-border/50 flex-1 min-w-[240px] max-w-sm">
+          <Select
+            value={isRightStatic ? "num" : "var"}
+            onValueChange={(val) => {
+              if (val === "var") {
+                onChange({ ...leaf, right: { nodeId: upstreamDataNodeId, output: "Close" } });
+              } else {
+                onChange({ ...leaf, right: "" });
+              }
+            }}
+          >
+            <SelectTrigger className="w-[72px] shrink-0 text-[10px] font-bold h-8 bg-background border-input text-foreground uppercase tracking-wider px-2 rounded-md">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper" className="bg-popover border border-border text-popover-foreground text-[10px] font-bold uppercase tracking-wider z-50 rounded-xl min-w-0">
+              <SelectItem value="var">VAR</SelectItem>
+              <SelectItem value="num">NUM</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <div className="flex-1 flex items-center gap-1.5 min-w-0">
+            {isRightStatic ? (
+              <Input
+                type="text"
+                value={leaf.right !== undefined && leaf.right !== null ? String(leaf.right) : ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const num = Number(val);
+                  onChange({ ...leaf, right: isNaN(num) || val === "" ? val : num });
+                }}
+                className="font-mono text-xs h-8 bg-background border-input text-foreground w-full px-2.5 rounded-md min-w-0"
+                placeholder="e.g. 1000"
+              />
+            ) : (
+              <>
+                <div className="flex-1 min-w-0">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full text-xs h-8 bg-background border-input text-foreground font-medium px-2.5 rounded-md min-w-0 justify-between">
+                        <span className="truncate">{getSelectedLabel(leaf.right) || "Select Variable"}</span>
+                        <IconChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent 
+                      className="bg-popover border border-border text-popover-foreground p-0 max-h-[300px] min-w-[240px] z-50 rounded-xl w-(--radix-popover-trigger-width)"
+                      onWheel={(e) => e.stopPropagation()}
+                      onTouchMove={(e) => e.stopPropagation()}
+                    >
+                      <Command>
+                        <CommandInput placeholder="Search variable..." className="h-9 text-xs" />
+                        <CommandList className="max-h-[250px] overflow-y-auto custom-scrollbar">
+                          <CommandEmpty className="py-2 text-center text-xs">No variable found.</CommandEmpty>
+                          {variableOptions.map(group => (
+                            <CommandGroup key={group.group} heading={group.group}>
+                              {group.items.map(item => (
+                                <CommandItem 
+                                  key={item.value} 
+                                  value={item.value} 
+                                  onSelect={() => handleSelectChange(item.value, "right")}
+                                  className="text-xs px-3 py-2 cursor-pointer"
+                                >
+                                  {item.label}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          ))}
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <Input 
+                  type="number"
+                  min="0"
+                  value={(leaf.right as any)?.offset ?? 0}
+                  onChange={(e) => handleOffsetChange("right", e.target.value)}
+                  className="w-14 h-8 text-xs rounded-md bg-background border-input text-center text-muted-foreground font-mono shrink-0"
+                  title="Offset (e.g. 1 for previous bar)"
+                  placeholder="0"
+                />
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -545,7 +654,7 @@ function ConditionLeafEditor({
         variant="ghost"
         size="icon"
         onClick={onRemove}
-        className="size-8 h-8 w-8 text-muted-foreground hover:bg-red-500/10 hover:text-red-500 rounded-xl md:opacity-0 group-hover:opacity-100 transition-opacity self-end md:self-center shrink-0 cursor-pointer"
+        className="size-8 h-8 w-8 text-muted-foreground hover:bg-red-500/10 hover:text-red-500 rounded-lg md:opacity-0 group-hover:opacity-100 transition-opacity shrink-0 cursor-pointer"
       >
         <IconX className="size-4" />
       </Button>
@@ -564,6 +673,7 @@ function ConditionGroupEditor({
   setDraggedPath,
   availableIndicators,
   upstreamSymbol,
+  upstreamDataNodeId,
   operatorTrail = ["ROOT"],
 }: {
   group: ConditionGroup;
@@ -575,6 +685,7 @@ function ConditionGroupEditor({
   setDraggedPath: (path: number[] | null) => void;
   availableIndicators: UnifiedIndicator[];
   upstreamSymbol: string;
+  upstreamDataNodeId: string;
   operatorTrail?: string[];
 }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -592,11 +703,11 @@ function ConditionGroupEditor({
   };
 
   const addLeaf = () => {
-    onChange({ ...group, children: [...group.children, makeDefaultLeaf(upstreamSymbol)] });
+    onChange({ ...group, children: [...group.children, makeDefaultLeaf(upstreamDataNodeId)] });
   };
 
   const addSubGroup = (op: "AND" | "OR") => {
-    onChange({ ...group, children: [...group.children, makeDefaultGroup(upstreamSymbol, op)] });
+    onChange({ ...group, children: [...group.children, makeDefaultGroup(upstreamDataNodeId, op)] });
   };
 
 
@@ -663,7 +774,7 @@ function ConditionGroupEditor({
       className={cn(
         "rounded-2xl p-4 transition-all duration-200 flex flex-col gap-4 relative",
         color.card,
-        isDragOver && "border-blue-500/80 bg-blue-500/[0.03] shadow-lg scale-[1.005]"
+        isDragOver && "border-blue-500/80 bg-blue-500/3 shadow-lg scale-[1.005]"
       )}
     >
       {/* Group header */}
@@ -695,14 +806,14 @@ function ConditionGroupEditor({
             <SelectTrigger className={cn("w-20 text-[10px] h-6 font-bold uppercase tracking-wider rounded border z-10 px-2", operatorBadgeClass)}>
               <SelectValue />
             </SelectTrigger>
-            <SelectContent position="popper" className="min-w-[4rem] text-[10px] font-bold z-50">
+            <SelectContent position="popper" className="min-w-16 text-[10px] font-bold z-50">
               <SelectItem value="AND">AND</SelectItem>
               <SelectItem value="OR">OR</SelectItem>
             </SelectContent>
           </Select>
 
           {/* Local Breadcrumb indicator */}
-          <div className="flex items-center gap-1 text-[9px] text-muted-foreground font-mono hidden md:flex ml-2 tracking-wide font-medium bg-muted/40 px-2 py-0.5 rounded-md border border-border/20 select-none">
+          <div className="items-center gap-1 text-[9px] text-muted-foreground font-mono hidden md:flex ml-2 tracking-wide font-medium bg-muted/40 px-2 py-0.5 rounded-md border border-border/20 select-none">
             {operatorTrail.map((op, idx) => (
               <React.Fragment key={idx}>
                 {idx > 0 && <span className="text-muted-foreground/30">/</span>}
@@ -752,6 +863,7 @@ function ConditionGroupEditor({
                     onDrop={handleDrop}
                     availableIndicators={availableIndicators}
                     upstreamSymbol={upstreamSymbol}
+                    upstreamDataNodeId={upstreamDataNodeId}
                   />
                 ) : (
                   <ConditionGroupEditor
@@ -764,6 +876,7 @@ function ConditionGroupEditor({
                     setDraggedPath={setDraggedPath}
                     availableIndicators={availableIndicators}
                     upstreamSymbol={upstreamSymbol}
+                    upstreamDataNodeId={upstreamDataNodeId}
                     operatorTrail={[...operatorTrail, group.operator]}
                   />
                 )}
@@ -800,12 +913,19 @@ export default function ConditionNodeDrawer() {
     setSelectedNodeId,
     updateNodeData,
     setIsSynced,
+    compileError,
   } = useNodesStore();
 
   const activeNode = nodes.find((n) => n.id === selectedNodeId);
   const isOpen = !!(activeNode && activeNode.type === "conditionNode");
+  const hasError = compileError && selectedNodeId ? compileError.includes(selectedNodeId) : false;
 
   const [astRoot, setAstRoot] = useState<ConditionGroup>(() => makeDefaultGroup("BTCUSD"));
+  const [registry, setRegistry] = useState<ConfigRegistry | null>(null);
+
+  useEffect(() => {
+    fetchConfigRegistry().then(setRegistry);
+  }, []);
   const [draggedPath, setDraggedPath] = useState<number[] | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
@@ -880,29 +1000,37 @@ export default function ConditionNodeDrawer() {
         data.indicators.forEach((ind: any) => {
           const params: string[] = [];
           if (ind.period !== undefined) params.push(String(ind.period));
+          if (ind.fast_period !== undefined) params.push(String(ind.fast_period));
+          if (ind.slow_period !== undefined) params.push(String(ind.slow_period));
+          if (ind.signal_period !== undefined) params.push(String(ind.signal_period));
           if (ind.std !== undefined) params.push(String(ind.std));
           const paramStr = params.length > 0 ? `(${params.join(",")})` : "";
           list.push({
             nodeId: node.id,
+            indicatorId: ind.id,
             indicator: ind.indicator,
             period: ind.period,
             std: ind.std,
             label: `${ind.indicator}${paramStr}`,
-            key: `${node.id}:${ind.indicator}`,
+            key: `${node.id}:${ind.indicator}:${ind.id || ""}`,
           });
         });
       } else if (data.indicator) {
         const params: string[] = [];
         if (data.period !== undefined) params.push(String(data.period));
+        if (data.fast_period !== undefined) params.push(String(data.fast_period));
+        if (data.slow_period !== undefined) params.push(String(data.slow_period));
+        if (data.signal_period !== undefined) params.push(String(data.signal_period));
         if (data.std !== undefined) params.push(String(data.std));
         const paramStr = params.length > 0 ? `(${params.join(",")})` : "";
         list.push({
           nodeId: node.id,
+          indicatorId: data.id || node.id,
           indicator: data.indicator as string,
           period: data.period as number | undefined,
           std: data.std as number | undefined,
           label: `${data.indicator}${paramStr}`,
-          key: `${node.id}:${data.indicator}`,
+          key: `${node.id}:${data.indicator}:${data.id || node.id}`,
         });
       }
     });
@@ -922,6 +1050,7 @@ export default function ConditionNodeDrawer() {
 
   useEffect(() => {
     if (isOpen && activeNode) {
+      const dataNodeId = upstreamDataNode?.id || "data_1";
       const data = activeNode.data as any;
       if (data.ast_root && data.ast_root.type === "GROUP") {
         setAstRoot(data.ast_root as ConditionGroup);
@@ -931,24 +1060,24 @@ export default function ConditionNodeDrawer() {
           const isRightStatic = !isNaN(Number(expr.rightOperand));
           return {
             type: "CONDITION" as const,
-            left: { source: upstreamSymbol, field: expr.leftOperand || "Close" },
+            left: { nodeId: dataNodeId, output: expr.leftOperand || "Close" },
             operator: OP_SYMBOLS[expr.operator] || expr.operator || ">",
             right: isRightStatic 
               ? Number(expr.rightOperand) 
-              : { source: upstreamSymbol, field: expr.rightOperand },
+              : { nodeId: dataNodeId, output: expr.rightOperand },
           };
         });
         setAstRoot({
           type: "GROUP",
           operator: data.expressions[1]?.logical_gate === "OR" ? "OR" : "AND",
-          children: children.length > 0 ? children : [makeDefaultLeaf(upstreamSymbol)],
+          children: children.length > 0 ? children : [makeDefaultLeaf(dataNodeId)],
         });
       } else {
-        setAstRoot(makeDefaultGroup(upstreamSymbol));
+        setAstRoot(makeDefaultGroup(dataNodeId));
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, selectedNodeId, upstreamSymbol]);
+  }, [isOpen, selectedNodeId, upstreamSymbol, upstreamDataNode?.id]);
 
   const handleApply = () => {
     if (!selectedNodeId) return;
@@ -979,7 +1108,7 @@ export default function ConditionNodeDrawer() {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent showCloseButton={false} className="fixed !top-6 !left-6 !w-[calc(100vw-3rem)] !h-[calc(100vh-3rem)] !max-w-none !max-h-none !translate-x-0 !translate-y-0 !transform-none !gap-0 !rounded-2xl !border !border-border !shadow-2xl !p-0 bg-background text-foreground flex flex-col z-50 overflow-hidden">
+      <DialogContent showCloseButton={false} className="fixed top-6! left-6! w-[calc(100vw-3rem)]! h-[calc(100vh-3rem)]! max-w-none! max-h-none! translate-x-0! translate-y-0! transform-none! gap-0! rounded-2xl! border! border-border! shadow-2xl! p-0! bg-background text-foreground flex flex-col z-50 overflow-hidden">
         {/* Header */}
         <div className="h-16 border-b border-border px-6 flex items-center justify-between shrink-0 bg-card">
           <div className="flex items-center gap-3">
@@ -1006,6 +1135,13 @@ export default function ConditionNodeDrawer() {
             </Button>
           </div>
         </div>
+
+        {hasError && (
+          <div className="mx-6 mt-4 p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-500 text-xs font-semibold flex gap-2 items-start shrink-0">
+            <span className="mt-0.5 font-bold">⚠️</span>
+            <div className="flex-1 leading-normal">{compileError}</div>
+          </div>
+        )}
 
         {/* 2-Column Split Layout */}
         <div className="grow overflow-hidden flex bg-background">
@@ -1130,6 +1266,7 @@ export default function ConditionNodeDrawer() {
                     setDraggedPath={setDraggedPath}
                     availableIndicators={availableIndicators}
                     upstreamSymbol={upstreamSymbol}
+                    upstreamDataNodeId={upstreamDataNode?.id || "data_1"}
                   />
                 </div>
 
@@ -1147,7 +1284,7 @@ export default function ConditionNodeDrawer() {
             <div className="flex items-center gap-2 text-xs font-mono bg-slate-50 dark:bg-[#1a1b1c] border border-slate-200 dark:border-slate-800/80 px-3.5 py-1.5 rounded-xl select-none">
               <span className="bg-blue-600/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md border border-blue-500/20 font-black text-[10px] tracking-wider uppercase shrink-0">IF</span>
               <div className="overflow-x-auto whitespace-nowrap grow scrollbar-none flex items-center gap-1.5">
-                {renderASTWithHighlight(astRoot, nodes)}
+                {renderASTWithHighlight(astRoot, nodes, registry)}
               </div>
             </div>
           </div>

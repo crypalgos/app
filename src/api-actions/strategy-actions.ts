@@ -244,12 +244,31 @@ export const StrategyActions = {
         error: summary.error,
       },
       charting_json: {
-        trades: report.charting?.trades?.recent_trades || report.charting?.trades || [],
-        equity_curve: report.charting?.datasets?.global_equity_curve || [],
-        drawdown_curve: report.charting?.datasets?.global_drawdown_curve || [],
+        dataset_id: report.charting?.datasets?.global_equity_curve?.dataset_id,
+        trades: Array.isArray(report.charting?.trades?.recent_trades) 
+          ? report.charting.trades.recent_trades 
+          : (Array.isArray(report.charting?.trades) ? report.charting.trades : []),
+        equity_curve: Array.isArray(summary.equity_preview) 
+          ? summary.equity_preview 
+          : (Array.isArray(report.charting?.datasets?.global_equity_curve) ? report.charting.datasets.global_equity_curve : []),
+        drawdown_curve: Array.isArray(report.charting?.datasets?.global_drawdown_curve) 
+          ? report.charting.datasets.global_drawdown_curve 
+          : [],
       },
+      report_json: report,
       created_at: data.created_at,
     };
+  },
+
+  /** Fetch a specific chart dataset for a backtest/research run */
+  getRunDatasetChart: async (
+    runId: string,
+    datasetName: string
+  ): Promise<any[]> => {
+    const response = await axiosInstance.get<ApiResponse<any[]>>(
+      `/research-runs/${runId}/datasets/${datasetName}`
+    );
+    return response.data.data;
   },
 
   /** Delete a specific backtest run. */
@@ -257,7 +276,7 @@ export const StrategyActions = {
     strategyId: string,
     backtestId: string
   ): Promise<void> => {
-    await axiosInstance.delete(`/strategies/${strategyId}/backtests/${backtestId}`);
+    await axiosInstance.delete(`/research-runs/${backtestId}`);
   },
 
   /** Delete a strategy owned by the authenticated user. */
