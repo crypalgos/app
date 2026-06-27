@@ -21,7 +21,6 @@ import {
   IconPlus,
   IconTrash,
   IconDatabase,
-  IconCopy,
   IconCheck,
 } from "@tabler/icons-react";
 import { useNodesStore } from "../../../store/nodes-store";
@@ -35,23 +34,25 @@ export default function IndicatorNodeDialog() {
     setSelectedNodeId,
     updateNodeData,
     setIsSynced,
+    compileError,
   } = useNodesStore();
 
   const activeNode = nodes.find((n) => n.id === selectedNodeId);
   const isOpen = !!(activeNode && activeNode.type === "indicatorNode");
+  const hasError = compileError && selectedNodeId ? compileError.includes(selectedNodeId) : false;
 
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [inputStates, setInputStates] = useState<Record<string, string>>({});
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   
   const [dynamicIndicators, setDynamicIndicators] = useState<{value: string, label: string}[]>([]);
+  const [registry, setRegistry] = useState<ConfigRegistry | null>(null);
+  const [timeframes, setTimeframes] = useState<string[]>([]);
 
   useEffect(() => {
     fetchConfigRegistry().then((config) => {
-      // Convert the registry map into the dropdown array format
+      setRegistry(config);
+      setTimeframes(config.timeframes || ["1m", "5m", "15m", "1h", "4h", "1d"]);
       const arr = Object.entries(config.indicators)
-        // Filter out alias or duplicate entries if necessary. 
-        // For now, let's include them, but filter out "BollingerBands" alias if "BB" exists.
         .filter(([key]) => key !== "BollingerBands") 
         .map(([key, def]) => ({
           value: key,
@@ -67,36 +68,38 @@ export default function IndicatorNodeDialog() {
       const data = activeNode.data || {};
       let list = data.indicators as any[];
       if (!list || !Array.isArray(list)) {
-      // Fallback to legacy structure
-      list = [
-        {
-          id: "legacy",
-          indicator: data.indicator || "ATR",
-          period: data.period ?? 14,
-          std: data.std ?? 2.0,
-        },
-      ];
-    }
-    setFormData({ ...data, indicators: list });
-    
-    // Initialize string states for all indicators
-    const initialInputStates: Record<string, string> = {};
-    list.forEach((item: any) => {
-      initialInputStates[`${item.id}_period`] = item.period?.toString() || "";
-      if (item.std !== undefined) {
-        initialInputStates[`${item.id}_std`] = item.std?.toString() || "";
+        if (data.indicator) {
+          list = [
+            {
+              id: "legacy",
+              indicator: data.indicator,
+              period: data.period ?? 14,
+              std: data.std ?? 2.0,
+              timeframe: data.timeframe || "",
+            },
+          ];
+        } else {
+          list = [];
+        }
       }
-    });
-    setInputStates(initialInputStates);
-  }
+      setFormData({ ...data, indicators: list });
+      
+      const initialInputStates: Record<string, string> = {};
+      list.forEach((item: any) => {
+        Object.entries(item).forEach(([k, v]) => {
+          if (k !== "id" && k !== "indicator" && k !== "timeframe" && v !== undefined && v !== null) {
+            initialInputStates[`${item.id}_${k}`] = v.toString();
+          }
+        });
+      });
+      setInputStates(initialInputStates);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, selectedNodeId]);
 
-  // Find incoming data node timeframe/symbol for left column
   const incomingData = React.useMemo(() => {
-    if (!activeNode || !edges || !nodes) return { symbol: "BTCUSDQ", timeframe: "1h", exchange: "delta" };
+    if (!activeNode || !edges || !nodes) return { symbol: "BTCUSD", timeframe: "1h", exchange: "delta", timeframes: ["1h"] };
     
-    // Recursive search up the graph
     const findUpstreamData = (nodeId: string): any => {
       const incoming = edges.filter((e) => e.target === nodeId);
       for (const edge of incoming) {
@@ -107,6 +110,7 @@ export default function IndicatorNodeDialog() {
               symbol: src.data?.symbol || "BTCUSD",
               timeframe: src.data?.timeframe || "1h",
               exchange: src.data?.source || "delta",
+              timeframes: src.data?.timeframes || [src.data?.timeframe || "1h"],
             };
           }
           const nested = findUpstreamData(src.id);
@@ -116,29 +120,56 @@ export default function IndicatorNodeDialog() {
       return null;
     };
 
-    return findUpstreamData(activeNode.id) || { symbol: "BTCUSDQ", timeframe: "1h", exchange: "delta" };
+    return findUpstreamData(activeNode.id) || { symbol: "BTCUSD", timeframe: "1h", exchange: "delta", timeframes: ["1h"] };
   }, [activeNode, edges, nodes]);
 
   const update = (key: string, value: any) =>
     setFormData((prev) => ({ ...prev, [key]: value }));
 
-  const sanitizeData = (data: Record<string, any>) => {
-    const list = (data.indicators || []).map((item: any) => ({
-      ...item,
-      period: item.period === "" || isNaN(Number(item.period)) ? 14 : Number(item.period),
-      std: item.std === "" || isNaN(Number(item.std)) ? 2.0 : Number(item.std),
-    }));
+  const getIndicatorDefaultParams = (indicatorKey: string): Record<string, any> => {
+    if (indicatorKey === "MACD") {
+      return { fast_period: 12, slow_period: 26, signal_period: 9 };
+    }
+    if (indicatorKey === "BB" || indicatorKey === "BollingerBands") {
+      return { period: 20, std: 2.0 };
+    }
+    return { period: 14 };
+  };
 
-    const first = list[0] || { indicator: "ATR", period: 14 };
+  const sanitizeData = (data: Record<string, any>) => {
+    const list = (data.indicators || []).map((item: any) => {
+      const sanitizedItem: Record<string, any> = {
+        id: item.id,
+        indicator: item.indicator,
+        timeframe: item.timeframe || incomingData.timeframe,
+      };
+
+      const entryPair = Object.entries(registry?.indicators || {}).find(
+        ([key, def]) => key === item.indicator || def.class === item.indicator
+      );
+      const regEntry = entryPair ? entryPair[1] : null;
+      const params = regEntry?.params || ["period"];
+
+      params.forEach((param) => {
+        const val = item[param];
+        if (val === undefined || val === "" || isNaN(Number(val))) {
+          const defaults = getIndicatorDefaultParams(item.indicator);
+          sanitizedItem[param] = defaults[param] ?? 14;
+        } else {
+          sanitizedItem[param] = Number(val);
+        }
+      });
+
+      return sanitizedItem;
+    });
+
+    const first = list[0];
 
     return {
       ...data,
       indicators: list,
-      // legacy support
-      indicator: first.indicator,
-      label: first.indicator === "BollingerBands" ? "BB" : first.indicator,
-      period: first.period,
-      std: first.std,
+      indicator: first ? first.indicator : undefined,
+      label: first ? (first.indicator === "BollingerBands" ? "BB" : first.indicator) : "Indicator",
     };
   };
 
@@ -164,13 +195,13 @@ export default function IndicatorNodeDialog() {
       id: `ind-${Date.now()}`,
       indicator: "EMA",
       period: 20,
+      timeframe: incomingData.timeframe,
     };
     update("indicators", [...(formData.indicators || []), newItem]);
   };
 
   const deleteIndicator = (id: string) => {
     const list = (formData.indicators || []).filter((item: any) => item.id !== id);
-    // Keep at least one indicator
     if (list.length === 0) return;
     update("indicators", list);
   };
@@ -179,21 +210,24 @@ export default function IndicatorNodeDialog() {
     const list = (formData.indicators || []).map((item: any) => {
       if (item.id === id) {
         const updated = { ...item, [key]: val };
-        // Reset defaults when indicator type switches
         if (key === "indicator") {
-          if (val === "BollingerBands") {
-            updated.period = 20;
-            updated.std = 2.0;
-            setInputStates(prev => ({ ...prev, [`${id}_period`]: "20", [`${id}_std`]: "2.0" }));
-          } else {
-            updated.period = 14;
-            delete updated.std;
-            setInputStates(prev => {
-              const next = { ...prev, [`${id}_period`]: "14" };
-              delete next[`${id}_std`];
-              return next;
+          const cleanItem = { id, indicator: val, timeframe: item.timeframe };
+          const defaults = getIndicatorDefaultParams(val);
+          const nextItem = { ...cleanItem, ...defaults };
+          
+          setInputStates(prev => {
+            const next = { ...prev };
+            Object.keys(next).forEach((k) => {
+              if (k.startsWith(`${id}_`)) {
+                delete next[k];
+              }
             });
-          }
+            Object.entries(defaults).forEach(([pk, pv]) => {
+              next[`${id}_${pk}`] = pv.toString();
+            });
+            return next;
+          });
+          return nextItem;
         }
         return updated;
       }
@@ -211,15 +245,9 @@ export default function IndicatorNodeDialog() {
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedKey(text);
-    setTimeout(() => setCopiedKey(null), 2000);
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent showCloseButton={false} className="fixed !top-6 !left-6 !w-[calc(100vw-3rem)] !h-[calc(100vh-3rem)] !max-w-none !max-h-none !translate-x-0 !translate-y-0 !transform-none !gap-0 !rounded-2xl !border !border-border !shadow-2xl !p-0 bg-background text-foreground flex flex-col z-50 overflow-hidden">
+      <DialogContent showCloseButton={false} className="fixed top-6! left-6! w-[calc(100vw-3rem)]! h-[calc(100vh-3rem)]! max-w-none! max-h-none! translate-x-0! translate-y-0! transform-none! gap-0! rounded-2xl! border! border-border! shadow-2xl! p-0! bg-background text-foreground flex flex-col z-50 overflow-hidden">
         {/* Header Block */}
         <div className="h-16 border-b border-border px-6 flex items-center justify-between shrink-0 bg-card">
           <div className="flex items-center gap-3">
@@ -245,28 +273,31 @@ export default function IndicatorNodeDialog() {
           </Button>
         </div>
 
-        {/* 3-Column Split View Body */}
+        {hasError && (
+          <div className="mx-6 mt-4 p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-500 text-xs font-semibold flex gap-2 items-start shrink-0">
+            <span className="mt-0.5 font-bold">⚠️</span>
+            <div className="flex-1 leading-normal">{compileError}</div>
+          </div>
+        )}
+
+        {/* 2-Column Split View Body */}
         <div className="grow overflow-hidden grid grid-cols-1 md:grid-cols-12 bg-background">
-          {/* Column 1: INPUT SCHEMA (3 cols) */}
-          <div className="col-span-3 min-w-0 flex flex-col h-full bg-muted/20 border-r border-border p-5 overflow-y-auto">
+          {/* Column 1: INPUT SCHEMA (4 cols) */}
+          <div className="col-span-4 min-w-0 flex flex-col h-full bg-muted/20 border-r border-border p-5 overflow-y-auto">
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-4">
-              Input Schema
+              Data Source Binding
             </span>
             <div className="space-y-4">
-              <div className="p-3 bg-card border border-border/80 rounded-xl">
-                <div className="flex items-center gap-2 mb-2">
-                  <IconDatabase className="size-4 text-purple-400" />
-                  <span className="text-xs font-bold text-foreground uppercase tracking-wider">
-                    Data Source
+              <div className="p-4 bg-card border border-border/80 rounded-xl">
+                <div className="flex items-center gap-2 mb-3">
+                  <IconDatabase className="size-5 text-purple-400" />
+                  <span className="text-sm font-bold text-foreground uppercase tracking-wider">
+                    {incomingData.symbol}
                   </span>
                 </div>
-                <div className="space-y-1.5 font-mono text-[11px] text-muted-foreground">
+                <div className="space-y-2 font-mono text-xs text-muted-foreground">
                   <div className="flex justify-between">
-                    <span>Symbol</span>
-                    <span className="text-foreground">{incomingData.symbol}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Timeframe</span>
+                    <span>Base Timeframe</span>
                     <span className="text-foreground">{incomingData.timeframe}</span>
                   </div>
                   <div className="flex justify-between">
@@ -275,33 +306,20 @@ export default function IndicatorNodeDialog() {
                   </div>
                 </div>
               </div>
-
-              <div className="p-3 bg-card border border-border/80 rounded-xl space-y-2">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                  Price Keys
-                </span>
-                <div className="space-y-1">
-                  {["Open", "High", "Low", "Close", "Volume"].map((key) => (
-                    <div
-                      key={key}
-                      onClick={() => copyToClipboard(key)}
-                      className="flex items-center justify-between p-1.5 rounded bg-muted/30 hover:bg-muted/65 cursor-pointer transition-colors border border-transparent hover:border-border font-mono text-xs text-muted-foreground hover:text-foreground"
-                    >
-                      <span>{key}</span>
-                      {copiedKey === key ? (
-                        <IconCheck className="size-3 text-emerald-500" />
-                      ) : (
-                        <IconCopy className="size-3 text-muted-foreground/60 hover:text-foreground" />
-                      )}
-                    </div>
-                  ))}
-                </div>
+              
+              <div className="p-4 bg-blue-500/5 border border-blue-500/20 rounded-xl space-y-2">
+                 <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold leading-relaxed">
+                   Multi-Timeframe Execution
+                 </p>
+                 <p className="text-[10px] text-muted-foreground leading-relaxed">
+                   You can bind indicators to timeframes different from the base asset. The compiler will automatically resolve multi-timeframe dependencies for you.
+                 </p>
               </div>
             </div>
           </div>
 
-          {/* Column 2: PARAMETERS FORM (5 cols) */}
-          <div className="col-span-5 min-w-0 flex flex-col h-full bg-background overflow-y-auto">
+          {/* Column 2: PARAMETERS FORM (8 cols) */}
+          <div className="col-span-8 min-w-0 flex flex-col h-full bg-background overflow-y-auto">
             <div className="p-5 flex items-center justify-between border-b border-border/60 shrink-0">
               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                 Indicator Configuration
@@ -318,73 +336,95 @@ export default function IndicatorNodeDialog() {
 
             <div className="grow p-5 space-y-4">
               {(formData.indicators || []).map((ind: any, index: number) => {
-                const isBB = ind.indicator === "BollingerBands";
                 return (
                   <div
                     key={ind.id}
-                    className="p-4 bg-card border border-border rounded-xl relative hover:border-border/80 transition-colors"
+                    className="p-5 bg-card border border-border rounded-xl relative hover:border-border/80 transition-colors"
                   >
                     {formData.indicators.length > 1 && (
                       <button
                         onClick={() => deleteIndicator(ind.id)}
-                        className="absolute top-3 right-3 p-1 hover:bg-destructive/10 text-muted-foreground hover:text-destructive rounded transition-colors cursor-pointer"
+                        className="absolute top-4 right-4 p-1 hover:bg-destructive/10 text-muted-foreground hover:text-destructive rounded transition-colors cursor-pointer"
                         title="Delete Indicator"
                       >
-                        <IconTrash className="size-3.5" />
+                        <IconTrash className="size-4" />
                       </button>
                     )}
 
-                    <FieldGroup className="flex flex-col gap-4">
-                      {/* Indicator Type Select */}
-                      <Field>
-                        <FieldLabel>Indicator #{index + 1} Type</FieldLabel>
-                        <Select
-                          value={ind.indicator || "ATR"}
-                          onValueChange={(val) => updateIndicatorItem(ind.id, "indicator", val)}
-                        >
-                          <SelectTrigger className="w-full text-xs h-8 bg-background border-input text-foreground">
-                            <SelectValue placeholder="Select Type" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-popover border-border text-popover-foreground">
-                            {dynamicIndicators.map((item) => (
-                              <SelectItem key={item.value} value={item.value} className="text-xs focus:bg-accent focus:text-accent-foreground">
-                                {item.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </Field>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        {/* Period */}
+                    <FieldGroup className="flex flex-col gap-5">
+                      <div className="grid grid-cols-2 gap-4">
+                        {/* Indicator Type Select */}
                         <Field>
-                          <FieldLabel>Period (bars)</FieldLabel>
-                          <Input
-                            type="number"
-                            min={1}
-                            max={200}
-                            value={inputStates[`${ind.id}_period`] ?? ""}
-                            onChange={(e) => updateIndicatorInput(ind.id, "period", e.target.value)}
-                            className="font-mono text-xs h-8 bg-background border-input text-foreground"
-                            placeholder="14"
-                          />
+                          <FieldLabel className="font-semibold text-xs text-foreground">Indicator Type</FieldLabel>
+                          <Select
+                             value={ind.indicator || "ATR"}
+                             onValueChange={(val) => updateIndicatorItem(ind.id, "indicator", val)}
+                          >
+                            <SelectTrigger className="w-full text-xs h-9 bg-background border-input text-foreground rounded-xl">
+                              <SelectValue placeholder="Select Type" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-popover border-border text-popover-foreground">
+                              {dynamicIndicators.map((item) => (
+                                <SelectItem key={item.value} value={item.value} className="text-xs">
+                                  {item.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </Field>
+                        
+                        {/* Timeframe Select */}
+                        <Field>
+                          <FieldLabel className="font-semibold text-xs text-foreground">Timeframe</FieldLabel>
+                          <Select
+                            value={ind.timeframe || incomingData.timeframe}
+                            onValueChange={(val) => updateIndicatorItem(ind.id, "timeframe", val)}
+                          >
+                            <SelectTrigger className="w-full text-xs h-9 bg-background border-input text-foreground rounded-xl">
+                              <SelectValue placeholder="Select Timeframe" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-popover border-border text-popover-foreground">
+                              {incomingData.timeframes.map((tf: string) => (
+                                <SelectItem key={tf} value={tf} className="text-xs">
+                                  {tf.toUpperCase()}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </Field>
+                      </div>
 
-                        {/* Std multiplier for Bollinger Bands */}
-                        {isBB ? (
-                          <Field>
-                            <FieldLabel>Multiplier (std)</FieldLabel>
-                            <Input
-                              type="number"
-                              step={0.1}
-                              min={0.1}
-                              value={inputStates[`${ind.id}_std`] ?? ""}
-                              onChange={(e) => updateIndicatorInput(ind.id, "std", e.target.value, true)}
-                              className="font-mono text-xs h-8 bg-background border-input text-foreground"
-                              placeholder="2.0"
-                            />
-                          </Field>
-                        ) : null}
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        {(() => {
+                          const entryPair = Object.entries(registry?.indicators || {}).find(
+                            ([key, def]) => key === ind.indicator || def.class === ind.indicator
+                          );
+                          const regEntry = entryPair ? entryPair[1] : null;
+                          const params = regEntry?.params || ["period"];
+
+                          return params.map((param) => {
+                            let labelName = param.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+                            if (param === "std") labelName = "Multiplier (std)";
+                            if (param === "period") labelName = "Period (bars)";
+
+                            const isFloat = param === "std";
+
+                            return (
+                              <Field key={param}>
+                                <FieldLabel className="font-semibold text-[11px] text-muted-foreground">{labelName}</FieldLabel>
+                                <Input
+                                  type="number"
+                                  step={isFloat ? 0.1 : 1}
+                                  min={isFloat ? 0.1 : 1}
+                                  value={inputStates[`${ind.id}_${param}`] ?? ""}
+                                  onChange={(e) => updateIndicatorInput(ind.id, param, e.target.value, isFloat)}
+                                  className="font-mono text-xs h-9 bg-background border-input text-foreground rounded-xl"
+                                  placeholder={isFloat ? "2.0" : "14"}
+                                />
+                              </Field>
+                            );
+                          });
+                        })()}
                       </div>
                     </FieldGroup>
                   </div>
@@ -393,68 +433,22 @@ export default function IndicatorNodeDialog() {
             </div>
 
             {/* Bottom Actions inside form column */}
-            <div className="p-4 border-t border-border bg-muted/10 shrink-0 flex items-center justify-end gap-2">
+            <div className="p-4 border-t border-border bg-muted/10 shrink-0 flex items-center justify-end gap-3">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => handleOpenChange(false)}
-                className="h-8 text-xs cursor-pointer"
+                className="h-9 rounded-lg text-xs cursor-pointer"
               >
                 Cancel
               </Button>
               <Button
                 size="sm"
                 onClick={handleApply}
-                className="h-8 text-xs cursor-pointer bg-orange-600 hover:bg-orange-500 text-white font-bold"
+                className="h-9 rounded-lg text-xs cursor-pointer bg-orange-600 hover:bg-orange-500 text-white font-bold"
               >
                 Apply & Close
               </Button>
-            </div>
-          </div>
-
-          {/* Column 3: OUTPUT VARIABLES SCHEMA (4 cols) */}
-          <div className="col-span-4 min-w-0 flex flex-col h-full bg-muted/20 border-l border-border p-5 overflow-y-auto">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-4">
-              Outputs (Use in conditions)
-            </span>
-            <div className="space-y-3">
-              <p className="text-[10px] text-muted-foreground leading-relaxed select-none">
-                These variable tokens are generated by this node. Click any variable to copy it, then paste it directly into your logic condition operand target fields.
-              </p>
-              
-              <div className="space-y-2">
-                {(formData.indicators || []).map((ind: any) => {
-                  const label = ind.indicator === "BollingerBands" ? "BB" : ind.indicator;
-                  const outputs =
-                    label === "BB"
-                      ? ["BB_Upper", "BB_Lower", "BB_Middle"]
-                      : [label];
-
-                  return (
-                    <div key={ind.id} className="p-2.5 rounded-lg border border-border bg-card">
-                      <span className="text-[10px] font-bold font-mono text-orange-500 uppercase block mb-1.5">
-                        {ind.indicator} ({ind.period})
-                      </span>
-                      <div className="flex flex-col gap-1.5">
-                        {outputs.map((out) => (
-                          <div
-                            key={out}
-                            onClick={() => copyToClipboard(out)}
-                            className="flex items-center justify-between p-1.5 rounded bg-muted/30 border border-border/40 hover:bg-muted/65 hover:border-border transition-colors font-mono text-[11px] text-foreground"
-                          >
-                            <span>{out}</span>
-                            {copiedKey === out ? (
-                              <IconCheck className="size-3 text-emerald-500" />
-                            ) : (
-                              <IconCopy className="size-3 text-muted-foreground/60" />
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
             </div>
           </div>
         </div>

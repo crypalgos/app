@@ -33,11 +33,13 @@ export function LoginDialog({ isOpen, onOpenChange }: LoginDialogProps) {
                 src="/logo_light.svg"
                 alt="CrypAlgos Logo"
                 className="block dark:hidden w-[160px] h-auto"
+                style={{ height: "auto" }}
               />
               <img
                 src="/logo_dark.svg"
                 alt="CrypAlgos Logo"
                 className="hidden dark:block w-[160px] h-auto"
+                style={{ height: "auto" }}
               />
             </div>
             <DialogTitle className="sr-only">

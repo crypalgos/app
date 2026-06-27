@@ -12,6 +12,8 @@ import { Separator } from '@/components/ui/separator';
 import { useNodesStore } from '@/app/(strategy-builder)/store/nodes-store';
 
 
+import { cn } from '@/lib/utils';
+
 const controlItems = [
   {
     id: 'zoom-in',
@@ -75,7 +77,7 @@ function ControlItem({ item, onAction }: ControlItemProps) {
 }
 
 export default function CanvasControls() {
-  const { zoomIn, zoomOut, fitView, resetView } = useNodesStore();
+  const { zoomIn, zoomOut, fitView, resetView, compileDiagnostics, diagnosticsPanelHeight } = useNodesStore();
 
   const handleAction = (action: string) => {
     switch (action) {
@@ -96,8 +98,14 @@ export default function CanvasControls() {
     }
   };
 
+  const hasDiagnostics = compileDiagnostics && compileDiagnostics.length > 0;
+  const bottomOffset = hasDiagnostics ? diagnosticsPanelHeight + 32 : 24;
+
   return (
-    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20">
+    <div 
+      className="absolute left-1/2 -translate-x-1/2 z-20 transition-all duration-300 ease-in-out"
+      style={{ bottom: `${bottomOffset}px` }}
+    >
       <TooltipProvider>
         <div className="bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-2xl p-1 flex items-center gap-1">
           {controlItems.map((item, index) => (

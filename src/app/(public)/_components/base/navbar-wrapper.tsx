@@ -86,14 +86,7 @@ export function NavbarWrapper() {
         <NavItems items={navItems} />
         <div className="flex items-center gap-4">
           <ThemeToggle />
-          {!mounted ? (
-            !isAuthenticated && (
-              <NavbarButton variant="shimmer" as="button" onClick={handleCtaClick}>
-                {ctaLabel}
-                <CtaIcon size={18} stroke={2} />
-              </NavbarButton>
-            )
-          ) : (
+          {!mounted ? null : (
             <>
               {showAuthMenu && user && <ProfileDropdown />}
               {showLoginButton && (
@@ -135,19 +128,7 @@ export function NavbarWrapper() {
             </a>
           ))}
           <div className="flex w-full flex-col gap-4">
-            {!mounted ? (
-              !isAuthenticated && (
-                <NavbarButton
-                  onClick={handleMobileCtaClick}
-                  variant="primary"
-                  className="w-full"
-                  as="button"
-                >
-                  {ctaLabel}
-                  <CtaIcon size={18} stroke={2} />
-                </NavbarButton>
-              )
-            ) : (
+            {!mounted ? null : (
               <>
                 {showAuthMenu && user && (
                   <div className="px-4 py-2 border-t border-border mt-4">

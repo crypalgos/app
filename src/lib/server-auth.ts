@@ -22,8 +22,12 @@ export async function getServerUser(): Promise<IUser | null> {
       const result = await response.json();
       return result.data as IUser;
     }
-  } catch (error) {
-    console.error("Error fetching user server-side on refresh:", error);
+  } catch (error: any) {
+    if (error?.cause?.code === "ECONNREFUSED" || error?.code === "ECONNREFUSED" || (error instanceof TypeError && error.message.includes("fetch failed"))) {
+      console.warn(`[Auth] Backend is offline or unreachable at ${BACKEND_URL}`);
+    } else {
+      console.error("Error fetching user server-side on refresh:", error);
+    }
   }
 
   return null;

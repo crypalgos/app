@@ -29,6 +29,7 @@ import {
   IconEdit,
   IconChevronRight,
   IconChevronLeft,
+  IconPlus,
 } from "@tabler/icons-react";
 import { useNodesStore } from "../../../store/nodes-store";
 
@@ -92,9 +93,7 @@ const NODE_COLORS: Record<string, string> = {
   indicatorNode: "bg-orange-500",
   conditionNode: "bg-blue-600",
   actionNode: "bg-emerald-600",
-  utilityNode: "bg-indigo-600",
-  riskManagementNode: "bg-red-600",
-  placeholderNode: "bg-zinc-500",
+  placeholderNode: "bg-zinc-200 dark:bg-zinc-800",
 };
 
 // Node type icons
@@ -104,9 +103,7 @@ const NODE_ICONS: Record<string, React.ReactNode> = {
   indicatorNode: <IconChartBar className="size-4 text-white" />,
   conditionNode: <IconGitBranch className="size-4 text-white" />,
   actionNode: <IconBolt className="size-4 text-white" />,
-  utilityNode: <IconBolt className="size-4 text-white" />,
-  riskManagementNode: <IconShield className="size-4 text-white" />,
-  placeholderNode: <IconSettings className="size-4 text-white" />,
+  placeholderNode: <IconPlus className="size-4 text-zinc-500" />,
 };
 
 // Node type labels
@@ -116,8 +113,6 @@ const NODE_LABELS: Record<string, string> = {
   indicatorNode: "Indicator",
   conditionNode: "Logic",
   actionNode: "Actions",
-  utilityNode: "Utility",
-  riskManagementNode: "Risk",
   placeholderNode: "Placeholder",
 };
 
@@ -134,12 +129,14 @@ export default function NodeConfigPanel() {
     isCodeModified,
     setStrategyMeta,
     setIsSynced,
+    compileError,
   } = useNodesStore();
 
   // Ref to track if form has uncommitted changes
   const pendingApplyRef = useRef(false);
 
   const activeNode = nodes.find((n) => n.id === selectedNodeId);
+  const hasError = compileError && selectedNodeId ? compileError.includes(selectedNodeId) : false;
 
   // Form local state
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -385,6 +382,12 @@ export default function NodeConfigPanel() {
 
               {/* Scrollable Form Content */}
               <div className="grow overflow-y-auto px-4 py-3 scrollbar-thin">
+                {hasError && (
+                  <div className="mb-4 p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-500 text-xs font-semibold flex gap-2 items-start shrink-0">
+                    <span className="mt-0.5 font-bold">⚠️</span>
+                    <div className="flex-1 leading-normal">{compileError}</div>
+                  </div>
+                )}
                 <FieldGroup className="flex flex-col gap-4">
 
                   {/* 1. DATA SOURCE NODE CONFIGURATION */}
@@ -564,10 +567,16 @@ export default function NodeConfigPanel() {
                       </Field>
 
                       <Field>
-                        <FieldLabel>Candles Timeframe</FieldLabel>
+                        <FieldLabel>Candles Timeframe (Primary)</FieldLabel>
                         <Select
                           value={formData.timeframe || "1h"}
-                          onValueChange={(val) => updateFormKey("timeframe", val)}
+                          onValueChange={(val) => {
+                            updateFormKey("timeframe", val);
+                            const tfs = formData.timeframes || [formData.timeframe || "1h"];
+                            if (!tfs.includes(val)) {
+                              updateFormKey("timeframes", [...tfs, val]);
+                            }
+                          }}
                         >
                           <SelectTrigger className="w-full border-border/80 font-mono text-xs">
                             <SelectValue placeholder="Select Timeframe" />
@@ -578,6 +587,48 @@ export default function NodeConfigPanel() {
                             ))}
                           </SelectContent>
                         </Select>
+                      </Field>
+
+                      <Field>
+                        <FieldLabel>Additional Timeframes</FieldLabel>
+                        <div className="flex flex-wrap gap-1.5 mt-1">
+                          {["1m", "5m", "15m", "1h", "4h", "1d"].map((tf) => {
+                            const isPrimary = (formData.timeframe || "1h") === tf;
+                            const timeframes = formData.timeframes || [formData.timeframe || "1h"];
+                            const isSelected = timeframes.includes(tf) || isPrimary;
+                            return (
+                              <button
+                                key={tf}
+                                type="button"
+                                disabled={isPrimary}
+                                onClick={() => {
+                                  let newTfs = [...timeframes];
+                                  if (newTfs.includes(tf)) {
+                                    newTfs = newTfs.filter((t) => t !== tf);
+                                  } else {
+                                    newTfs.push(tf);
+                                  }
+                                  // Ensure primary is always in there
+                                  const primary = formData.timeframe || "1h";
+                                  if (!newTfs.includes(primary)) {
+                                    newTfs.push(primary);
+                                  }
+                                  updateFormKey("timeframes", newTfs);
+                                }}
+                                className={`px-2.5 py-1 text-[10px] font-mono font-bold rounded-lg border transition-all duration-200 cursor-pointer ${
+                                  isPrimary
+                                    ? "bg-muted text-muted-foreground border-border cursor-not-allowed opacity-50"
+                                    : isSelected
+                                      ? "bg-primary border-primary text-primary-foreground shadow-sm"
+                                      : "bg-background border-border text-foreground hover:bg-muted"
+                                }`}
+                              >
+                                {tf}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <FieldDescription className="text-xs">Select any extra timeframes required by indicator nodes connected to this data feed.</FieldDescription>
                       </Field>
                     </>
                   )}
@@ -742,7 +793,7 @@ export default function NodeConfigPanel() {
                   )}
 
                   {/* 4. TRADING ACTION NODE CONFIGURATION */}
-                  {(activeNode.type === "actionNode" || activeNode.type === "utilityNode") && (
+                  {activeNode.type === "actionNode" && (
                     <>
                       <Field>
                         <FieldLabel>Action Classification</FieldLabel>

@@ -191,7 +191,7 @@ export default function NodeConfigSheet() {
       
       let finalData: Record<string, any> = changed ? { ...data, leftOperand: left, rightOperand: right } : { ...data };
       
-      if (activeNode.type === "actionNode" || activeNode.type === "utilityNode") {
+      if (activeNode.type === "actionNode") {
         const type = finalData.actionType || "buy";
         if (type === "buy" || type === "sell") {
           const sizing = finalData.sizing || {};
@@ -227,7 +227,7 @@ export default function NodeConfigSheet() {
     const sanitizedData = { ...data };
     if (nodeType === "startNode") {
       delete sanitizedData.position_size_pct;
-    } else if (nodeType === "actionNode" || nodeType === "utilityNode") {
+    } else if (nodeType === "actionNode") {
       const type = sanitizedData.actionType || "buy";
       if (type === "buy" || type === "sell") {
         const mode = sanitizedData.sizing_mode || "PERCENT_OF_EQUITY";
@@ -346,10 +346,7 @@ export default function NodeConfigSheet() {
       case "conditionNode":
         return <IconGitBranch className="size-5 text-blue-400" />;
       case "actionNode":
-      case "utilityNode":
         return <IconBolt className="size-5 text-emerald-400" />;
-      case "riskManagementNode":
-        return <IconShield className="size-5 text-red-400" />;
       default:
         return <IconSettings className="size-5 text-muted-foreground" />;
     }
@@ -749,7 +746,7 @@ export default function NodeConfigSheet() {
             )}
 
             {/* 4. TRADING ACTION NODE CONFIGURATION */}
-            {(activeNode.type === "actionNode" || activeNode.type === "utilityNode") && (
+            {activeNode.type === "actionNode" && (
               <>
                 <Field>
                   <FieldLabel>Action Classification</FieldLabel>

@@ -12,6 +12,8 @@ interface WorkspaceToolbarProps {
   onSearchChange: (value: string) => void;
   viewMode: "card" | "table";
   onViewModeChange: (mode: "card" | "table") => void;
+  showArchived: boolean;
+  onShowArchivedChange: (value: boolean) => void;
 }
 
 export function WorkspaceToolbar({
@@ -20,26 +22,45 @@ export function WorkspaceToolbar({
   onSearchChange,
   viewMode,
   onViewModeChange,
+  showArchived,
+  onShowArchivedChange,
 }: WorkspaceToolbarProps) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      {/* Left: label + count */}
-      <div className="flex items-center gap-2.5">
-        <div className="relative flex size-2">
-          <span className="absolute inline-flex size-full animate-ping rounded-full bg-chart-1/40 opacity-75" />
-          <span className="relative inline-flex size-2 rounded-full bg-chart-1" />
-        </div>
-        <h2 className="text-[11px] font-bold tracking-[0.18em] uppercase text-muted-foreground">
+      {/* Left: Active/Archive Tab selector */}
+      <div className="flex items-center gap-1.5 bg-muted/40 p-0.5 rounded-xl border border-border/50">
+        <button
+          onClick={() => onShowArchivedChange(false)}
+          className={cn(
+            "px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5",
+            !showArchived
+              ? "bg-background text-foreground shadow-sm border border-border/50"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
           Active Workspace
-        </h2>
-        {totalCount > 0 && (
-          <Badge
-            variant="secondary"
-            className="tabular-nums text-[10px] font-bold h-4.5 px-1.5 rounded-full"
-          >
-            {totalCount}
-          </Badge>
-        )}
+          {totalCount > 0 && !showArchived && (
+            <span className="tabular-nums text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-mono">
+              {totalCount}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => onShowArchivedChange(true)}
+          className={cn(
+            "px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5",
+            showArchived
+              ? "bg-background text-foreground shadow-sm border border-border/50"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          Archive
+          {totalCount > 0 && showArchived && (
+            <span className="tabular-nums text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-mono">
+              {totalCount}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Right: search + view toggle */}

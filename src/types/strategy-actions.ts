@@ -84,6 +84,9 @@ export interface ApiStrategy {
   updated_at: string;
   compile_error?: string | null;
   compile_diagnostics?: CompilerDiagnostic[] | null;
+  is_golden?: boolean;
+  current_version?: number;
+  is_archived?: boolean;
 }
 
 export interface BacktestTriggerResponse {
@@ -103,6 +106,7 @@ export interface ApiBacktest {
   leverage: number;
   metrics_json: Record<string, number>;
   charting_json: Record<string, unknown>;
+  report_json?: Record<string, any>;
   created_at: string;
 }
 
