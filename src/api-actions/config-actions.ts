@@ -35,7 +35,16 @@ export interface ConfigRegistry {
   }>;
 }
 
+let cachedRegistryPromise: Promise<ConfigRegistry> | null = null;
+
 export const fetchConfigRegistry = async (): Promise<ConfigRegistry> => {
-  const response = await axiosInstance.get("/config/registry");
-  return response.data.data;
+  if (!cachedRegistryPromise) {
+    cachedRegistryPromise = axiosInstance.get("/config/registry")
+      .then(response => response.data.data)
+      .catch(error => {
+        cachedRegistryPromise = null;
+        throw error;
+      });
+  }
+  return cachedRegistryPromise;
 };
