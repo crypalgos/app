@@ -354,7 +354,7 @@ export function TradeAnalysisTable({ trades }: { trades: any[] }) {
                 </SheetDescription>
               </SheetHeader>
 
-              <ScrollArea className="flex-1 w-full">
+              <ScrollArea className="flex-1 w-full min-h-0">
                 <div className="space-y-6 p-6 pb-8">
                   {/* Hero Section Banner */}
                   <div className={cn(
