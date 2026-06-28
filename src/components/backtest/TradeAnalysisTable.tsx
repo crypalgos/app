@@ -4,6 +4,7 @@ import React, { useState, useMemo, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -358,170 +359,177 @@ export function TradeAnalysisTable({ trades }: { trades: any[] }) {
                 <div className="space-y-6 p-6 pb-8">
                   {/* Hero Section Banner */}
                   <div className={cn(
-                    "p-5 rounded-2xl border flex flex-col items-center justify-center text-center gap-2 shadow-sm relative overflow-hidden",
+                    "p-4 rounded-xl border flex items-center justify-between shadow-sm relative overflow-hidden",
                     selectedTrade.net_pnl > 0 
                       ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-500 shadow-emerald-500/5" 
                       : "bg-red-500/5 border-red-500/20 text-red-500 shadow-red-500/5"
                   )}>
-                    <div className="absolute top-0 right-0 p-3 opacity-10">
-                      {selectedTrade.net_pnl > 0 ? <IconTrendingUp className="size-24" /> : <IconTrendingDown className="size-24" />}
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 p-3 opacity-[0.03] pointer-events-none">
+                      {selectedTrade.net_pnl > 0 ? <IconTrendingUp className="size-20" /> : <IconTrendingDown className="size-20" />}
                     </div>
-                    <span className="text-xs font-semibold tracking-widest uppercase opacity-80">Net Profit / Loss</span>
-                    <span className="text-4xl font-extrabold font-mono tracking-tight tabular-nums">
-                      {selectedTrade.net_pnl > 0 ? "+" : ""}${formatCurrency(selectedTrade.net_pnl)}
-                    </span>
-                    <span className={cn(
-                      "text-sm font-bold font-mono px-3 py-1 rounded-full",
-                      selectedTrade.net_pnl > 0 ? "bg-emerald-500/10" : "bg-red-500/10"
-                    )}>
-                      {selectedTrade.return_pct > 0 ? "+" : ""}{selectedTrade.return_pct.toFixed(2)}% Return
-                    </span>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[10px] font-bold tracking-wider uppercase opacity-70">Net Profit / Loss</span>
+                      <span className="text-2xl font-extrabold font-mono tracking-tight tabular-nums">
+                        {selectedTrade.net_pnl > 0 ? "+" : ""}${formatCurrency(selectedTrade.net_pnl)}
+                      </span>
+                    </div>
+                    <div className="flex flex-col items-end gap-1.5">
+                      <Badge className={cn(
+                        "text-xs font-bold font-mono py-0.5 px-2.5",
+                        selectedTrade.net_pnl > 0 
+                          ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" 
+                          : "bg-red-500/10 text-red-500 border border-red-500/20"
+                      )} variant="outline">
+                        {selectedTrade.return_pct > 0 ? "+" : ""}{selectedTrade.return_pct.toFixed(2)}% Return
+                      </Badge>
+                      <span className="text-[10px] text-muted-foreground font-semibold uppercase">
+                        {selectedTrade.net_pnl > 0 ? "Winner Trade" : "Loser Trade"}
+                      </span>
+                    </div>
                   </div>
 
-                  {/* Timeline Flowchart */}
-                  <section className="space-y-3">
-                    <div className="flex items-center gap-2 text-foreground font-semibold">
-                      <IconClock className="size-4 text-indigo-500" />
-                      <span>Execution Path</span>
-                    </div>
-                    <div className="flex flex-col gap-3 relative before:absolute before:left-[17px] before:top-4 before:bottom-4 before:w-0.5 before:bg-border/60">
-                      {/* Entry node */}
-                      <div className="flex gap-4 relative z-10">
-                        <div className="size-9 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-500 shrink-0">
-                          <IconArrowUpRight className="size-4" />
+                  {/* Tabs Section */}
+                  <Tabs defaultValue="execution" className="w-full">
+                    <TabsList className="grid w-full grid-cols-3 bg-muted/40 p-1 rounded-xl mb-6">
+                      <TabsTrigger value="execution" className="rounded-lg text-xs font-semibold py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">Execution</TabsTrigger>
+                      <TabsTrigger value="ledger" className="rounded-lg text-xs font-semibold py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">Ledger</TabsTrigger>
+                      <TabsTrigger value="risk" className="rounded-lg text-xs font-semibold py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">Risk & MAE</TabsTrigger>
+                    </TabsList>
+
+                    {/* Tab 1: Execution Details */}
+                    <TabsContent value="execution" className="space-y-6 outline-none">
+                      {/* Timeline Flowchart */}
+                      <div className="flex flex-col gap-3 relative before:absolute before:left-[17px] before:top-4 before:bottom-4 before:w-0.5 before:bg-border/60">
+                        {/* Entry node */}
+                        <div className="flex gap-4 relative z-10">
+                          <div className="size-9 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-500 shrink-0">
+                            <IconArrowUpRight className="size-4" />
+                          </div>
+                          <div className="flex-1 bg-muted/20 border p-3 rounded-xl flex flex-col gap-1.5">
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs font-bold text-muted-foreground uppercase">Position Entry</span>
+                              {selectedTrade.entry_reason && (
+                                <Badge variant="outline" className="border-indigo-500/20 text-indigo-500 text-[10px] py-0 px-2 bg-indigo-500/5">
+                                  Node: {selectedTrade.entry_reason.action_node}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex justify-between items-baseline">
+                              <span className="text-lg font-bold font-mono tracking-tight">${formatCurrency(selectedTrade.entry_price)}</span>
+                              <span className="text-[10px] font-mono text-muted-foreground">{formatTimestamp(selectedTrade.entry_time)}</span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex-1 bg-muted/20 border p-3 rounded-xl flex flex-col gap-1.5">
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs font-bold text-muted-foreground uppercase">Position Entry</span>
-                            {selectedTrade.entry_reason && (
-                              <Badge variant="outline" className="border-indigo-500/20 text-indigo-500 text-[10px] py-0 px-2 bg-indigo-500/5">
-                                Node: {selectedTrade.entry_reason.action_node}
+
+                        {/* Middle stats node */}
+                        <div className="flex gap-4 ml-[2px] items-center py-1">
+                          <div className="size-8 rounded-full flex items-center justify-center shrink-0" />
+                          <div className="flex gap-3 text-xs text-muted-foreground font-mono">
+                            <span className="bg-muted px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase">{selectedTrade.side}</span>
+                            <span>·</span>
+                            <span>{selectedTrade.quantity.toFixed(4)} {selectedTrade.symbol.replace("USD", "")}</span>
+                            <span>·</span>
+                            <span>{selectedTrade.leverage}x Leverage</span>
+                          </div>
+                        </div>
+
+                        {/* Exit node */}
+                        <div className="flex gap-4 relative z-10">
+                          <div className="size-9 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-500 shrink-0">
+                            <IconArrowDownRight className="size-4" />
+                          </div>
+                          <div className="flex-1 bg-muted/20 border p-3 rounded-xl flex flex-col gap-1.5">
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs font-bold text-muted-foreground uppercase">Position Exit</span>
+                              <Badge className={cn("text-[10px] py-0 px-2", getBadgeVariant(selectedTrade.exit_reason.code))} variant="outline">
+                                {selectedTrade.exit_reason.label}
                               </Badge>
-                            )}
-                          </div>
-                          <div className="flex justify-between items-baseline">
-                            <span className="text-lg font-bold font-mono tracking-tight">${formatCurrency(selectedTrade.entry_price)}</span>
-                            <span className="text-[10px] font-mono text-muted-foreground">{formatTimestamp(selectedTrade.entry_time)}</span>
+                            </div>
+                            <div className="flex justify-between items-baseline">
+                              <span className="text-lg font-bold font-mono tracking-tight">${formatCurrency(selectedTrade.exit_price)}</span>
+                              <span className="text-[10px] font-mono text-muted-foreground">{formatTimestamp(selectedTrade.exit_time)}</span>
+                            </div>
                           </div>
                         </div>
                       </div>
 
-                      {/* Middle stats node */}
-                      <div className="flex gap-4 ml-[2px] items-center py-1">
-                        <div className="size-8 rounded-full flex items-center justify-center shrink-0" />
-                        <div className="flex gap-3 text-xs text-muted-foreground font-mono">
-                          <span className="bg-muted px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase">{selectedTrade.side}</span>
-                          <span>·</span>
-                          <span>{selectedTrade.quantity.toFixed(4)} {selectedTrade.symbol.replace("USD", "")}</span>
-                          <span>·</span>
-                          <span>{selectedTrade.leverage}x Leverage</span>
+                      {/* Capital Allocation & Capacity */}
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 text-foreground font-semibold">
+                          <IconWallet className="size-4 text-orange-500" />
+                          <span>Capital Allocation</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 bg-muted/20 p-4 rounded-xl border">
+                          <DetailItem label="Entry Notional" value={`$${formatCurrency(selectedTrade.position_value)}`} />
+                          <DetailItem label="Position Leverage" value={`${selectedTrade.leverage}x`} />
+                          <DetailItem label="Duration" value={formatDuration(selectedTrade.duration_ms)} className="col-span-2" />
+                          <DetailItem label="Portfolio Equity after Close" value={`$${formatCurrency(selectedTrade.equity_after)}`} className="col-span-2 text-foreground font-bold border-t border-dashed pt-3" />
                         </div>
                       </div>
+                    </TabsContent>
 
-                      {/* Exit node */}
-                      <div className="flex gap-4 relative z-10">
-                        <div className="size-9 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-500 shrink-0">
-                          <IconArrowDownRight className="size-4" />
+                    {/* Tab 2: Financial Ledger */}
+                    <TabsContent value="ledger" className="space-y-6 outline-none">
+                      <div className="bg-muted/20 border rounded-xl overflow-hidden divide-y divide-border/60">
+                        <div className="p-4 flex justify-between items-center bg-muted/10">
+                          <span className="text-sm font-medium">Gross Profit / Loss</span>
+                          <span className={cn("font-bold font-mono", selectedTrade.gross_pnl > 0 ? "text-emerald-500" : "text-destructive")}>
+                            ${formatCurrency(selectedTrade.gross_pnl)}
+                          </span>
                         </div>
-                        <div className="flex-1 bg-muted/20 border p-3 rounded-xl flex flex-col gap-1.5">
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs font-bold text-muted-foreground uppercase">Position Exit</span>
-                            <Badge className={cn("text-[10px] py-0 px-2", getBadgeVariant(selectedTrade.exit_reason.code))} variant="outline">
-                              {selectedTrade.exit_reason.label}
-                            </Badge>
+
+                        <div className="p-4 space-y-3 bg-card">
+                          <div className="flex justify-between items-center text-sm">
+                            <div className="flex flex-col">
+                              <span className="text-muted-foreground">Entry Execution Fee</span>
+                              <span className="text-[10px] text-muted-foreground/60 font-mono">Taker Commission</span>
+                            </div>
+                            <span className="font-mono text-red-500/90">-${formatCurrency(selectedTrade.fees.entry)}</span>
                           </div>
-                          <div className="flex justify-between items-baseline">
-                            <span className="text-lg font-bold font-mono tracking-tight">${formatCurrency(selectedTrade.exit_price)}</span>
-                            <span className="text-[10px] font-mono text-muted-foreground">{formatTimestamp(selectedTrade.exit_time)}</span>
+                          
+                          <div className="flex justify-between items-center text-sm">
+                            <div className="flex flex-col">
+                              <span className="text-muted-foreground">Exit Execution Fee</span>
+                              <span className="text-[10px] text-muted-foreground/60 font-mono">Taker Commission</span>
+                            </div>
+                            <span className="font-mono text-red-500/90">-${formatCurrency(selectedTrade.fees.exit)}</span>
+                          </div>
+
+                          <div className="flex justify-between items-center text-sm pt-2 border-t border-dashed">
+                            <span className="font-medium">Total Execution Cost</span>
+                            <span className="font-mono text-red-500 font-semibold">-${formatCurrency(selectedTrade.execution_cost)}</span>
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  </section>
 
-                  {/* Financial Ledger Section */}
-                  <section className="space-y-3">
-                    <div className="flex items-center gap-2 text-foreground font-semibold">
-                      <IconReceipt className="size-4 text-emerald-500" />
-                      <span>Financial Ledger</span>
-                    </div>
-                    <div className="bg-muted/20 border rounded-2xl overflow-hidden divide-y divide-border/60">
-                      <div className="p-4 flex justify-between items-center bg-muted/10">
-                        <span className="text-sm font-medium">Gross Profit / Loss</span>
-                        <span className={cn("font-bold font-mono", selectedTrade.gross_pnl > 0 ? "text-emerald-500" : "text-destructive")}>
-                          ${formatCurrency(selectedTrade.gross_pnl)}
-                        </span>
-                      </div>
-
-                      <div className="p-4 space-y-3 bg-card">
-                        <div className="flex justify-between items-center text-sm">
+                        <div className="p-4 flex justify-between items-center bg-card">
                           <div className="flex flex-col">
-                            <span className="text-muted-foreground">Entry Execution Fee</span>
-                            <span className="text-[10px] text-muted-foreground/60 font-mono">Taker Commission</span>
+                            <span className="text-sm text-muted-foreground">Financing Cost (Funding)</span>
+                            <span className="text-[10px] text-muted-foreground/60">Interest rate paid/received</span>
                           </div>
-                          <span className="font-mono text-red-500/90">-${formatCurrency(selectedTrade.fees.entry)}</span>
-                        </div>
-                        
-                        <div className="flex justify-between items-center text-sm">
-                          <div className="flex flex-col">
-                            <span className="text-muted-foreground">Exit Execution Fee</span>
-                            <span className="text-[10px] text-muted-foreground/60 font-mono">Taker Commission</span>
-                          </div>
-                          <span className="font-mono text-red-500/90">-${formatCurrency(selectedTrade.fees.exit)}</span>
+                          <span className={cn("font-mono font-semibold", selectedTrade.funding_cost <= 0 ? "text-emerald-500" : "text-red-500")}>
+                            {selectedTrade.funding_cost <= 0 ? "+" : "-"}${formatCurrency(Math.abs(selectedTrade.funding_cost))}
+                          </span>
                         </div>
 
-                        <div className="flex justify-between items-center text-sm pt-2 border-t border-dashed">
-                          <span className="font-medium">Total Execution Cost</span>
-                          <span className="font-mono text-red-500 font-semibold">-${formatCurrency(selectedTrade.execution_cost)}</span>
+                        <div className="p-4 flex justify-between items-center bg-muted/15">
+                          <span className="font-bold text-foreground">Net Position Profit</span>
+                          <span className={cn("font-extrabold font-mono text-lg", selectedTrade.net_pnl > 0 ? "text-emerald-500" : "text-destructive")}>
+                            {selectedTrade.net_pnl > 0 ? "+" : ""}${formatCurrency(selectedTrade.net_pnl)}
+                          </span>
                         </div>
                       </div>
+                    </TabsContent>
 
-                      <div className="p-4 flex justify-between items-center bg-card">
-                        <div className="flex flex-col">
-                          <span className="text-sm text-muted-foreground">Financing Cost (Funding)</span>
-                          <span className="text-[10px] text-muted-foreground/60">Interest rate paid/received</span>
-                        </div>
-                        <span className={cn("font-mono font-semibold", selectedTrade.funding_cost <= 0 ? "text-emerald-500" : "text-red-500")}>
-                          {selectedTrade.funding_cost <= 0 ? "+" : "-"}${formatCurrency(Math.abs(selectedTrade.funding_cost))}
-                        </span>
+                    {/* Tab 3: Risk & Advanced Analytics */}
+                    <TabsContent value="risk" className="space-y-6 outline-none">
+                      <div className="grid grid-cols-2 gap-4 bg-muted/20 p-4 rounded-xl border">
+                        <DetailItem label="MAE (Max Adverse Excursion)" value={selectedTrade.advanced_metrics.mae ?? "—"} subtext="Adverse price swing during trade" />
+                        <DetailItem label="MFE (Max Favorable Excursion)" value={selectedTrade.advanced_metrics.mfe ?? "—"} subtext="Favorable price swing during trade" />
+                        <DetailItem label="R-Multiple" value={selectedTrade.advanced_metrics.r_multiple ?? "—"} subtext="Risk-to-reward multiple" />
+                        <DetailItem label="Slippage (USDT)" value={selectedTrade.advanced_metrics.slippage ?? "—"} subtext="Execution slippage cost" />
                       </div>
-
-                      <div className="p-4 flex justify-between items-center bg-muted/15">
-                        <span className="font-bold text-foreground">Net Position Profit</span>
-                        <span className={cn("font-extrabold font-mono text-lg", selectedTrade.net_pnl > 0 ? "text-emerald-500" : "text-destructive")}>
-                          {selectedTrade.net_pnl > 0 ? "+" : ""}${formatCurrency(selectedTrade.net_pnl)}
-                        </span>
-                      </div>
-                    </div>
-                  </section>
-
-                  {/* Capital Allocation & Capacity */}
-                  <section className="space-y-3">
-                    <div className="flex items-center gap-2 text-foreground font-semibold">
-                      <IconWallet className="size-4 text-orange-500" />
-                      <span>Capital & Leverage</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 bg-muted/20 p-4 rounded-2xl border">
-                      <DetailItem label="Entry Notional" value={`$${formatCurrency(selectedTrade.position_value)}`} />
-                      <DetailItem label="Position Leverage" value={`${selectedTrade.leverage}x`} />
-                      <DetailItem label="Duration" value={formatDuration(selectedTrade.duration_ms)} className="col-span-2" />
-                      <DetailItem label="Portfolio Equity after Close" value={`$${formatCurrency(selectedTrade.equity_after)}`} className="col-span-2 text-foreground font-bold border-t border-dashed pt-3" />
-                    </div>
-                  </section>
-
-                  {/* Advanced Risk Metrics */}
-                  <section className="space-y-3">
-                    <div className="flex items-center gap-2 text-foreground font-semibold">
-                      <IconShield className="size-4 text-purple-500" />
-                      <span>Advanced Risk Metrics</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 bg-muted/20 p-4 rounded-2xl border">
-                      <DetailItem label="MAE (Max Adverse Excursion)" value={selectedTrade.advanced_metrics.mae ?? "—"} subtext="Adverse price swing during trade" />
-                      <DetailItem label="MFE (Max Favorable Excursion)" value={selectedTrade.advanced_metrics.mfe ?? "—"} subtext="Favorable price swing during trade" />
-                      <DetailItem label="R-Multiple" value={selectedTrade.advanced_metrics.r_multiple ?? "—"} subtext="Risk-to-reward multiple" />
-                      <DetailItem label="Slippage (USDT)" value={selectedTrade.advanced_metrics.slippage ?? "—"} subtext="Execution slippage cost" />
-                    </div>
-                  </section>
+                    </TabsContent>
+                  </Tabs>
                 </div>
               </ScrollArea>
             </>
