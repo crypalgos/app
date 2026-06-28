@@ -1046,9 +1046,10 @@ export default function NodeConfigPanel() {
                           step={0.01}
                           min={0.01}
                           max={1.00}
-                          value={formData.max_drawdown_pct ?? 0.25}
-                          onChange={(e) => updateFormKey("max_drawdown_pct", parseFloat(e.target.value) || 0.25)}
+                          value={formData.max_drawdown_pct ?? ""}
+                          onChange={(e) => updateFormKey("max_drawdown_pct", e.target.value === "" ? null : parseFloat(e.target.value))}
                           className="font-mono border-border/80 text-xs"
+                          placeholder="0.25"
                         />
                         <FieldDescription className="text-xs">Maximum equity drawdown, e.g. 0.25 representing 25% peak cap.</FieldDescription>
                       </Field>
@@ -1059,9 +1060,10 @@ export default function NodeConfigPanel() {
                           type="number"
                           step={0.1}
                           min={0.1}
-                          value={formData.atr_sl_mult ?? 2.0}
-                          onChange={(e) => updateFormKey("atr_sl_mult", parseFloat(e.target.value) || 2.0)}
+                          value={formData.atr_sl_mult ?? ""}
+                          onChange={(e) => updateFormKey("atr_sl_mult", e.target.value === "" ? null : parseFloat(e.target.value))}
                           className="font-mono border-border/80 text-xs"
+                          placeholder="2.0"
                         />
                       </Field>
 
@@ -1071,9 +1073,10 @@ export default function NodeConfigPanel() {
                           type="number"
                           step={0.1}
                           min={0.1}
-                          value={formData.atr_tp_mult ?? 5.0}
-                          onChange={(e) => updateFormKey("atr_tp_mult", parseFloat(e.target.value) || 5.0)}
+                          value={formData.atr_tp_mult ?? ""}
+                          onChange={(e) => updateFormKey("atr_tp_mult", e.target.value === "" ? null : parseFloat(e.target.value))}
                           className="font-mono border-border/80 text-xs"
+                          placeholder="4.0"
                         />
                       </Field>
 
@@ -1082,9 +1085,10 @@ export default function NodeConfigPanel() {
                         <Input
                           type="number"
                           min={1}
-                          value={formData.max_open_positions ?? 2}
-                          onChange={(e) => updateFormKey("max_open_positions", parseInt(e.target.value) || 2)}
+                          value={formData.max_open_positions ?? ""}
+                          onChange={(e) => updateFormKey("max_open_positions", e.target.value === "" ? null : parseInt(e.target.value))}
                           className="font-mono border-border/80 text-xs"
+                          placeholder="3"
                         />
                       </Field>
                     </>
