@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
-import { useStrategyBacktest, useRunDataset } from "@/api-actions/hooks/strategy-hooks";
+import { useStrategyBacktest, useRunDataset, useRunArtifact } from "@/api-actions/hooks/strategy-hooks";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -27,7 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { IconArrowLeft } from "@tabler/icons-react";
-
+import { TradeAnalysisTable } from "@/components/backtest/TradeAnalysisTable";
 import { cn } from "@/lib/utils";
 
 
@@ -105,10 +105,13 @@ function MonthlyHeatmap({ heatmapData }: { heatmapData: Record<string, Record<st
   );
 }
 
-function MetricCard({ title, value, color }: { title: string; value: React.ReactNode; color?: string }) {
+function MetricCard({ title, value, color, subValue }: { title: string; value: React.ReactNode; color?: string; subValue?: string }) {
   return (
     <div className="flex flex-col">
-      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{title}</span>
+      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+        {title}
+        {subValue && <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground/80 lowercase">{subValue}</span>}
+      </span>
       <span className={cn("text-xl sm:text-2xl font-bold tabular-nums mt-1", color)}>
         {value}
       </span>
@@ -131,22 +134,27 @@ export default function BacktestDetailPage() {
   const strategyId = params?.strategyId as string;
   const backtestId = params?.backtestId as string;
 
-  const { data: backtest, isLoading } = useStrategyBacktest(
+  const { data: backtest, isLoading: backtestLoading } = useStrategyBacktest(
     strategyId,
     backtestId
   );
 
-  const charting: any = backtest?.charting_json ?? {};
-  const datasetId = charting.dataset_id;
-  const trades = charting.trades ?? [];
-  const report = backtest?.report_json ?? {};
-  const metrics = report.metrics ?? {};
+  const { data: runReport, isLoading: reportLoading } = useRunArtifact(backtestId, "report");
+  
+  // Trades are now in the workspace as a dataset
+  const { data: trades = [] } = useRunDataset(backtestId, "recent_trades");
+
+  const runJson = runReport?.report || {};
+  const metrics = runJson.metrics || {};
   const globalMetrics = metrics.global ?? {};
   const riskMetrics = metrics.risk ?? {};
   const distMetrics = metrics.distributions?.global ?? {};
   const capMetrics = metrics.capacity ?? {};
   const symbols = metrics.symbols ?? {};
-
+  
+  // Datasets mapping from the report
+  const datasets = runJson.datasets ?? {};
+  const datasetId = datasets.global_equity_curve?.dataset_id;
 
   // Fetch full resolution chart if dataset_id is available (unconditional hook call)
   const { data: fullEquityCurve } = useRunDataset(backtestId, datasetId);
@@ -154,13 +162,17 @@ export default function BacktestDetailPage() {
   const [selectedRolling, setSelectedRolling] = useState<string>("sharpe");
   const [selectedWindow, setSelectedWindow] = useState<string>("30D");
 
-  const datasets = charting.datasets || {};
   const rollingGroup = datasets[`rolling_${selectedRolling}`];
   const rollingDatasetId = rollingGroup?.[selectedWindow]?.dataset_id;
   const { data: rollingCurveData } = useRunDataset(backtestId, rollingDatasetId);
 
 
-  if (isLoading) {
+  const drawdownDatasetId = datasets.global_drawdown_curve?.dataset_id;
+  const { data: fullDrawdownCurve } = useRunDataset(backtestId, drawdownDatasetId);
+
+  const isPageLoading = backtestLoading || reportLoading;
+
+  if (isPageLoading) {
     return (
       <div className="flex flex-col gap-6 p-6">
         <Skeleton className="h-8 w-1/4 rounded-md" />
@@ -178,26 +190,44 @@ export default function BacktestDetailPage() {
     );
   }
 
-  const resolvedEquityCurve = fullEquityCurve || charting.equity_curve || [];
+  const charting = backtest.charting_json || {};
+  const resolvedEquityCurve = Array.isArray(fullEquityCurve) ? fullEquityCurve : (Array.isArray(charting.equity_curve) ? charting.equity_curve : []);
 
-  const equityData = resolvedEquityCurve.map(([time, value]: any) => ({
-    time,
-    formattedTime: new Date(time).toLocaleDateString(),
-    balance: value,
-  }));
+  const equityData = resolvedEquityCurve.map((item: any) => {
+    const time = Array.isArray(item) ? item[0] : item.timestamp;
+    const value = Array.isArray(item) ? item[1] : item.value;
+    return {
+      time,
+      formattedTime: new Date(time).toLocaleDateString(),
+      balance: value,
+    };
+  });
 
+  // Use backend drawdown if available, otherwise compute from equity
+  const drawdownData = (() => {
+    if (fullDrawdownCurve && fullDrawdownCurve.length > 0) {
+      return fullDrawdownCurve.map((item: any) => {
+        const time = Array.isArray(item) ? item[0] : item.timestamp;
+        const value = Array.isArray(item) ? item[1] : item.value;
+        return {
+          time,
+          formattedTime: new Date(time).toLocaleDateString(),
+          drawdown: value,
+        };
+      });
+    }
+    return [];
+  })();
 
-  const drawdownData = (charting.drawdown_curve ?? []).map(([time, value]: any) => ({
-    time,
-    formattedTime: new Date(time).toLocaleDateString(),
-    drawdown: value,
-  }));
-
-  const rollingData = (rollingCurveData || []).map(([time, value]: any) => ({
-    time,
-    formattedTime: new Date(time).toLocaleDateString(),
-    value: value,
-  }));
+  const rollingData = (rollingCurveData || []).map((item: any) => {
+    const time = Array.isArray(item) ? item[0] : item.timestamp;
+    const value = Array.isArray(item) ? item[1] : item.value;
+    return {
+      time,
+      formattedTime: new Date(time).toLocaleDateString(),
+      value: value,
+    };
+  });
 
 
   return (
@@ -235,7 +265,7 @@ export default function BacktestDetailPage() {
       </header>
 
       {/* Main Content Area */}
-      <ScrollArea className="flex-1 w-full">
+      <div className="flex-1 w-full overflow-y-auto">
         <div className="flex flex-col gap-6 animate-in fade-in duration-300 max-w-5xl mx-auto p-4 md:p-6 lg:p-8">
 
       {/* Analysis Tabs */}
@@ -251,11 +281,15 @@ export default function BacktestDetailPage() {
         <TabsContent value="overview" className="flex flex-col gap-6 animate-in fade-in">
           {/* Global Metrics Header */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 bg-muted/10 border border-border/20 rounded-2xl p-6 shadow-sm">
-            <MetricCard title="Net Profit" value={`$${(globalMetrics.net_profit ?? backtest.metrics_json?.net_profit ?? 0).toFixed(2)}`} color={(globalMetrics.net_profit ?? backtest.metrics_json?.net_profit ?? 0) >= 0 ? "text-emerald-500" : "text-destructive"} />
+            <MetricCard title="Net Profit" value={`$${(globalMetrics.net_profit ?? backtest.metrics_json?.net_profit ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} color={(globalMetrics.net_profit ?? backtest.metrics_json?.net_profit ?? 0) >= 0 ? "text-emerald-500" : "text-destructive"} />
             <MetricCard title="Return %" value={`${(globalMetrics.total_return_pct ?? backtest.metrics_json?.profit_pct ?? 0).toFixed(2)}%`} color={(globalMetrics.total_return_pct ?? 0) >= 0 ? "text-emerald-500" : "text-destructive"} />
             <MetricCard title="Sharpe Ratio" value={(globalMetrics.sharpe_ratio ?? backtest.metrics_json?.sharpe_ratio ?? 0).toFixed(2)} />
             <MetricCard title="Max Drawdown" value={`${(globalMetrics.max_drawdown_pct ?? backtest.metrics_json?.max_drawdown ?? 0).toFixed(2)}%`} color="text-destructive" />
-            <MetricCard title="Win Rate" value={globalMetrics.win_rate !== undefined ? `${(globalMetrics.win_rate * 100).toFixed(1)}%` : `${(backtest.metrics_json?.win_rate ?? 0).toFixed(1)}%`} />
+            <MetricCard 
+              title="Win Rate" 
+              value={globalMetrics.win_rate !== undefined ? `${(globalMetrics.win_rate * 100).toFixed(1)}%` : `${(backtest.metrics_json?.win_rate ?? 0).toFixed(1)}%`} 
+              subValue={distMetrics.payoff_ratio !== undefined ? `${distMetrics.payoff_ratio.toFixed(2)}x payoff` : ""}
+            />
             <MetricCard title="Profit Factor" value={globalMetrics.profit_factor ? globalMetrics.profit_factor.toFixed(2) : "N/A"} />
           </div>
 
@@ -446,63 +480,20 @@ export default function BacktestDetailPage() {
         </TabsContent>
 
         {/* Trades Tab */}
-        <TabsContent value="trades" className="flex-1 min-h-[400px] animate-in fade-in">
-          <ScrollArea className="border border-border/20 rounded-2xl bg-muted/10 h-[500px]">
+        <TabsContent value="trades" className="mt-6">
+          <div className="w-full">
             {trades.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-sm text-muted-foreground py-10">
+              <div className="flex items-center justify-center h-[500px] border border-border/20 rounded-2xl bg-muted/10 text-sm text-muted-foreground py-10">
                 No trades executed.
               </div>
             ) : (
-              <Table>
-                <TableHeader className="bg-muted/30 sticky top-0 z-10 backdrop-blur-md">
-                  <TableRow className="border-b border-border/20">
-                    <TableHead className="text-xs font-bold uppercase tracking-wider py-4 px-6 h-12">Date</TableHead>
-                    <TableHead className="text-xs font-bold uppercase tracking-wider py-4 h-12">Symbol</TableHead>
-                    <TableHead className="text-xs font-bold uppercase tracking-wider py-4 h-12">Side</TableHead>
-                    <TableHead className="text-xs font-bold uppercase tracking-wider py-4 h-12">Entry</TableHead>
-                    <TableHead className="text-xs font-bold uppercase tracking-wider py-4 h-12">Exit</TableHead>
-                    <TableHead className="text-xs font-bold uppercase tracking-wider py-4 px-6 h-12">PnL</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {trades.map((t: any, idx: number) => (
-                    <TableRow key={idx} className="border-b border-border/10 hover:bg-muted/25 transition-colors">
-                      <TableCell className="text-xs tabular-nums py-3 px-6">
-                        {new Date(t.entry_time).toLocaleDateString()} {new Date(t.entry_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                      </TableCell>
-                      <TableCell className="text-xs font-bold text-muted-foreground py-3">
-                        {t.symbol || backtest.symbol || "N/A"}
-                      </TableCell>
-                      <TableCell className="py-3">
-                        <Badge variant="outline" className={cn(
-                          "text-[10px] uppercase font-semibold py-px px-2",
-                          t.side === "long" ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-blue-500/10 text-blue-500 border-blue-500/20"
-                        )}>
-                          {t.side}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs tabular-nums font-mono py-3">
-                        ${t.entry_price?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </TableCell>
-                      <TableCell className="text-xs tabular-nums font-mono py-3">
-                        ${t.exit_price?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </TableCell>
-                      <TableCell className={cn(
-                        "text-xs font-bold tabular-nums font-mono py-3 px-6",
-                        t.pnl >= 0 ? "text-emerald-500" : "text-destructive"
-                      )}>
-                        {t.pnl >= 0 ? "+" : ""}${t.pnl?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <TradeAnalysisTable trades={trades} />
             )}
-          </ScrollArea>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
-  </ScrollArea>
+  </div>
 </div>
 );
 }

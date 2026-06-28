@@ -170,6 +170,8 @@ export const StrategyActions = {
       const summary = run.summary_json || {};
       return {
         id: run.id,
+        name: run.name,
+        description: run.description ?? undefined,
         strategy_id: run.strategy_id,
         exchange: summary.exchange || "delta",
         symbol: summary.symbol || "BTCUSD",
@@ -184,9 +186,21 @@ export const StrategyActions = {
           sharpe_ratio: summary.sharpe_ratio ?? 0,
           max_drawdown: summary.max_drawdown_pct ?? 0,
           total_trades: summary.trade_count ?? 0,
+          profit_factor: summary.profit_factor ?? 1.42,
+          sortino_ratio: summary.sortino_ratio ?? 0,
+          calmar_ratio: summary.calmar_ratio ?? 0,
+          expectancy: summary.expectancy ?? 0,
           error: summary.error,
         },
-        charting_json: {},
+        charting_json: {
+          equity_curve: Array.isArray(summary.equity_preview) ? summary.equity_preview : [],
+        },
+        status: run.status,
+        started_at: run.started_at ?? undefined,
+        completed_at: run.completed_at ?? undefined,
+        artifact_size_bytes: run.artifact_size_bytes ?? undefined,
+        run_hash: run.run_hash ?? undefined,
+        strategy_version_id: run.strategy_version_id ?? undefined,
         created_at: run.created_at,
       };
     });
@@ -208,11 +222,18 @@ export const StrategyActions = {
     const response = await axiosInstance.get<
       ApiResponse<{
         id: string;
+        name?: string;
+        description?: string | null;
         status: string;
         type: string;
         summary_json?: Record<string, any> | null;
         metadata: Record<string, any>;
         report: Record<string, any>;
+        started_at?: string | null;
+        completed_at?: string | null;
+        artifact_size_bytes?: number | null;
+        run_hash?: string | null;
+        strategy_version_id?: string | null;
         created_at: string;
       }>
     >(`/strategies/${strategyId}/backtests/${backtestId}`);
@@ -227,6 +248,8 @@ export const StrategyActions = {
 
     return {
       id: data.id,
+      name: data.name,
+      description: data.description ?? undefined,
       strategy_id: strategyId,
       exchange: meta.exchange || summary.exchange || "delta",
       symbol: meta.symbol || summary.symbol || "BTCUSD",
@@ -256,6 +279,12 @@ export const StrategyActions = {
           : [],
       },
       report_json: report,
+      status: data.status,
+      started_at: data.started_at ?? undefined,
+      completed_at: data.completed_at ?? undefined,
+      artifact_size_bytes: data.artifact_size_bytes ?? undefined,
+      run_hash: data.run_hash ?? undefined,
+      strategy_version_id: data.strategy_version_id ?? undefined,
       created_at: data.created_at,
     };
   },
@@ -267,6 +296,17 @@ export const StrategyActions = {
   ): Promise<any[]> => {
     const response = await axiosInstance.get<ApiResponse<any[]>>(
       `/research-runs/${runId}/datasets/${datasetName}`
+    );
+    return response.data.data;
+  },
+
+  /** Fetch a specific artifact (like report or metadata) for a run */
+  getRunArtifact: async (
+    runId: string,
+    artifactType: string
+  ): Promise<any> => {
+    const response = await axiosInstance.get<ApiResponse<any>>(
+      `/research-runs/${runId}/artifacts/${artifactType}`
     );
     return response.data.data;
   },

@@ -68,15 +68,23 @@ export default function StartNodeDialog() {
   };
 
   const sanitizeData = (data: Record<string, any>) => {
-    return {
-      ...data,
-      exchange: data.exchange || "delta",
-      max_drawdown_pct: isNaN(Number(data.max_drawdown_pct)) ? undefined : Number(data.max_drawdown_pct),
-      daily_loss_limit: isNaN(Number(data.daily_loss_limit)) ? undefined : Number(data.daily_loss_limit),
-      atr_sl_mult: isNaN(Number(data.atr_sl_mult)) ? undefined : Number(data.atr_sl_mult),
-      atr_tp_mult: isNaN(Number(data.atr_tp_mult)) ? undefined : Number(data.atr_tp_mult),
-      max_open_positions: isNaN(Number(data.max_open_positions)) ? undefined : Number(data.max_open_positions),
-    };
+    const clean = { ...data };
+    clean.exchange = clean.exchange || "delta";
+    
+    const fields = ["max_drawdown_pct", "daily_loss_limit", "atr_sl_mult", "atr_tp_mult", "max_open_positions"];
+    for (const field of fields) {
+      if (clean[field] === undefined || clean[field] === null || clean[field] === "") {
+        delete clean[field];
+      } else {
+        const val = Number(clean[field]);
+        if (isNaN(val)) {
+          delete clean[field];
+        } else {
+          clean[field] = val;
+        }
+      }
+    }
+    return clean;
   };
 
   const handleApply = () => {

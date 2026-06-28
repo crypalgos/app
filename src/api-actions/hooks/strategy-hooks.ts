@@ -222,11 +222,18 @@ export const useDeleteBacktest = (strategyId: string) => {
 };
 
 /** Fetch a specific chart dataset for a backtest/research run */
-export const useRunDataset = (runId: string, datasetName: string | undefined) => {
-  return useQuery({
-    queryKey: ["run-dataset", runId, datasetName],
-    queryFn: () => StrategyActions.getRunDatasetChart(runId, datasetName!),
-    enabled: !!datasetName,
-    staleTime: Infinity, // Datasets never change once generated
+export const useRunDataset = (runId: string | null, datasetName: string | null) =>
+  useQuery({
+    queryKey: ["runs", runId, "datasets", datasetName],
+    queryFn: () => StrategyActions.getRunDatasetChart(runId!, datasetName!),
+    enabled: !!runId && !!datasetName,
+    staleTime: Infinity,
   });
-};
+
+export const useRunArtifact = (runId: string | null, artifactType: string | null) =>
+  useQuery({
+    queryKey: ["runs", runId, "artifacts", artifactType],
+    queryFn: () => StrategyActions.getRunArtifact(runId!, artifactType!),
+    enabled: !!runId && !!artifactType,
+    staleTime: Infinity,
+  });

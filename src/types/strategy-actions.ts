@@ -97,6 +97,8 @@ export interface BacktestTriggerResponse {
 
 export interface ApiBacktest {
   id: string;
+  name?: string;
+  description?: string;
   strategy_id: string;
   exchange: string;
   symbol: string;
@@ -107,6 +109,12 @@ export interface ApiBacktest {
   metrics_json: Record<string, number>;
   charting_json: Record<string, unknown>;
   report_json?: Record<string, any>;
+  status?: string;
+  started_at?: string;
+  completed_at?: string;
+  artifact_size_bytes?: number;
+  run_hash?: string;
+  strategy_version_id?: string;
   created_at: string;
 }
 
