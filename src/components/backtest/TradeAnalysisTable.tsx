@@ -353,7 +353,7 @@ export function TradeAnalysisTable({ trades }: { trades: any[] }) {
                 </SheetDescription>
               </SheetHeader>
 
-              <div className="space-y-6 pb-8">
+              <div className="space-y-6 px-6 pb-8">
                 {/* Hero Section Banner */}
                 <div className={cn(
                   "p-5 rounded-2xl border flex flex-col items-center justify-center text-center gap-2 shadow-sm relative overflow-hidden",
