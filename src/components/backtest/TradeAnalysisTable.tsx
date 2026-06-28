@@ -7,7 +7,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { IconDownload, IconSearch } from "@tabler/icons-react";
+import { 
+  IconDownload, 
+  IconSearch, 
+  IconCalendar, 
+  IconClock, 
+  IconShield, 
+  IconWallet, 
+  IconReceipt, 
+  IconCoins, 
+  IconTrendingUp, 
+  IconTrendingDown,
+  IconArrowUpRight,
+  IconArrowDownRight,
+  IconAlertCircle
+} from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 
 // Types
@@ -49,72 +63,90 @@ export interface TradeReport {
   entry_time: number;
   exit_time: number;
   duration_ms: number;
-  quantity: number;
-  leverage: number;
-  position_value: number;
   entry_price: number;
   exit_price: number;
+  quantity: number;
+  position_value: number;
+  leverage: number;
   gross_pnl: number;
-  fees: TradeFees;
-  execution_cost: number;
-  funding_cost: number;
   net_pnl: number;
   return_pct: number;
+  execution_cost: number;
+  funding_cost: number;
   equity_after: number;
+  fees: TradeFees;
   exit_reason: ExitReason;
   entry_reason: EntryReason | null;
   advanced_metrics: AdvancedMetrics;
 }
 
-// Formatters
+const formatCurrency = (val: number) => {
+  return val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
 const formatTimestamp = (ts: number) => {
-  const date = new Date(ts);
-  return date.toISOString().replace("T", " ").substring(0, 16) + " UTC";
+  return new Date(ts).toLocaleString("en-US", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZoneName: "short",
+  });
 };
 
 const formatDuration = (ms: number) => {
-  const seconds = Math.floor((ms / 1000) % 60);
-  const minutes = Math.floor((ms / (1000 * 60)) % 60);
-  const hours = Math.floor((ms / (1000 * 60 * 60)) % 24);
-  const days = Math.floor(ms / (1000 * 60 * 60 * 24));
-  
-  if (days > 0) return `${days}d ${hours}h`;
-  if (hours > 0) return `${hours}h ${minutes}m`;
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) return `${days}d ${hours % 24}h`;
+  if (hours > 0) return `${hours}h ${minutes % 60}m`;
   if (minutes > 0) return `${minutes}m`;
   return `${seconds}s`;
 };
 
-const formatCurrency = (val: number, maxDecimals = 2) => {
-  return new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: maxDecimals,
-  }).format(val);
-};
-
-// CSV Export
-const exportCSV = (trades: TradeReport[]) => {
+const exportToCSV = (trades: TradeReport[], filename = "trade_report.csv") => {
   const headers = [
-    "Trade ID", "Trade #", "Symbol", "Side", "Status", 
-    "Entry Time (UTC)", "Exit Time (UTC)", "Duration (ms)", 
-    "Entry Price", "Exit Price", "Quantity", "Position Value", 
-    "Leverage", "Gross PnL", "Entry Fee", "Exit Fee", "Execution Cost",
+    "Trade #", "Symbol", "Side", "Entry Time", "Exit Time", "Duration", "Entry Price", "Exit Price",
+    "Quantity", "Leverage", "Gross PnL", "Entry Fee", "Exit Fee", "Execution Cost",
     "Funding Cost", "Net PnL", "Return %", "Equity After", "Exit Reason"
   ];
-  
-  const rows = trades.map(t => [
-    t.id, t.trade_number, t.symbol, t.side, t.net_pnl > 0 ? "Winner" : t.net_pnl < 0 ? "Loser" : "Breakeven",
-    formatTimestamp(t.entry_time), formatTimestamp(t.exit_time), t.duration_ms,
-    t.entry_price, t.exit_price, t.quantity, t.position_value,
-    t.leverage, t.gross_pnl, t.fees.entry, t.fees.exit, t.execution_cost,
-    t.funding_cost, t.net_pnl, t.return_pct, t.equity_after, t.exit_reason.label
-  ]);
 
-  const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
+  const csvRows = [headers.join(",")];
+
+  for (const t of trades) {
+    const row = [
+      t.trade_number,
+      t.symbol,
+      t.side,
+      `"${formatTimestamp(t.entry_time)}"`,
+      `"${formatTimestamp(t.exit_time)}"`,
+      `"${formatDuration(t.duration_ms)}"`,
+      t.entry_price.toFixed(4),
+      t.exit_price.toFixed(4),
+      t.quantity.toFixed(4),
+      t.leverage,
+      t.gross_pnl.toFixed(4),
+      t.fees.entry.toFixed(4),
+      t.fees.exit.toFixed(4),
+      t.execution_cost.toFixed(4),
+      t.funding_cost.toFixed(4),
+      t.net_pnl.toFixed(4),
+      t.return_pct.toFixed(4),
+      t.equity_after.toFixed(4),
+      `"${t.exit_reason.label}"`
+    ];
+    csvRows.push(row.join(","));
+  }
+
+  const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
   link.setAttribute("href", url);
-  link.setAttribute("download", "trade_analysis_report.csv");
+  link.setAttribute("download", filename);
   link.style.visibility = "hidden";
   document.body.appendChild(link);
   link.click();
@@ -127,7 +159,9 @@ const getBadgeVariant = (reasonCode: string) => {
     case "stop_loss": return "bg-red-500/10 text-red-500 hover:bg-red-500/20";
     case "liquidation": return "bg-red-900/20 text-red-600 hover:bg-red-900/30 font-bold border border-red-500/30";
     case "risk_close_all": return "bg-orange-500/10 text-orange-500 hover:bg-orange-500/20";
-    case "order_close": return "bg-blue-500/10 text-blue-500 hover:bg-blue-500/20";
+    case "strategy_exit": return "bg-blue-500/10 text-blue-500 hover:bg-blue-500/20";
+    case "signal_reversal": return "bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20";
+    case "end_of_backtest": return "bg-zinc-500/10 text-zinc-500 hover:bg-zinc-500/20";
     case "trailing_stop": return "bg-purple-500/10 text-purple-500 hover:bg-purple-500/20";
     default: return "bg-muted text-muted-foreground";
   }
@@ -223,7 +257,7 @@ export function TradeAnalysisTable({ trades }: { trades: any[] }) {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Button variant="outline" size="sm" onClick={() => exportCSV(mappedTrades)} className="gap-2">
+        <Button variant="outline" size="sm" onClick={() => exportToCSV(mappedTrades)} className="gap-2">
           <IconDownload className="h-4 w-4" />
           Export CSV
         </Button>
@@ -319,75 +353,171 @@ export function TradeAnalysisTable({ trades }: { trades: any[] }) {
                 </SheetDescription>
               </SheetHeader>
 
-              <div className="space-y-6">
-                <section>
-                  <h3 className="font-semibold mb-3">Overview</h3>
-                  <div className="grid grid-cols-2 gap-4 bg-muted/20 p-4 rounded-lg border">
-                    <DetailItem label="Status" value={selectedTrade.net_pnl > 0 ? "Winner" : selectedTrade.net_pnl < 0 ? "Loser" : "Breakeven"} color={selectedTrade.net_pnl > 0 ? "text-emerald-500" : selectedTrade.net_pnl < 0 ? "text-destructive" : ""} />
-                    <DetailItem label="Duration" value={formatDuration(selectedTrade.duration_ms)} />
-                    <DetailItem label="Entry Time" value={formatTimestamp(selectedTrade.entry_time)} className="col-span-2" />
-                    <DetailItem label="Exit Time" value={formatTimestamp(selectedTrade.exit_time)} className="col-span-2" />
+              <div className="space-y-6 pb-8">
+                {/* Hero Section Banner */}
+                <div className={cn(
+                  "p-5 rounded-2xl border flex flex-col items-center justify-center text-center gap-2 shadow-sm relative overflow-hidden",
+                  selectedTrade.net_pnl > 0 
+                    ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-500 shadow-emerald-500/5" 
+                    : "bg-red-500/5 border-red-500/20 text-red-500 shadow-red-500/5"
+                )}>
+                  <div className="absolute top-0 right-0 p-3 opacity-10">
+                    {selectedTrade.net_pnl > 0 ? <IconTrendingUp className="size-24" /> : <IconTrendingDown className="size-24" />}
                   </div>
-                </section>
+                  <span className="text-xs font-semibold tracking-widest uppercase opacity-80">Net Profit / Loss</span>
+                  <span className="text-4xl font-extrabold font-mono tracking-tight tabular-nums">
+                    {selectedTrade.net_pnl > 0 ? "+" : ""}${formatCurrency(selectedTrade.net_pnl)}
+                  </span>
+                  <span className={cn(
+                    "text-sm font-bold font-mono px-3 py-1 rounded-full",
+                    selectedTrade.net_pnl > 0 ? "bg-emerald-500/10" : "bg-red-500/10"
+                  )}>
+                    {selectedTrade.return_pct > 0 ? "+" : ""}{selectedTrade.return_pct.toFixed(2)}% Return
+                  </span>
+                </div>
 
-                <section>
-                  <h3 className="font-semibold mb-3">Execution</h3>
-                  <div className="grid grid-cols-2 gap-4 bg-muted/20 p-4 rounded-lg border">
-                    <DetailItem label="Entry Price" value={`$${formatCurrency(selectedTrade.entry_price)}`} />
-                    <DetailItem label="Exit Price" value={`$${formatCurrency(selectedTrade.exit_price)}`} />
-                    <DetailItem label="Quantity" value={`${selectedTrade.quantity.toFixed(4)} ${selectedTrade.symbol.replace("USD", "")}`} />
-                    <DetailItem label="Leverage" value={`${selectedTrade.leverage}x`} />
-                    <DetailItem label="Entry Notional" value={`$${formatCurrency(selectedTrade.position_value)}`} className="col-span-2" />
+                {/* Timeline Flowchart */}
+                <section className="space-y-3">
+                  <div className="flex items-center gap-2 text-foreground font-semibold">
+                    <IconClock className="size-4 text-indigo-500" />
+                    <span>Execution Path</span>
                   </div>
-                </section>
-
-                <section>
-                  <h3 className="font-semibold mb-3">Financials</h3>
-                  <div className="grid grid-cols-2 gap-4 bg-muted/20 p-4 rounded-lg border">
-                    <DetailItem label="Gross PnL" value={`$${formatCurrency(selectedTrade.gross_pnl)}`} color={selectedTrade.gross_pnl > 0 ? "text-emerald-500" : "text-destructive"} />
-                    <DetailItem label="Return %" value={`${selectedTrade.return_pct > 0 ? '+' : ''}${selectedTrade.return_pct.toFixed(2)}%`} color={selectedTrade.return_pct > 0 ? "text-emerald-500" : "text-destructive"} />
-                    <div className="col-span-2 pt-3 border-t">
-                      <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Execution</span>
-                    </div>
-                    <DetailItem label="Entry Fee" value={`-$${formatCurrency(selectedTrade.fees.entry)}`} />
-                    <DetailItem label="Exit Fee" value={`-$${formatCurrency(selectedTrade.fees.exit)}`} />
-                    <DetailItem label="Execution Cost" value={`-$${formatCurrency(selectedTrade.execution_cost)}`} color="text-red-500" className="col-span-2" />
-                    <div className="col-span-2 pt-3 border-t">
-                      <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Funding</span>
-                    </div>
-                    <DetailItem label={selectedTrade.funding_cost < 0 ? "Funding Credit" : "Funding Cost"} value={`${selectedTrade.funding_cost <= 0 ? '+' : '-'}$${formatCurrency(Math.abs(selectedTrade.funding_cost))}`} color={selectedTrade.funding_cost <= 0 ? "text-emerald-500" : "text-red-500"} className="col-span-2" />
-                    <DetailItem label="Net PnL" value={`${selectedTrade.net_pnl > 0 ? '+' : ''}$${formatCurrency(selectedTrade.net_pnl)}`} color={selectedTrade.net_pnl > 0 ? "text-emerald-500" : "text-destructive"} className="col-span-2 text-xl font-bold" borderTop />
-                  </div>
-                </section>
-
-                <section>
-                  <h3 className="font-semibold mb-3">Portfolio</h3>
-                  <div className="grid grid-cols-1 gap-4 bg-muted/20 p-4 rounded-lg border">
-                    <DetailItem label="Portfolio Equity After Trade" value={`$${formatCurrency(selectedTrade.equity_after)}`} className="text-lg font-bold" />
-                  </div>
-                </section>
-
-                <section>
-                  <h3 className="font-semibold mb-3">Risk & Future Metrics</h3>
-                  <div className="grid grid-cols-2 gap-4 bg-muted/20 p-4 rounded-lg border">
-                    <div className="col-span-2 flex justify-between items-center pb-2 border-b">
-                      <span className="text-sm text-muted-foreground">Exit Reason</span>
-                      <div className="flex gap-2">
-                        {selectedTrade.entry_reason && (
-                           <Badge variant="outline" className="border-emerald-500 text-emerald-500">
-                             Entry Node: {selectedTrade.entry_reason.action_node}
-                           </Badge>
-                        )}
-                        <Badge className={getBadgeVariant(selectedTrade.exit_reason.code)} variant="outline">
-                          {selectedTrade.exit_reason.label}
-                        </Badge>
+                  <div className="flex flex-col gap-3 relative before:absolute before:left-[17px] before:top-4 before:bottom-4 before:w-0.5 before:bg-border/60">
+                    {/* Entry node */}
+                    <div className="flex gap-4 relative z-10">
+                      <div className="size-9 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-500 shrink-0">
+                        <IconArrowUpRight className="size-4" />
+                      </div>
+                      <div className="flex-1 bg-muted/20 border p-3 rounded-xl flex flex-col gap-1.5">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-bold text-muted-foreground uppercase">Position Entry</span>
+                          {selectedTrade.entry_reason && (
+                            <Badge variant="outline" className="border-indigo-500/20 text-indigo-500 text-[10px] py-0 px-2 bg-indigo-500/5">
+                              Node: {selectedTrade.entry_reason.action_node}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex justify-between items-baseline">
+                          <span className="text-lg font-bold font-mono tracking-tight">${formatCurrency(selectedTrade.entry_price)}</span>
+                          <span className="text-[10px] font-mono text-muted-foreground">{formatTimestamp(selectedTrade.entry_time)}</span>
+                        </div>
                       </div>
                     </div>
-                    
-                    <DetailItem label="MAE" value={selectedTrade.advanced_metrics.mae ?? "—"} subtext="Requires future implementation" />
-                    <DetailItem label="MFE" value={selectedTrade.advanced_metrics.mfe ?? "—"} subtext="Requires future implementation" />
-                    <DetailItem label="R-Multiple" value={selectedTrade.advanced_metrics.r_multiple ?? "—"} subtext="Requires future implementation" />
-                    <DetailItem label="Slippage (USDT)" value={selectedTrade.advanced_metrics.slippage ?? "—"} subtext="Requires future implementation" />
+
+                    {/* Middle stats node */}
+                    <div className="flex gap-4 ml-[2px] items-center py-1">
+                      <div className="size-8 rounded-full flex items-center justify-center shrink-0" />
+                      <div className="flex gap-3 text-xs text-muted-foreground font-mono">
+                        <span className="bg-muted px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase">{selectedTrade.side}</span>
+                        <span>·</span>
+                        <span>{selectedTrade.quantity.toFixed(4)} {selectedTrade.symbol.replace("USD", "")}</span>
+                        <span>·</span>
+                        <span>{selectedTrade.leverage}x Leverage</span>
+                      </div>
+                    </div>
+
+                    {/* Exit node */}
+                    <div className="flex gap-4 relative z-10">
+                      <div className="size-9 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-500 shrink-0">
+                        <IconArrowDownRight className="size-4" />
+                      </div>
+                      <div className="flex-1 bg-muted/20 border p-3 rounded-xl flex flex-col gap-1.5">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-bold text-muted-foreground uppercase">Position Exit</span>
+                          <Badge className={cn("text-[10px] py-0 px-2", getBadgeVariant(selectedTrade.exit_reason.code))} variant="outline">
+                            {selectedTrade.exit_reason.label}
+                          </Badge>
+                        </div>
+                        <div className="flex justify-between items-baseline">
+                          <span className="text-lg font-bold font-mono tracking-tight">${formatCurrency(selectedTrade.exit_price)}</span>
+                          <span className="text-[10px] font-mono text-muted-foreground">{formatTimestamp(selectedTrade.exit_time)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Financial Ledger Section */}
+                <section className="space-y-3">
+                  <div className="flex items-center gap-2 text-foreground font-semibold">
+                    <IconReceipt className="size-4 text-emerald-500" />
+                    <span>Financial Ledger</span>
+                  </div>
+                  <div className="bg-muted/20 border rounded-2xl overflow-hidden divide-y divide-border/60">
+                    <div className="p-4 flex justify-between items-center bg-muted/10">
+                      <span className="text-sm font-medium">Gross Profit / Loss</span>
+                      <span className={cn("font-bold font-mono", selectedTrade.gross_pnl > 0 ? "text-emerald-500" : "text-destructive")}>
+                        ${formatCurrency(selectedTrade.gross_pnl)}
+                      </span>
+                    </div>
+
+                    <div className="p-4 space-y-3 bg-card">
+                      <div className="flex justify-between items-center text-sm">
+                        <div className="flex flex-col">
+                          <span className="text-muted-foreground">Entry Execution Fee</span>
+                          <span className="text-[10px] text-muted-foreground/60 font-mono">Taker Commission</span>
+                        </div>
+                        <span className="font-mono text-red-500/90">-${formatCurrency(selectedTrade.fees.entry)}</span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center text-sm">
+                        <div className="flex flex-col">
+                          <span className="text-muted-foreground">Exit Execution Fee</span>
+                          <span className="text-[10px] text-muted-foreground/60 font-mono">Taker Commission</span>
+                        </div>
+                        <span className="font-mono text-red-500/90">-${formatCurrency(selectedTrade.fees.exit)}</span>
+                      </div>
+
+                      <div className="flex justify-between items-center text-sm pt-2 border-t border-dashed">
+                        <span className="font-medium">Total Execution Cost</span>
+                        <span className="font-mono text-red-500 font-semibold">-${formatCurrency(selectedTrade.execution_cost)}</span>
+                      </div>
+                    </div>
+
+                    <div className="p-4 flex justify-between items-center bg-card">
+                      <div className="flex flex-col">
+                        <span className="text-sm text-muted-foreground">Financing Cost (Funding)</span>
+                        <span className="text-[10px] text-muted-foreground/60">Interest rate paid/received</span>
+                      </div>
+                      <span className={cn("font-mono font-semibold", selectedTrade.funding_cost <= 0 ? "text-emerald-500" : "text-red-500")}>
+                        {selectedTrade.funding_cost <= 0 ? "+" : "-"}${formatCurrency(Math.abs(selectedTrade.funding_cost))}
+                      </span>
+                    </div>
+
+                    <div className="p-4 flex justify-between items-center bg-muted/15">
+                      <span className="font-bold text-foreground">Net Position Profit</span>
+                      <span className={cn("font-extrabold font-mono text-lg", selectedTrade.net_pnl > 0 ? "text-emerald-500" : "text-destructive")}>
+                        {selectedTrade.net_pnl > 0 ? "+" : ""}${formatCurrency(selectedTrade.net_pnl)}
+                      </span>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Capital Allocation & Capacity */}
+                <section className="space-y-3">
+                  <div className="flex items-center gap-2 text-foreground font-semibold">
+                    <IconWallet className="size-4 text-orange-500" />
+                    <span>Capital & Leverage</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 bg-muted/20 p-4 rounded-2xl border">
+                    <DetailItem label="Entry Notional" value={`$${formatCurrency(selectedTrade.position_value)}`} />
+                    <DetailItem label="Position Leverage" value={`${selectedTrade.leverage}x`} />
+                    <DetailItem label="Duration" value={formatDuration(selectedTrade.duration_ms)} className="col-span-2" />
+                    <DetailItem label="Portfolio Equity after Close" value={`$${formatCurrency(selectedTrade.equity_after)}`} className="col-span-2 text-foreground font-bold border-t border-dashed pt-3" />
+                  </div>
+                </section>
+
+                {/* Advanced Risk Metrics */}
+                <section className="space-y-3">
+                  <div className="flex items-center gap-2 text-foreground font-semibold">
+                    <IconShield className="size-4 text-purple-500" />
+                    <span>Advanced Risk Metrics</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 bg-muted/20 p-4 rounded-2xl border">
+                    <DetailItem label="MAE (Max Adverse Excursion)" value={selectedTrade.advanced_metrics.mae ?? "—"} subtext="Adverse price swing during trade" />
+                    <DetailItem label="MFE (Max Favorable Excursion)" value={selectedTrade.advanced_metrics.mfe ?? "—"} subtext="Favorable price swing during trade" />
+                    <DetailItem label="R-Multiple" value={selectedTrade.advanced_metrics.r_multiple ?? "—"} subtext="Risk-to-reward multiple" />
+                    <DetailItem label="Slippage (USDT)" value={selectedTrade.advanced_metrics.slippage ?? "—"} subtext="Execution slippage cost" />
                   </div>
                 </section>
               </div>
