@@ -257,3 +257,118 @@ export interface PaginatedMonteCarloRunsResponse {
   limit: number;
   total_pages: number;
 }
+
+export interface GlobalMetrics {
+  net_profit?: number;
+  total_return_pct?: number;
+  sharpe_ratio?: number;
+  sortino_ratio?: number;
+  calmar_ratio?: number;
+  profit_factor?: number;
+  max_drawdown_pct?: number;
+  recovery_factor?: number;
+  total_trades?: number;
+  win_rate?: number;
+}
+
+export interface SymbolMetric {
+  net_profit?: number;
+  sharpe_ratio?: number;
+  sortino_ratio?: number;
+  max_drawdown_pct?: number;
+  recovery_factor?: number;
+}
+
+export interface RiskMetrics {
+  historical_var_95?: number;
+  historical_var_99?: number;
+  cvar_95?: number;
+  cvar_99?: number;
+  ulcer_index?: number;
+  tail_ratio?: number;
+  omega_ratio?: number;
+  gain_to_pain_ratio?: number;
+}
+
+export interface DistributionMetric {
+  average_winner?: number;
+  average_loser?: number;
+  median_winner?: number;
+  median_loser?: number;
+  largest_winner?: number;
+  largest_loser?: number;
+  payoff_ratio?: number;
+  expectancy?: number;
+  kelly_pct_raw?: number;
+  kelly_pct?: number;
+  max_consecutive_wins?: number;
+  max_consecutive_losses?: number;
+  average_trade_duration_hours?: number;
+  median_trade_duration_hours?: number;
+}
+
+export interface CapacityMetrics {
+  average_position_size?: number;
+  maximum_position_size?: number;
+  average_margin_usage?: number;
+  maximum_margin_usage?: number;
+  average_exposure?: number;
+  maximum_exposure?: number;
+  average_net_exposure?: number;
+  maximum_net_exposure?: number;
+}
+
+export interface AttributionSymbol {
+  net_profit?: number;
+  contribution_pct?: number;
+}
+
+export interface Attribution {
+  portfolio_return_pct?: number;
+  contribution_by_symbol?: Record<string, AttributionSymbol>;
+}
+
+export interface DrawdownAttribution {
+  method?: string;
+  portfolio_drawdown_pct?: number;
+  contribution_by_symbol?: Record<string, number>;
+  window_start?: number;
+  window_end?: number;
+}
+
+export interface BacktestReportMetrics {
+  global?: GlobalMetrics;
+  symbols?: Record<string, SymbolMetric>;
+  risk?: RiskMetrics;
+  distributions?: Record<string, DistributionMetric>;
+  capacity?: CapacityMetrics;
+  attribution?: Attribution;
+  drawdown_attribution?: DrawdownAttribution;
+}
+
+export interface DatasetRef {
+  dataset_id?: string;
+}
+
+export interface BacktestReportDatasets {
+  global_equity_curve?: DatasetRef;
+  global_drawdown_curve?: DatasetRef;
+  symbol_equity_curves?: Record<string, DatasetRef>;
+  symbol_exposure_curves?: Record<string, DatasetRef>;
+  monthly_heatmap?: Record<string, Record<string, number | null>>;
+  [key: string]: any;
+}
+
+export interface BacktestReport {
+  schema_version?: string;
+  metrics?: BacktestReportMetrics;
+  datasets?: BacktestReportDatasets;
+  monthly?: {
+    returns?: Record<string, number>;
+  };
+}
+
+export interface ApiRunReport {
+  report?: BacktestReport;
+}
+

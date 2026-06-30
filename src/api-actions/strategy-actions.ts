@@ -26,6 +26,7 @@ import type {
   PaginatedWalkForwardRunsResponse,
   PaginatedMonteCarloRunsResponse,
   ResearchRun,
+  ApiRunReport,
 } from "@/types/strategy-actions";
 
 export type {
@@ -304,8 +305,8 @@ export const StrategyActions = {
   getRunArtifact: async (
     runId: string,
     artifactType: string
-  ): Promise<any> => {
-    const response = await axiosInstance.get<ApiResponse<any>>(
+  ): Promise<ApiRunReport> => {
+    const response = await axiosInstance.get<ApiResponse<ApiRunReport>>(
       `/research-runs/${runId}/artifacts/${artifactType}`
     );
     return response.data.data;

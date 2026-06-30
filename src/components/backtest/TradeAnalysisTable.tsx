@@ -157,14 +157,14 @@ const exportToCSV = (trades: TradeReport[], filename = "trade_report.csv") => {
 
 const getBadgeVariant = (reasonCode: string) => {
   switch (reasonCode) {
-    case "take_profit": return "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20";
-    case "stop_loss": return "bg-red-500/10 text-red-500 hover:bg-red-500/20";
-    case "liquidation": return "bg-red-900/20 text-red-600 hover:bg-red-900/30 font-bold border border-red-500/30";
-    case "risk_close_all": return "bg-orange-500/10 text-orange-500 hover:bg-orange-500/20";
-    case "strategy_exit": return "bg-blue-500/10 text-blue-500 hover:bg-blue-500/20";
-    case "signal_reversal": return "bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20";
-    case "end_of_backtest": return "bg-zinc-500/10 text-zinc-500 hover:bg-zinc-500/20";
-    case "trailing_stop": return "bg-purple-500/10 text-purple-500 hover:bg-purple-500/20";
+    case "take_profit": return "bg-emerald-500/10 dark:bg-emerald-400/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20";
+    case "stop_loss": return "bg-rose-500/10 dark:bg-rose-400/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20";
+    case "liquidation": return "bg-red-500/15 dark:bg-red-950/40 text-red-600 dark:text-red-400 font-bold border border-red-500/20";
+    case "risk_close_all": return "bg-amber-500/10 dark:bg-amber-400/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20";
+    case "strategy_exit": return "bg-blue-500/10 dark:bg-blue-400/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20";
+    case "signal_reversal": return "bg-indigo-500/10 dark:bg-indigo-400/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20";
+    case "end_of_backtest": return "bg-zinc-500/10 dark:bg-zinc-400/10 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-500/20";
+    case "trailing_stop": return "bg-purple-500/10 dark:bg-purple-400/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500/20";
     default: return "bg-muted text-muted-foreground";
   }
 };
@@ -268,11 +268,11 @@ export function TradeAnalysisTable({ trades }: { trades: any[] }) {
       {/* Virtualized Table Container */}
       <div 
         ref={parentRef} 
-        className="rounded-md border bg-card overflow-auto h-[600px] w-full"
+        className="rounded-xl border border-border bg-card overflow-auto h-[600px] w-full"
       >
         <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, width: "100%", position: "relative" }}>
           {/* Header Row */}
-          <div className="sticky top-0 z-10 grid grid-cols-[80px_100px_80px_140px_140px_100px_120px_120px_100px_120px_80px_120px_100px_120px_100px_140px] gap-2 border-b bg-muted/80 backdrop-blur-sm p-3 text-xs font-medium text-muted-foreground uppercase min-w-max h-12 items-center shadow-sm">
+          <div className="sticky top-0 z-10 grid grid-cols-[80px_100px_80px_140px_140px_100px_120px_120px_100px_120px_80px_120px_100px_120px_100px_140px] gap-2 border-b border-border bg-muted/65 backdrop-blur-sm p-3 text-xs font-semibold text-muted-foreground uppercase min-w-max h-12 items-center shadow-sm">
             <div>Trade #</div>
             <div>Symbol</div>
             <div>Side</div>
@@ -298,7 +298,7 @@ export function TradeAnalysisTable({ trades }: { trades: any[] }) {
             return (
               <div
                 key={virtualRow.index}
-                className="absolute top-0 left-0 w-full min-w-max grid grid-cols-[80px_100px_80px_140px_140px_100px_120px_120px_100px_120px_80px_120px_100px_120px_100px_140px] gap-2 p-3 text-sm border-b border-border/5 hover:bg-muted/30 cursor-pointer items-center h-14 transition-colors"
+                className="absolute top-0 left-0 w-full min-w-max grid grid-cols-[80px_100px_80px_140px_140px_100px_120px_120px_100px_120px_80px_120px_100px_120px_100px_140px] gap-2 p-3 text-sm border-b border-border/40 hover:bg-muted/10 cursor-pointer items-center h-14 transition-colors"
                 style={{ transform: `translateY(${virtualRow.start + 48}px)` }} // +48 for header
                 onClick={() => setSelectedTrade(t)}
               >
@@ -311,18 +311,18 @@ export function TradeAnalysisTable({ trades }: { trades: any[] }) {
                 </div>
                 <div className="text-xs text-muted-foreground font-mono">{formatTimestamp(t.entry_time)}</div>
                 <div className="text-xs text-muted-foreground font-mono">{formatTimestamp(t.exit_time)}</div>
-                <div className="text-xs font-mono">{formatDuration(t.duration_ms)}</div>
-                <div className="text-right font-mono">${formatCurrency(t.entry_price)}</div>
-                <div className="text-right font-mono">${formatCurrency(t.exit_price)}</div>
-                <div className="text-right font-mono">{t.quantity.toFixed(4)}</div>
+                <div className="text-xs font-mono text-muted-foreground">{formatDuration(t.duration_ms)}</div>
+                <div className="text-right font-mono text-foreground">{formatCurrency(t.entry_price)}</div>
+                <div className="text-right font-mono text-foreground">{formatCurrency(t.exit_price)}</div>
+                <div className="text-right font-mono text-foreground">{t.quantity.toFixed(4)}</div>
                 <div className="text-right font-mono text-muted-foreground">${formatCurrency(t.position_value)}</div>
-                <div className="text-center font-mono text-xs">{t.leverage}x</div>
-                <div className="text-right font-mono">${formatCurrency(t.gross_pnl)}</div>
-                <div className="text-right font-mono text-red-500/70">-${formatCurrency(t.execution_cost + t.funding_cost)}</div>
-                <div className={cn("text-right font-mono font-medium", isWinner ? "text-emerald-500" : "text-destructive")}>
+                <div className="text-center font-mono text-xs text-foreground/80">{t.leverage}x</div>
+                <div className="text-right font-mono text-foreground">${formatCurrency(t.gross_pnl)}</div>
+                <div className="text-right font-mono text-destructive/80">-${formatCurrency(t.execution_cost + t.funding_cost)}</div>
+                <div className={cn("text-right font-mono font-semibold", isWinner ? "text-success" : "text-destructive")}>
                   {isWinner ? '+' : ''}${formatCurrency(t.net_pnl)}
                 </div>
-                <div className={cn("text-right font-mono font-medium", isWinner ? "text-emerald-500" : "text-destructive")}>
+                <div className={cn("text-right font-mono font-semibold", isWinner ? "text-success" : "text-destructive")}>
                   {isWinner ? '+' : ''}{t.return_pct.toFixed(2)}%
                 </div>
                 <div>
@@ -361,8 +361,8 @@ export function TradeAnalysisTable({ trades }: { trades: any[] }) {
                   <div className={cn(
                     "p-4 rounded-xl border flex items-center justify-between shadow-sm relative overflow-hidden",
                     selectedTrade.net_pnl > 0 
-                      ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-500 shadow-emerald-500/5" 
-                      : "bg-red-500/5 border-red-500/20 text-red-500 shadow-red-500/5"
+                      ? "bg-success/5 border-success/20 text-success" 
+                      : "bg-destructive/5 border-destructive/20 text-destructive"
                   )}>
                     <div className="absolute right-0 top-1/2 -translate-y-1/2 p-3 opacity-[0.03] pointer-events-none">
                       {selectedTrade.net_pnl > 0 ? <IconTrendingUp className="size-20" /> : <IconTrendingDown className="size-20" />}
@@ -377,8 +377,8 @@ export function TradeAnalysisTable({ trades }: { trades: any[] }) {
                       <Badge className={cn(
                         "text-xs font-bold font-mono py-0.5 px-2.5",
                         selectedTrade.net_pnl > 0 
-                          ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" 
-                          : "bg-red-500/10 text-red-500 border border-red-500/20"
+                          ? "bg-success/10 text-success border border-success/20" 
+                          : "bg-destructive/10 text-destructive border border-destructive/20"
                       )} variant="outline">
                         {selectedTrade.return_pct > 0 ? "+" : ""}{selectedTrade.return_pct.toFixed(2)}% Return
                       </Badge>
@@ -452,14 +452,14 @@ export function TradeAnalysisTable({ trades }: { trades: any[] }) {
                   {/* Financial Ledger Section */}
                   <section className="space-y-3">
                     <div className="flex items-center gap-2 text-foreground font-semibold">
-                      <IconReceipt className="size-4 text-emerald-500" />
+                      <IconReceipt className="size-4 text-success" />
                       <span>Financial Ledger</span>
                     </div>
                     
-                    <div className="bg-muted/20 border rounded-xl overflow-hidden divide-y divide-border/60">
+                    <div className="bg-muted/20 border border-border rounded-xl overflow-hidden divide-y divide-border/60">
                       <div className="p-4 flex justify-between items-center bg-muted/10">
                         <span className="text-sm font-medium">Gross Profit / Loss</span>
-                        <span className={cn("font-bold font-mono", selectedTrade.gross_pnl > 0 ? "text-emerald-500" : "text-destructive")}>
+                        <span className={cn("font-bold font-mono", selectedTrade.gross_pnl > 0 ? "text-success" : "text-destructive")}>
                           ${formatCurrency(selectedTrade.gross_pnl)}
                         </span>
                       </div>
@@ -470,7 +470,7 @@ export function TradeAnalysisTable({ trades }: { trades: any[] }) {
                             <span className="text-muted-foreground">Entry Execution Fee</span>
                             <span className="text-[10px] text-muted-foreground/60 font-mono">Taker Commission</span>
                           </div>
-                          <span className="font-mono text-red-500/90">-${formatCurrency(selectedTrade.fees.entry)}</span>
+                          <span className="font-mono text-destructive/90">-${formatCurrency(selectedTrade.fees.entry)}</span>
                         </div>
                         
                         <div className="flex justify-between items-center text-sm">
@@ -478,12 +478,12 @@ export function TradeAnalysisTable({ trades }: { trades: any[] }) {
                             <span className="text-muted-foreground">Exit Execution Fee</span>
                             <span className="text-[10px] text-muted-foreground/60 font-mono">Taker Commission</span>
                           </div>
-                          <span className="font-mono text-red-500/90">-${formatCurrency(selectedTrade.fees.exit)}</span>
+                          <span className="font-mono text-destructive/90">-${formatCurrency(selectedTrade.fees.exit)}</span>
                         </div>
 
-                        <div className="flex justify-between items-center text-sm pt-2 border-t border-dashed">
+                        <div className="flex justify-between items-center text-sm pt-2 border-t border-dashed border-border/60">
                           <span className="font-medium">Total Execution Cost</span>
-                          <span className="font-mono text-red-500 font-semibold">-${formatCurrency(selectedTrade.execution_cost)}</span>
+                          <span className="font-mono text-destructive font-semibold">-${formatCurrency(selectedTrade.execution_cost)}</span>
                         </div>
                       </div>
 
@@ -492,14 +492,14 @@ export function TradeAnalysisTable({ trades }: { trades: any[] }) {
                           <span className="text-sm text-muted-foreground">Financing Cost (Funding)</span>
                           <span className="text-[10px] text-muted-foreground/60">Interest rate paid/received</span>
                         </div>
-                        <span className={cn("font-mono font-semibold", selectedTrade.funding_cost <= 0 ? "text-emerald-500" : "text-red-500")}>
+                        <span className={cn("font-mono font-semibold", selectedTrade.funding_cost <= 0 ? "text-success" : "text-destructive")}>
                           {selectedTrade.funding_cost <= 0 ? "+" : "-"}${formatCurrency(Math.abs(selectedTrade.funding_cost))}
                         </span>
                       </div>
 
                       <div className="p-4 flex justify-between items-center bg-muted/15">
                         <span className="font-bold text-foreground">Net Position Profit</span>
-                        <span className={cn("font-extrabold font-mono text-lg", selectedTrade.net_pnl > 0 ? "text-emerald-500" : "text-destructive")}>
+                        <span className={cn("font-extrabold font-mono text-lg", selectedTrade.net_pnl > 0 ? "text-success" : "text-destructive")}>
                           {selectedTrade.net_pnl > 0 ? "+" : ""}${formatCurrency(selectedTrade.net_pnl)}
                         </span>
                       </div>
