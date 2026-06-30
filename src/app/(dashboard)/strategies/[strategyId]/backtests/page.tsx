@@ -6,7 +6,7 @@ import {
   useStrategyBacktests,
   useDeleteBacktest,
 } from "@/api-actions/hooks/strategy-hooks";
-import type { ApiBacktest } from "@/api-actions/strategy-actions";
+import type { ApiBacktest } from "@/types/strategy-actions";
 import { BacktestCard } from "@/components/backtest/BacktestCard";
 
 import {
@@ -67,9 +67,9 @@ export default function StrategyBacktestsPage() {
 
   if (isLoading) {
     return (
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <Skeleton key={i} className="h-[180px] rounded-xl" />
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-[250px] rounded-[18px]" />
         ))}
       </div>
     );
@@ -105,8 +105,8 @@ export default function StrategyBacktestsPage() {
         </h2>
       </div>
 
-      <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto">
-        {backtests.map((bt) => (
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
+        {backtests.map((bt: ApiBacktest) => (
           <BacktestCard
             key={bt.id}
             bt={bt}
