@@ -61,6 +61,12 @@ export default function StrategyDetailLayout({ children }: StrategyLayoutProps) 
     router.push(`/workflow/${strategyId}`);
   };
 
+  const isDetailPage = /^\/strategies\/[^/]+\/(backtests|optimizations|walkforwards|montecarlos)\/[^/]+$/.test(pathname);
+
+  if (isDetailPage) {
+    return <>{children}</>;
+  }
+
   return (
     <div className="flex flex-col gap-6 max-w-[1400px] mx-auto w-full px-4 md:px-6 pb-20 pt-2 animate-in fade-in duration-300">
       {/* Breadcrumbs */}

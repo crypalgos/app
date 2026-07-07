@@ -1,29 +1,44 @@
 "use client";
 
+import React, { useState } from "react";
 import { useParams } from "next/navigation";
-import { useState } from "react";
 import { useStrategyBacktest, useRunDataset, useRunArtifact } from "@/api-actions/hooks/strategy-hooks";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { IconStar } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 
-import type { BacktestReport } from "@/types/strategy-actions";
+import type { AnalyticsReport, BacktestSummary, RunDetail } from "@/types/strategy-actions";
 
 import {
   MetricsGrid,
   EquityCurveChart,
-  RiskProfilePanel,
-  MonthlyHeatmap,
-  CapacityPanel,
   DrawdownChart,
   RollingMetricsChart,
-  MultiAssetBreakdown,
   TradesSection,
 } from "./_components";
+import {
+  ReportMasthead,
+  WarningsBanner,
+  SymbolBreakdownCards,
+  OrderLifecyclePanel,
+  RiskStatsPanel,
+  TradeDistributionTable,
+  MonthlyReturnsStrip,
+  ConcentrationPanel,
+  CorrelationHeatmap,
+  SizingCards,
+  ReportFooter,
+} from "./_components/report/report-sections";
+import { ReportSectionLabel, CoinLogo } from "./_components/report/report-primitives";
+
 
 export default function BacktestDetailPage() {
   const params = useParams();
   const strategyId = params?.strategyId as string;
   const backtestId = params?.backtestId as string;
+
+  const [isFavorite, setIsFavorite] = useState(false);
 
   const { data: backtest, isLoading: backtestLoading } = useStrategyBacktest(
     strategyId,
@@ -31,40 +46,43 @@ export default function BacktestDetailPage() {
   );
 
   const { data: runReport, isLoading: reportLoading } = useRunArtifact(backtestId, "report");
-  const { data: trades = [] } = useRunDataset(backtestId, "recent_trades");
+  const { data: dbTrades = [] } = useRunDataset(backtestId, "trades");
+  const { data: dbOrders = [] } = useRunDataset(backtestId, "orders");
 
   const [selectedSymbol, setSelectedSymbol] = useState<string>("global");
 
-  const runJson = (runReport?.report || {}) as BacktestReport;
-  const metrics = runJson.metrics || {};
-  const globalMetrics = metrics.global ?? {};
-  const riskMetrics = metrics.risk ?? {};
-  const distMetrics = metrics.distributions?.global ?? {};
-  const capMetrics = metrics.capacity ?? {};
-  const symbols = metrics.symbols ?? {};
-
-  const symbolKeys = Object.keys(symbols);
-
+  const runJson = (runReport?.report || {}) as unknown as AnalyticsReport;
   const datasets = runJson.datasets ?? {};
-  
+
   const activeEquityCurveDatasetId = (selectedSymbol === "global"
     ? datasets.global_equity_curve?.dataset_id
     : datasets.symbol_equity_curves?.[selectedSymbol]?.dataset_id) ?? null;
 
-  const { data: fullEquityCurve } = useRunDataset(backtestId, activeEquityCurveDatasetId);
-
   const activeDrawdownDatasetId = (selectedSymbol === "global"
     ? datasets.global_drawdown_curve?.dataset_id
-    : datasets.symbol_exposure_curves?.[selectedSymbol]?.dataset_id) ?? null;
+    : null) ?? null;
 
+  const activeExposureDatasetId = (selectedSymbol !== "global"
+    ? datasets.symbol_exposure_curves?.[selectedSymbol]?.dataset_id
+    : null) ?? null;
+
+  const { data: fullEquityCurve } = useRunDataset(backtestId, activeEquityCurveDatasetId);
   const { data: fullDrawdownCurve } = useRunDataset(backtestId, activeDrawdownDatasetId);
+  const { data: fullExposureCurve } = useRunDataset(backtestId, activeExposureDatasetId);
 
-  const [selectedRolling, setSelectedRolling] = useState<string>("sharpe");
-  const [selectedWindow, setSelectedWindow] = useState<string>("30D");
+  // Rolling analytics (sharpe/sortino/drawdown/volatility/correlation × 30/60/90D windows)
+  const [rollingMetric, setRollingMetric] = useState("sharpe");
+  const [rollingWindow, setRollingWindow] = useState("30D");
+  const rollingSymbolKeys = Object.keys(runJson.metrics?.symbols ?? {});
+  const correlationPairKey =
+    rollingSymbolKeys.length >= 2 ? `${rollingSymbolKeys[0]}-${rollingSymbolKeys[1]}` : null;
 
-  const rollingGroup = datasets[`rolling_${selectedRolling}`];
-  const rollingDatasetId = rollingGroup?.[selectedWindow]?.dataset_id ?? null;
-  const { data: rollingCurveData } = useRunDataset(backtestId, rollingDatasetId);
+  const rollingDatasetId =
+    rollingMetric === "correlation"
+      ? (runJson.correlations?.rolling?.[rollingWindow]?.[correlationPairKey ?? ""]?.dataset_id ?? null)
+      : (((datasets as unknown as Record<string, unknown>)[`rolling_${rollingMetric}`] ?? {}) as Record<string, { dataset_id?: string } | null>)[rollingWindow]?.dataset_id ?? null;
+
+  const { data: rawRolling, isLoading: rollingLoading } = useRunDataset(backtestId, rollingDatasetId);
 
   const isPageLoading = backtestLoading || reportLoading;
 
@@ -96,12 +114,13 @@ export default function BacktestDetailPage() {
   }
 
   /* ── Data Transforms ── */
-  const charting = backtest.charting_json || {};
-  const resolvedEquityCurve = Array.isArray(fullEquityCurve)
-    ? fullEquityCurve
-    : Array.isArray(charting.equity_curve)
-    ? charting.equity_curve
-    : [];
+  const metrics = runJson.metrics || {};
+  const globalMetrics = metrics.global ?? {};
+  const distMetrics = metrics.distributions?.global ?? {};
+  const symbols = metrics.symbols ?? {};
+  const symbolKeys = Object.keys(symbols);
+
+  const resolvedEquityCurve = Array.isArray(fullEquityCurve) ? fullEquityCurve : [];
 
   const equityData = resolvedEquityCurve.map((item: any) => {
     const time = Array.isArray(item) ? item[0] : item.timestamp;
@@ -113,9 +132,49 @@ export default function BacktestDetailPage() {
     };
   });
 
+  // Extract actual arrays from root report payload or fallback to dataset queries
+  const trades = (runReport as any)?.trades || dbTrades || [];
+  const orders = (runReport as any)?.orders || dbOrders || [];
+
   const drawdownData = (() => {
-    if (fullDrawdownCurve && fullDrawdownCurve.length > 0) {
-      return fullDrawdownCurve.map((item: any) => {
+    if (selectedSymbol === "global") {
+      if (fullDrawdownCurve && fullDrawdownCurve.length > 0) {
+        return fullDrawdownCurve.map((item: any) => {
+          const time = Array.isArray(item) ? item[0] : item.timestamp;
+          const value = Array.isArray(item) ? item[1] : item.value;
+          return {
+            time,
+            formattedTime: new Date(time).toLocaleDateString(),
+            value: value,
+          };
+        });
+      }
+      return [];
+    } else {
+      // Calculate individual symbol drawdown dynamically on-the-fly from its equity contribution curve
+      if (fullEquityCurve && fullEquityCurve.length > 0) {
+        let runningMax = -Infinity;
+        return fullEquityCurve.map((item: any) => {
+          const time = Array.isArray(item) ? item[0] : item.timestamp;
+          const value = Array.isArray(item) ? item[1] : item.value;
+          if (value > runningMax) {
+            runningMax = value;
+          }
+          const dd = runningMax > 0 ? ((value - runningMax) / runningMax) * 100 : 0;
+          return {
+            time,
+            formattedTime: new Date(time).toLocaleDateString(),
+            value: dd,
+          };
+        });
+      }
+      return [];
+    }
+  })();
+
+  const exposureData = (() => {
+    if (fullExposureCurve && fullExposureCurve.length > 0) {
+      return fullExposureCurve.map((item: any) => {
         const time = Array.isArray(item) ? item[0] : item.timestamp;
         const value = Array.isArray(item) ? item[1] : item.value;
         return {
@@ -128,30 +187,21 @@ export default function BacktestDetailPage() {
     return [];
   })();
 
-  const rollingData = (rollingCurveData || []).map((item: any) => {
-    const time = Array.isArray(item) ? item[0] : item.timestamp;
-    const value = Array.isArray(item) ? item[1] : item.value;
-    return {
-      time,
-      formattedTime: new Date(time).toLocaleDateString(),
-      value: value,
-    };
-  });
-
   // Resolve metrics depending on selected symbol
+  const summary = (backtest as RunDetail | undefined)?.summary ?? ({} as BacktestSummary);
   const activeMetrics = selectedSymbol === "global"
     ? {
-        net_profit: globalMetrics.net_profit ?? backtest.metrics_json?.net_profit ?? 0,
-        total_return_pct: globalMetrics.total_return_pct ?? backtest.metrics_json?.profit_pct ?? 0,
-        sharpe_ratio: globalMetrics.sharpe_ratio ?? backtest.metrics_json?.sharpe_ratio ?? 0,
-        max_drawdown_pct: globalMetrics.max_drawdown_pct ?? backtest.metrics_json?.max_drawdown ?? 0,
-        win_rate: globalMetrics.win_rate !== undefined ? globalMetrics.win_rate : backtest.metrics_json?.win_rate,
+        net_profit: globalMetrics.net_profit ?? summary.net_profit ?? 0,
+        total_return_pct: globalMetrics.total_return_pct ?? summary.total_return_pct ?? 0,
+        sharpe_ratio: globalMetrics.sharpe_ratio ?? summary.sharpe_ratio ?? 0,
+        max_drawdown_pct: globalMetrics.max_drawdown_pct ?? summary.max_drawdown_pct ?? 0,
+        win_rate: globalMetrics.win_rate ?? summary.win_rate,
         profit_factor: globalMetrics.profit_factor,
       }
     : {
         net_profit: symbols[selectedSymbol]?.net_profit ?? 0,
-        total_return_pct: symbols[selectedSymbol]?.net_profit !== undefined && backtest.initial_capital
-          ? (symbols[selectedSymbol].net_profit / backtest.initial_capital) * 100
+        total_return_pct: symbols[selectedSymbol]?.net_profit !== undefined && summary.initial_capital
+          ? (symbols[selectedSymbol].net_profit! / summary.initial_capital) * 100
           : 0,
         sharpe_ratio: symbols[selectedSymbol]?.sharpe_ratio ?? 0,
         max_drawdown_pct: symbols[selectedSymbol]?.max_drawdown_pct ?? 0,
@@ -166,42 +216,57 @@ export default function BacktestDetailPage() {
     ? distMetrics
     : (metrics.distributions?.[selectedSymbol] ?? {});
 
-  /* ── Render Dashboard ── */
+  const rollingData = (Array.isArray(rawRolling) ? rawRolling : []).map((item: any) => {
+    const time = Array.isArray(item) ? item[0] : item.timestamp;
+    const value = Array.isArray(item) ? item[1] : item.value;
+    return { time, formattedTime: new Date(time).toLocaleDateString(), value };
+  });
+
+  const datasetCount = Object.values(runJson.datasets ?? {}).filter(Boolean).length;
+
   return (
     <div className="w-full min-h-screen pb-20">
-      <main className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-4 animate-in fade-in duration-300">
-        
-        {/* Symbol Scope Selector Bar */}
+
+      {/* ── Single-page research report ── */}
+      <main className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-5 animate-in fade-in duration-300">
+
+
+        <ReportMasthead
+          summary={summary}
+          symbols={symbolKeys}
+          completedAt={(backtest as RunDetail | undefined)?.completed_at}
+        />
+
+        <WarningsBanner report={runJson} />
+
+        {/* Symbol scope selector — filters the KPI strip + performance charts */}
         {symbolKeys.length > 0 && (
-          <div className="flex items-center justify-between border-b border-border/40 pb-3">
-            <div className="flex items-center gap-2">
-              <h1 className="text-base font-bold tracking-tight text-foreground">
-                Performance Scope
-              </h1>
-            </div>
-            <div className="flex items-center gap-1 bg-muted p-0.5 rounded-lg border border-border/40">
+          <div className="flex items-center justify-between">
+            <ReportSectionLabel>Performance</ReportSectionLabel>
+            <div className="flex items-center gap-1 bg-muted p-0.5 rounded-lg border border-border/40 select-none">
               <button
                 onClick={() => setSelectedSymbol("global")}
                 className={cn(
-                  "px-3 py-1 rounded-md text-[11px] font-semibold transition-all duration-200",
+                  "px-3 py-1 rounded-md text-[10px] font-bold transition-all duration-200",
                   selectedSymbol === "global"
-                    ? "bg-card text-foreground shadow-sm border border-border/10"
+                    ? "bg-card text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                Global Portfolio
+                Global
               </button>
               {symbolKeys.map((sym) => (
                 <button
                   key={sym}
                   onClick={() => setSelectedSymbol(sym)}
                   className={cn(
-                    "px-3 py-1 rounded-md text-[11px] font-semibold transition-all duration-200",
+                    "flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] font-bold transition-all duration-200",
                     selectedSymbol === sym
-                      ? "bg-card text-foreground shadow-sm border border-border/10"
+                      ? "bg-card text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
+                  <CoinLogo symbol={sym} size={14} />
                   {sym}
                 </button>
               ))}
@@ -209,70 +274,83 @@ export default function BacktestDetailPage() {
           </div>
         )}
 
-        {/* Row 1: Key Metrics */}
+        {/* KPI strip */}
         <MetricsGrid
           profitVal={profitVal}
           isProfit={isProfit}
-          globalMetrics={activeMetrics}
+          globalMetrics={activeMetrics as any}
           distMetrics={activeDistMetrics}
-          metricsJson={backtest.metrics_json}
+          metricsJson={{}}
         />
 
-        {/* Row 2: Equity Chart + Risk Profile */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2">
-            <EquityCurveChart equityData={equityData} isProfit={isProfit} />
-          </div>
-          <RiskProfilePanel riskMetrics={riskMetrics} distMetrics={activeDistMetrics} />
-        </div>
-
-        {/* Row 3: Heatmap + Capacity */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2">
-            <MonthlyHeatmap heatmapData={datasets.monthly_heatmap || {}} />
-          </div>
-          <CapacityPanel
-            capMetrics={capMetrics}
-            globalMetrics={activeMetrics}
-            distMetrics={activeDistMetrics}
-            totalTrades={trades.length}
-          />
-        </div>
-
-        {/* Row 4: Drawdown + Rolling Metrics */}
+        {/* Equity + drawdown (+ exposure when a symbol scope is active) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <EquityCurveChart equityData={equityData} isProfit={isProfit} />
           <DrawdownChart
             drawdownData={drawdownData}
-            title={selectedSymbol === "global" ? "Drawdown" : "Asset Exposure"}
-            color={selectedSymbol === "global" ? "#fb7185" : "#38bdf8"}
-            valueLabel={selectedSymbol === "global" ? "Drawdown" : "Exposure"}
-            valueFormatter={
-              selectedSymbol === "global"
-                ? (v) => `${Number(v).toFixed(2)}%`
-                : (v) => `$${Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
-            }
-            yAxisFormatter={
-              selectedSymbol === "global"
-                ? (v) => `${v}%`
-                : (v) => `$${(v / 1000).toFixed(0)}k`
-            }
-            emptyText={selectedSymbol === "global" ? "No drawdown data available" : "No exposure data available"}
-          />
-          <RollingMetricsChart
-            rollingData={rollingData}
-            selectedRolling={selectedRolling}
-            selectedWindow={selectedWindow}
-            onRollingChange={setSelectedRolling}
-            onWindowChange={setSelectedWindow}
+            title={selectedSymbol === "global" ? "Drawdown" : `${selectedSymbol} Drawdown`}
+            color="var(--destructive)"
+            valueLabel="Drawdown"
+            valueFormatter={(v) => `${Number(v).toFixed(2)}%`}
+            yAxisFormatter={(v) => `${v}%`}
+            emptyText="No drawdown data available"
           />
         </div>
+        {selectedSymbol !== "global" && (
+          <DrawdownChart
+            drawdownData={exposureData}
+            title={`${selectedSymbol} Exposure`}
+            color="var(--chart-2)"
+            valueLabel="Exposure"
+            valueFormatter={(v) => `${Number(v).toFixed(4)}`}
+            yAxisFormatter={(v) => `${Number(v).toFixed(2)}`}
+            emptyText="No exposure data available"
+          />
+        )}
 
-        {/* Row 5: Multi-Asset Breakdown */}
-        <MultiAssetBreakdown symbols={symbols} />
+        {/* Per-symbol breakdown */}
+        {symbolKeys.length > 0 && (
+          <>
+            <ReportSectionLabel>Per-Symbol Breakdown</ReportSectionLabel>
+            <SymbolBreakdownCards report={runJson} trades={trades} />
+          </>
+        )}
 
-        {/* Row 6: Trade Log */}
-        <TradesSection trades={trades} />
+        {/* Rolling analytics + order lifecycle + concentration */}
+        <ReportSectionLabel>Analytics</ReportSectionLabel>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <RollingMetricsChart
+            rollingData={rollingData}
+            selectedRolling={rollingMetric}
+            selectedWindow={rollingWindow}
+            onRollingChange={setRollingMetric}
+            onWindowChange={setRollingWindow}
+            isLoading={rollingLoading}
+            showCorrelation={rollingSymbolKeys.length >= 2}
+          />
+          <div className="flex flex-col gap-4">
+            <OrderLifecyclePanel orders={orders} />
+            <ConcentrationPanel report={runJson} />
+          </div>
+        </div>
 
+        <CorrelationHeatmap report={runJson} />
+
+        {/* Risk & trade statistics */}
+        <ReportSectionLabel>Risk &amp; Trade Statistics</ReportSectionLabel>
+        <RiskStatsPanel report={runJson} />
+        <TradeDistributionTable report={runJson} />
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+          <MonthlyReturnsStrip report={runJson} />
+          <SizingCards report={runJson} />
+        </div>
+
+        {/* Trades & execution */}
+        <ReportSectionLabel>Trades &amp; Execution</ReportSectionLabel>
+        <TradesSection trades={trades} orders={orders} />
+
+        <ReportFooter report={runJson} datasetCount={datasetCount} />
       </main>
     </div>
   );

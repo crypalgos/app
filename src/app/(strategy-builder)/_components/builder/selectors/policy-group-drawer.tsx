@@ -47,7 +47,7 @@ export default function PolicyGroupDrawer() {
       setFormData({ ...data, policies });
       
       const initialInputStates: Record<string, string> = {};
-      policies.forEach((p: any) => {
+                  policies.forEach((p: any) => {
         Object.entries(p).forEach(([k, v]) => {
           if (k !== "id" && k !== "type" && k !== "mode" && v !== undefined && v !== null) {
             initialInputStates[`${p.id}_${k}`] = v.toString();
@@ -62,7 +62,7 @@ export default function PolicyGroupDrawer() {
   const update = (key: string, value: any) =>
     setFormData((prev) => ({ ...prev, [key]: value }));
 
-  const sanitizeData = (data: Record<string, any>) => {
+      const sanitizeData = (data: Record<string, any>) => {
     return {
       ...data,
       policies: data.policies || [],
@@ -230,9 +230,8 @@ export default function PolicyGroupDrawer() {
                               <SelectContent className="bg-popover border-border text-popover-foreground">
                                 <SelectItem value="PERCENTAGE" className="text-xs">Percentage (%)</SelectItem>
                                 <SelectItem value="ATR_MULTIPLE" className="text-xs">ATR Multiple</SelectItem>
-                                <SelectItem value="FIXED_PRICE" className="text-xs">Fixed Price</SelectItem>
-                                <SelectItem value="TICKS" className="text-xs">Ticks</SelectItem>
-                              </SelectContent>
+                                <SelectItem value="ABSOLUTE_PRICE" className="text-xs">Absolute Price</SelectItem>
+                                                              </SelectContent>
                             </Select>
                           </Field>
                           <Field>
@@ -283,13 +282,13 @@ export default function PolicyGroupDrawer() {
                           <FieldLabel className="font-semibold text-xs text-foreground">Exit Quantity (%)</FieldLabel>
                           <Input
                             type="number"
-                            step="0.1"
-                            min="0.01"
-                            max="1"
+                            step="1"
+                            min="1"
+                            max="100"
                             value={inputStates[`${pol.id}_quantity_pct`] ?? ""}
                             onChange={(e) => updatePolicyInput(pol.id, "quantity_pct", e.target.value)}
                             className="font-mono text-xs h-9 bg-background border-input text-foreground rounded-xl"
-                            placeholder="e.g. 0.5 (for 50%)"
+                            placeholder="e.g. 50"
                           />
                         </Field>
                       )}

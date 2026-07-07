@@ -12,20 +12,14 @@ import type {
   WalkForwardRequest,
   MonteCarloRequest,
   ApiStrategy,
-  BacktestTriggerResponse,
-  ApiBacktest,
-  OptimizationTriggerResponse,
-  ApiOptimizationRun,
-  WalkForwardTriggerResponse,
-  ApiWalkForwardRun,
-  MonteCarloTriggerResponse,
-  ApiMonteCarloRun,
+  ResearchRunTriggerResponse,
+  ResearchRun,
+  RunDetail,
   PaginatedStrategiesResponse,
   PaginatedBacktestsResponse,
   PaginatedOptimizationRunsResponse,
   PaginatedWalkForwardRunsResponse,
   PaginatedMonteCarloRunsResponse,
-  ResearchRun,
   ApiRunReport,
 } from "@/types/strategy-actions";
 
@@ -40,20 +34,15 @@ export type {
   WalkForwardRequest,
   MonteCarloRequest,
   ApiStrategy,
-  BacktestTriggerResponse,
-  ApiBacktest,
-  OptimizationTriggerResponse,
-  ApiOptimizationRun,
-  WalkForwardTriggerResponse,
-  ApiWalkForwardRun,
-  MonteCarloTriggerResponse,
-  ApiMonteCarloRun,
+  ResearchRunTriggerResponse,
+  ResearchRun,
+  RunDetail,
   PaginatedStrategiesResponse,
   PaginatedBacktestsResponse,
   PaginatedOptimizationRunsResponse,
   PaginatedWalkForwardRunsResponse,
   PaginatedMonteCarloRunsResponse,
-  ResearchRun,
+  ApiRunReport,
 };
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
@@ -78,8 +67,8 @@ export const StrategyActions = {
   setGoldenVersion: async (
     strategyId: string,
     version: number
-  ): Promise<any> => {
-    const response = await axiosInstance.post<ApiResponse<any>>(
+  ): Promise<unknown> => {
+    const response = await axiosInstance.post<ApiResponse<unknown>>(
       `/strategies/${strategyId}/versions/${version}/golden`
     );
     return response.data.data;
@@ -139,9 +128,9 @@ export const StrategyActions = {
   triggerBacktest: async (
     strategyId: string,
     data: TriggerBacktestRequest
-  ): Promise<BacktestTriggerResponse> => {
+  ): Promise<ResearchRunTriggerResponse> => {
     const response = await axiosInstance.post<
-      ApiResponse<BacktestTriggerResponse>
+      ApiResponse<ResearchRunTriggerResponse>
     >(`/strategies/${strategyId}/backtests`, data);
     return response.data.data;
   },
@@ -155,148 +144,42 @@ export const StrategyActions = {
     symbol?: string
   ): Promise<PaginatedBacktestsResponse> => {
     const response = await axiosInstance.get<
-      ApiResponse<{
-        total: number;
-        runs: ResearchRun[];
-        current_page: number;
-        limit: number;
-        total_pages: number;
-      }>
+      ApiResponse<PaginatedBacktestsResponse>
     >(`/strategies/${strategyId}/backtests`, {
       params: { page, limit, exchange, symbol },
     });
-
-    const data = response.data.data;
-    const backtests: ApiBacktest[] = (data.runs || []).map((run) => {
-      const summary = run.summary_json || {};
-      return {
-        id: run.id,
-        name: run.name,
-        description: run.description ?? undefined,
-        strategy_id: run.strategy_id,
-        exchange: summary.exchange || "delta",
-        symbol: summary.symbol || "BTCUSD",
-        start_date: summary.start_date || run.created_at,
-        end_date: summary.end_date || run.created_at,
-        initial_capital: summary.initial_capital ?? 10000,
-        leverage: summary.leverage ?? 1,
-        metrics_json: {
-          net_profit: summary.net_profit ?? 0,
-          profit_pct: summary.total_return_pct ?? 0,
-          win_rate: summary.win_rate ?? 0,
-          sharpe_ratio: summary.sharpe_ratio ?? 0,
-          max_drawdown: summary.max_drawdown_pct ?? 0,
-          total_trades: summary.trade_count ?? 0,
-          profit_factor: summary.profit_factor ?? 1.42,
-          sortino_ratio: summary.sortino_ratio ?? 0,
-          calmar_ratio: summary.calmar_ratio ?? 0,
-          expectancy: summary.expectancy ?? 0,
-          error: summary.error,
-        },
-        charting_json: {
-          equity_curve: Array.isArray(summary.equity_preview) ? summary.equity_preview : [],
-        },
-        status: run.status,
-        started_at: run.started_at ?? undefined,
-        completed_at: run.completed_at ?? undefined,
-        artifact_size_bytes: run.artifact_size_bytes ?? undefined,
-        run_hash: run.run_hash ?? undefined,
-        strategy_version_id: run.strategy_version_id ?? undefined,
-        created_at: run.created_at,
-      };
-    });
-
-    return {
-      total: data.total,
-      backtests,
-      current_page: data.current_page,
-      limit: data.limit,
-      total_pages: data.total_pages,
-    };
+    return response.data.data;
   },
 
-  /** Fetch a specific backtest run with curves intact. */
+  /** Fetch a single backtest run detail. */
   getBacktest: async (
     strategyId: string,
     backtestId: string
-  ): Promise<ApiBacktest> => {
-    const response = await axiosInstance.get<
-      ApiResponse<{
-        id: string;
-        name?: string;
-        description?: string | null;
-        status: string;
-        type: string;
-        summary_json?: Record<string, any> | null;
-        metadata: Record<string, any>;
-        report: Record<string, any>;
-        started_at?: string | null;
-        completed_at?: string | null;
-        artifact_size_bytes?: number | null;
-        run_hash?: string | null;
-        strategy_version_id?: string | null;
-        created_at: string;
-      }>
-    >(`/strategies/${strategyId}/backtests/${backtestId}`);
-
-    const data = response.data.data;
-    const meta = data.metadata || {};
-    const report = data.report || {};
-    const summary = data.summary_json || {};
-
-    const raw_metrics = report.metrics || {};
-    const g_metrics = raw_metrics.global || raw_metrics.global_metrics || raw_metrics;
-
-    return {
-      id: data.id,
-      name: data.name,
-      description: data.description ?? undefined,
-      strategy_id: strategyId,
-      exchange: meta.exchange || summary.exchange || "delta",
-      symbol: meta.symbol || summary.symbol || "BTCUSD",
-      start_date: meta.start_date || summary.start_date || data.created_at,
-      end_date: meta.end_date || summary.end_date || data.created_at,
-      initial_capital: meta.initial_capital ?? summary.initial_capital ?? 10000,
-      leverage: meta.leverage ?? summary.leverage ?? 1,
-      metrics_json: {
-        net_profit: g_metrics.net_profit ?? summary.net_profit ?? 0,
-        profit_pct: g_metrics.total_return_pct ?? summary.total_return_pct ?? 0,
-        win_rate: g_metrics.win_rate ?? summary.win_rate ?? 0,
-        sharpe_ratio: g_metrics.sharpe_ratio ?? summary.sharpe_ratio ?? 0,
-        max_drawdown: g_metrics.max_drawdown_pct ?? summary.max_drawdown_pct ?? 0,
-        total_trades: g_metrics.total_trades ?? summary.trade_count ?? 0,
-        error: summary.error,
-      },
-      charting_json: {
-        dataset_id: report.charting?.datasets?.global_equity_curve?.dataset_id,
-        trades: Array.isArray(report.charting?.trades?.recent_trades) 
-          ? report.charting.trades.recent_trades 
-          : (Array.isArray(report.charting?.trades) ? report.charting.trades : []),
-        equity_curve: Array.isArray(summary.equity_preview) 
-          ? summary.equity_preview 
-          : (Array.isArray(report.charting?.datasets?.global_equity_curve) ? report.charting.datasets.global_equity_curve : []),
-        drawdown_curve: Array.isArray(report.charting?.datasets?.global_drawdown_curve) 
-          ? report.charting.datasets.global_drawdown_curve 
-          : [],
-      },
-      report_json: report,
-      status: data.status,
-      started_at: data.started_at ?? undefined,
-      completed_at: data.completed_at ?? undefined,
-      artifact_size_bytes: data.artifact_size_bytes ?? undefined,
-      run_hash: data.run_hash ?? undefined,
-      strategy_version_id: data.strategy_version_id ?? undefined,
-      created_at: data.created_at,
-    };
+  ): Promise<RunDetail> => {
+    const response = await axiosInstance.get<ApiResponse<RunDetail>>(
+      `/strategies/${strategyId}/backtests/${backtestId}`
+    );
+    return response.data.data;
   },
 
-  /** Fetch a specific chart dataset for a backtest/research run */
+  /** Fetch a specific chart dataset for a research run */
   getRunDatasetChart: async (
     runId: string,
     datasetName: string
-  ): Promise<any[]> => {
-    const response = await axiosInstance.get<ApiResponse<any[]>>(
+  ): Promise<unknown[]> => {
+    const response = await axiosInstance.get<ApiResponse<unknown[]>>(
       `/research-runs/${runId}/datasets/${datasetName}`
+    );
+    return response.data.data;
+  },
+
+  /** Fetch a Monte Carlo chart dataset (equity_fan, returns, drawdowns, sharpes) */
+  getMonteCarloDataset: async (
+    runId: string,
+    datasetName: string
+  ): Promise<unknown[]> => {
+    const response = await axiosInstance.get<ApiResponse<unknown[]>>(
+      `/research-runs/${runId}/montecarlo-datasets/${datasetName}`
     );
     return response.data.data;
   },
@@ -337,9 +220,9 @@ export const StrategyActions = {
   triggerOptimization: async (
     strategyId: string,
     data: OptimizationRequest
-  ): Promise<OptimizationTriggerResponse> => {
+  ): Promise<ResearchRunTriggerResponse> => {
     const response = await axiosInstance.post<
-      ApiResponse<OptimizationTriggerResponse>
+      ApiResponse<ResearchRunTriggerResponse>
     >(`/strategies/${strategyId}/optimizations`, data);
     return response.data.data;
   },
@@ -363,9 +246,9 @@ export const StrategyActions = {
   getOptimizationRun: async (
     strategyId: string,
     runId: string
-  ): Promise<ApiOptimizationRun> => {
+  ): Promise<ResearchRun> => {
     const response = await axiosInstance.get<
-      ApiResponse<ApiOptimizationRun>
+      ApiResponse<ResearchRun>
     >(`/strategies/${strategyId}/optimizations/${runId}`);
     return response.data.data;
   },
@@ -374,9 +257,9 @@ export const StrategyActions = {
   triggerWalkForward: async (
     strategyId: string,
     data: WalkForwardRequest
-  ): Promise<WalkForwardTriggerResponse> => {
+  ): Promise<ResearchRunTriggerResponse> => {
     const response = await axiosInstance.post<
-      ApiResponse<WalkForwardTriggerResponse>
+      ApiResponse<ResearchRunTriggerResponse>
     >(`/strategies/${strategyId}/walkforwards`, data);
     return response.data.data;
   },
@@ -400,9 +283,9 @@ export const StrategyActions = {
   getWalkForwardRun: async (
     strategyId: string,
     runId: string
-  ): Promise<ApiWalkForwardRun> => {
+  ): Promise<ResearchRun> => {
     const response = await axiosInstance.get<
-      ApiResponse<ApiWalkForwardRun>
+      ApiResponse<ResearchRun>
     >(`/strategies/${strategyId}/walkforwards/${runId}`);
     return response.data.data;
   },
@@ -411,9 +294,9 @@ export const StrategyActions = {
   triggerMonteCarlo: async (
     strategyId: string,
     data: MonteCarloRequest
-  ): Promise<MonteCarloTriggerResponse> => {
+  ): Promise<ResearchRunTriggerResponse> => {
     const response = await axiosInstance.post<
-      ApiResponse<MonteCarloTriggerResponse>
+      ApiResponse<ResearchRunTriggerResponse>
     >(`/strategies/${strategyId}/montecarlos`, data);
     return response.data.data;
   },
@@ -437,9 +320,9 @@ export const StrategyActions = {
   getMonteCarloRun: async (
     strategyId: string,
     runId: string
-  ): Promise<ApiMonteCarloRun> => {
+  ): Promise<ResearchRun> => {
     const response = await axiosInstance.get<
-      ApiResponse<ApiMonteCarloRun>
+      ApiResponse<ResearchRun>
     >(`/strategies/${strategyId}/montecarlos/${runId}`);
     return response.data.data;
   },

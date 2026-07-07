@@ -5,10 +5,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { IconCoins } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { getCoinLogoUrl } from "@/lib/instruments";
-import type { SymbolMetric } from "@/types/strategy-actions";
+import type { SymbolMetrics } from "@/types/strategy-actions";
 
 interface MultiAssetBreakdownProps {
-  symbols: Record<string, SymbolMetric>;
+  symbols: Record<string, SymbolMetrics>;
 }
 
 function getCoinSymbol(sym: string): string {
@@ -62,7 +62,7 @@ export function MultiAssetBreakdown({ symbols }: MultiAssetBreakdownProps) {
             </tr>
           </thead>
           <tbody>
-            {entries.map(([sym, stats]: [string, SymbolMetric], i) => {
+            {entries.map(([sym, stats]: [string, SymbolMetrics], i) => {
               const coinSym = getCoinSymbol(sym);
               const coinLogo = getCoinLogoUrl(coinSym);
               return (

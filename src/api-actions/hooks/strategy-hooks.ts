@@ -4,6 +4,9 @@ import {
   StrategyActions,
   type CreateStrategyRequest,
   type TriggerBacktestRequest,
+  type OptimizationRequest,
+  type WalkForwardRequest,
+  type MonteCarloRequest,
   type UpdateCanvasRequest,
 } from "@/api-actions/strategy-actions";
 
@@ -230,6 +233,14 @@ export const useRunDataset = (runId: string | null, datasetName: string | null) 
     staleTime: Infinity,
   });
 
+export const useMonteCarloDataset = (runId: string | null, datasetName: string | null) =>
+  useQuery({
+    queryKey: ["runs", runId, "montecarlo-datasets", datasetName],
+    queryFn: () => StrategyActions.getMonteCarloDataset(runId!, datasetName!),
+    enabled: !!runId && !!datasetName,
+    staleTime: Infinity,
+  });
+
 export const useRunArtifact = (runId: string | null, artifactType: string | null) =>
   useQuery({
     queryKey: ["runs", runId, "artifacts", artifactType],
@@ -237,3 +248,195 @@ export const useRunArtifact = (runId: string | null, artifactType: string | null
     enabled: !!runId && !!artifactType,
     staleTime: Infinity,
   });
+
+// ─── Optimization hooks ──────────────────────────────────────────────────────
+
+export const useStrategyOptimizations = (
+  strategyId: string | null,
+  page = 1,
+  limit = 8,
+  search = ""
+) =>
+  useQuery({
+    queryKey: [
+      ...STRATEGY_KEYS.detail(strategyId ?? ""),
+      "optimizations",
+      page,
+      limit,
+      search,
+    ],
+    queryFn: () =>
+      StrategyActions.listOptimizationRuns(strategyId!, page, limit, search),
+    enabled: !!strategyId,
+    staleTime: 1000 * 30,
+  });
+
+export const useStrategyOptimization = (
+  strategyId: string | null,
+  runId: string | null
+) =>
+  useQuery({
+    queryKey: [
+      ...STRATEGY_KEYS.detail(strategyId ?? ""),
+      "optimizations",
+      "detail",
+      runId ?? "",
+    ],
+    queryFn: () => StrategyActions.getOptimizationRun(strategyId!, runId!),
+    enabled: !!strategyId && !!runId,
+    staleTime: 1000 * 60 * 5,
+  });
+
+export const useTriggerOptimization = (strategyId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: OptimizationRequest) =>
+      StrategyActions.triggerOptimization(strategyId, params),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [...STRATEGY_KEYS.detail(strategyId), "optimizations"],
+      });
+    },
+  });
+};
+
+export const useDeleteOptimization = (strategyId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (runId: string) =>
+      StrategyActions.deleteBacktest(strategyId, runId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [...STRATEGY_KEYS.detail(strategyId), "optimizations"],
+      });
+    },
+  });
+};
+
+// ─── Walkforward hooks ───────────────────────────────────────────────────────
+
+export const useStrategyWalkforwards = (
+  strategyId: string | null,
+  page = 1,
+  limit = 8,
+  search = ""
+) =>
+  useQuery({
+    queryKey: [
+      ...STRATEGY_KEYS.detail(strategyId ?? ""),
+      "walkforwards",
+      page,
+      limit,
+      search,
+    ],
+    queryFn: () =>
+      StrategyActions.listWalkForwardRuns(strategyId!, page, limit, search),
+    enabled: !!strategyId,
+    staleTime: 1000 * 30,
+  });
+
+export const useStrategyWalkforward = (
+  strategyId: string | null,
+  runId: string | null
+) =>
+  useQuery({
+    queryKey: [
+      ...STRATEGY_KEYS.detail(strategyId ?? ""),
+      "walkforwards",
+      "detail",
+      runId ?? "",
+    ],
+    queryFn: () => StrategyActions.getWalkForwardRun(strategyId!, runId!),
+    enabled: !!strategyId && !!runId,
+    staleTime: 1000 * 60 * 5,
+  });
+
+export const useTriggerWalkForward = (strategyId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: WalkForwardRequest) =>
+      StrategyActions.triggerWalkForward(strategyId, params),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [...STRATEGY_KEYS.detail(strategyId), "walkforwards"],
+      });
+    },
+  });
+};
+
+export const useDeleteWalkforward = (strategyId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (runId: string) =>
+      StrategyActions.deleteBacktest(strategyId, runId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [...STRATEGY_KEYS.detail(strategyId), "walkforwards"],
+      });
+    },
+  });
+};
+
+// ─── Monte Carlo hooks ───────────────────────────────────────────────────────
+
+export const useStrategyMonteCarlos = (
+  strategyId: string | null,
+  page = 1,
+  limit = 8,
+  search = ""
+) =>
+  useQuery({
+    queryKey: [
+      ...STRATEGY_KEYS.detail(strategyId ?? ""),
+      "montecarlos",
+      page,
+      limit,
+      search,
+    ],
+    queryFn: () =>
+      StrategyActions.listMonteCarloRuns(strategyId!, page, limit, search),
+    enabled: !!strategyId,
+    staleTime: 1000 * 30,
+  });
+
+export const useStrategyMonteCarlo = (
+  strategyId: string | null,
+  runId: string | null
+) =>
+  useQuery({
+    queryKey: [
+      ...STRATEGY_KEYS.detail(strategyId ?? ""),
+      "montecarlos",
+      "detail",
+      runId ?? "",
+    ],
+    queryFn: () => StrategyActions.getMonteCarloRun(strategyId!, runId!),
+    enabled: !!strategyId && !!runId,
+    staleTime: 1000 * 60 * 5,
+  });
+
+export const useTriggerMonteCarlo = (strategyId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: MonteCarloRequest) =>
+      StrategyActions.triggerMonteCarlo(strategyId, params),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [...STRATEGY_KEYS.detail(strategyId), "montecarlos"],
+      });
+    },
+  });
+};
+
+export const useDeleteMonteCarlo = (strategyId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (runId: string) =>
+      StrategyActions.deleteBacktest(strategyId, runId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [...STRATEGY_KEYS.detail(strategyId), "montecarlos"],
+      });
+    },
+  });
+};
