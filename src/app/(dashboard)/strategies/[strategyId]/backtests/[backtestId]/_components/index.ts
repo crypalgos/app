@@ -9,3 +9,6 @@ export { DrawdownChart } from "./DrawdownChart";
 export { RollingMetricsChart } from "./RollingMetricsChart";
 export { MultiAssetBreakdown } from "./MultiAssetBreakdown";
 export { TradesSection } from "./TradesSection";
+export { ResearchPanel } from "./ResearchPanel";
+export { GradeBadge } from "./GradeBadge";
+export { HealthScorecard } from "./HealthScorecard";

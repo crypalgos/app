@@ -6,7 +6,7 @@ import {
   useStrategyBacktests,
   useDeleteBacktest,
 } from "@/api-actions/hooks/strategy-hooks";
-import type { ApiBacktest } from "@/types/strategy-actions";
+import type { ResearchRun } from "@/types/strategy-actions";
 import { BacktestCard } from "@/components/backtest/BacktestCard";
 
 import {
@@ -75,9 +75,9 @@ export default function StrategyBacktestsPage() {
     );
   }
 
-  const backtests = apiBacktests?.backtests ?? [];
+  const runs = apiBacktests?.runs ?? [];
 
-  if (backtests.length === 0 && page === 1) {
+  if (runs.length === 0 && page === 1) {
     return (
       <Empty className="border border-dashed border-border/40 min-h-[300px]">
         <EmptyHeader>
@@ -106,12 +106,12 @@ export default function StrategyBacktestsPage() {
       </div>
 
       <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
-        {backtests.map((bt: ApiBacktest) => (
+        {runs.map((run: ResearchRun) => (
           <BacktestCard
-            key={bt.id}
-            bt={bt}
-            onDelete={() => handleDeleteBacktest(bt.id)}
-            onClick={() => router.push(`/strategies/${strategyId}/backtests/${bt.id}`)}
+            key={run.id}
+            run={run}
+            onDelete={() => handleDeleteBacktest(run.id)}
+            onClick={() => router.push(`/strategies/${strategyId}/backtests/${run.id}`)}
           />
         ))}
       </div>

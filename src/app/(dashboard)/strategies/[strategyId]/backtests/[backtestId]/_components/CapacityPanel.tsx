@@ -3,12 +3,12 @@
 import React from "react";
 import { MetricRow, SectionCard } from "./MetricCard";
 import { IconStack2 } from "@tabler/icons-react";
-import type { CapacityMetrics, GlobalMetrics, DistributionMetric } from "@/types/strategy-actions";
+import type { CapacityMetrics, GlobalMetrics, DistributionMetrics } from "@/types/strategy-actions";
 
 interface CapacityPanelProps {
   capMetrics: CapacityMetrics;
   globalMetrics: GlobalMetrics;
-  distMetrics: DistributionMetric;
+  distMetrics: DistributionMetrics;
   totalTrades: number;
 }
 

@@ -30,24 +30,18 @@ import { useNodesStore } from "../../../store/nodes-store";
 import { cn } from "@/lib/utils";
 
 const ACTION_TYPES = [
-  { value: "buy", label: "Market Buy / Long Position", group: "Trading" },
-  { value: "sell", label: "Market Sell / Close Long", group: "Trading" },
-  { value: "short", label: "Market Short / Short Position", group: "Trading" },
-  { value: "cover", label: "Market Cover / Close Short", group: "Trading" },
-  { value: "place_limit_order", label: "Limit Order Placement", group: "Trading" },
+  { value: "buy", label: "Open Long (Market)", group: "Trading" },
+  { value: "sell", label: "Close Long (Market)", group: "Trading" },
+  { value: "short", label: "Open Short (Market)", group: "Trading" },
+  { value: "cover", label: "Close Short (Market)", group: "Trading" },
+  { value: "place_limit_order", label: "Place Limit Order", group: "Trading" },
   { value: "close_all", label: "Close All Positions", group: "Trading" },
-  { value: "reduce_position", label: "Reduce Active Sizing", group: "Trading" },
-  { value: "cancel_all_orders", label: "Cancel Pending Orders", group: "Trading" },
+  { value: "cancel_all_orders", label: "Cancel All Pending Orders", group: "Trading" },
 ] as const;
 
 const TRIGGERS = [
-  { value: "IMMEDIATE", label: "Immediate (On Bar)" },
-  { value: "ON_FILL", label: "On Order Fill" },
-  { value: "ON_POSITION_OPEN", label: "On Position Opened" },
-  { value: "ON_POSITION_CLOSE", label: "On Position Closed" },
-  { value: "ON_PROFIT_TARGET", label: "On Take Profit Hit" },
-  { value: "ON_STOP_LOSS", label: "On Stop Loss Hit" },
-  { value: "ON_BAR_CLOSE", label: "On Bar Close" },
+  { value: "IMMEDIATE", label: "Execute Immediately" },
+  { value: "ON_BAR_CLOSE", label: "Execute on Candle Close" },
 ] as const;
 
 export default function ActionNodeDrawer() {
@@ -88,14 +82,14 @@ export default function ActionNodeDrawer() {
             sizingValue = 10;
           }
         } else if (sizingMode === "PERCENT_OF_EQUITY") {
-          sizingValue = sizingValue !== undefined ? sizingValue * 100 : 10;
+          sizingValue = sizingValue !== undefined ? sizingValue : 10;
         }
 
         setFormData({
           ...data,
           actionType: step.actionType || "buy",
-          sl: step.sl,
-          tp: step.tp,
+          
+          
           limit_price: step.limit_price,
           percentage: step.percentage,
           side: step.side,
@@ -111,7 +105,7 @@ export default function ActionNodeDrawer() {
         let sizingMode = sizing.mode;
         let sizingValue = sizing.value;
         if (sizingMode === "PERCENT_OF_EQUITY") {
-          sizingValue = sizingValue !== undefined ? sizingValue * 100 : undefined;
+          sizingValue = sizingValue !== undefined ? sizingValue : undefined;
         }
 
         setFormData({
@@ -159,9 +153,7 @@ export default function ActionNodeDrawer() {
     amount: z.coerce.number().min(0.0001).catch(0.5),
   });
 
-  const reducePositionSchema = z.object({
-    percentage: z.coerce.number().min(0.01).max(1.0).catch(0.25),
-  });
+  
 
   const sanitize = (data: Record<string, any>) => {
     const type = data.actionType || "buy";
@@ -170,16 +162,14 @@ export default function ActionNodeDrawer() {
       const parsed = buySellSchema.parse(data);
       const mode = parsed.sizing_mode;
       let val = parsed.sizing_value;
-      if (mode === "PERCENT_OF_EQUITY") {
-        val = val / 100;
-      }
+      
       result.sizing = {
         mode: mode,
         value: val
       };
       
-      delete result.sl;
-      delete result.tp;
+      
+      
       delete result.sizing_mode;
       delete result.sizing_value;
       delete result.amount;
@@ -188,10 +178,7 @@ export default function ActionNodeDrawer() {
       result.limit_price = parsed.limit_price;
       result.amount = parsed.amount;
       delete result.sizing;
-    } else if (type === "reduce_position") {
-      const parsed = reducePositionSchema.parse(data);
-      result.percentage = parsed.percentage;
-      delete result.sizing;
+    
     } else {
       delete result.sizing;
     }
@@ -529,22 +516,6 @@ export default function ActionNodeDrawer() {
                         </Field>
                       </div>
                     </div>
-                  )}
-
-                  {actionType === "reduce_position" && (
-                    <Field>
-                      <FieldLabel className="text-xs font-bold text-foreground">Reduce Percentage</FieldLabel>
-                      <Input
-                        type="number"
-                        step="0.05"
-                        min="0"
-                        max="1"
-                        value={formData.percentage ?? 0.25}
-                        onChange={(e) => updateField("percentage", e.target.value)}
-                        className="font-mono text-xs h-10 rounded-xl"
-                        placeholder="0.25 = 25%"
-                      />
-                    </Field>
                   )}
 
                   {(actionType === "close_all" || actionType === "cancel_all_orders") && (

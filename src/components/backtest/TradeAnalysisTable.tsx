@@ -1,28 +1,24 @@
 "use client";
 
-import React, { useState, useMemo, useRef } from "react";
-import { useVirtualizer } from "@tanstack/react-virtual";
+import React, { useState, useMemo } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DecisionTraceTimeline } from "./DecisionTraceTimeline";
+import { buildTraceIndex, resolveTraceForSequence } from "@/lib/replay";
+import { CoinLogo } from "@/components/shared/coin-logo";
+import type { RuntimeEvent } from "@/types/replay";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  IconDownload, 
-  IconSearch, 
-  IconCalendar, 
-  IconClock, 
-  IconShield, 
-  IconWallet, 
-  IconReceipt, 
-  IconCoins, 
-  IconTrendingUp, 
+import {
+  IconDownload,
+  IconSearch,
+  IconClock,
+  IconWallet,
+  IconReceipt,
+  IconShield,
+  IconTrendingUp,
   IconTrendingDown,
-  IconArrowUpRight,
-  IconArrowDownRight,
-  IconAlertCircle
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 
@@ -31,23 +27,6 @@ export interface TradeFees {
   entry: number;
   exit: number;
   funding: number;
-}
-
-export interface ExitReason {
-  code: string;
-  label: string;
-  price: number;
-  trigger?: string;
-  node_id?: string;
-  event_id?: string;
-  decision_trace_id?: string;
-}
-
-export interface EntryReason {
-  action_node: string;
-  decision_trace_id: string;
-  runtime_event_start: number;
-  runtime_event_end: number;
 }
 
 export interface AdvancedMetrics {
@@ -77,8 +56,8 @@ export interface TradeReport {
   funding_cost: number;
   equity_after: number;
   fees: TradeFees;
-  exit_reason: ExitReason;
-  entry_reason: EntryReason | null;
+  entry_sequence: number | null;
+  exit_sequence: number | null;
   advanced_metrics: AdvancedMetrics;
 }
 
@@ -110,16 +89,17 @@ const formatDuration = (ms: number) => {
   return `${seconds}s`;
 };
 
-const exportToCSV = (trades: TradeReport[], filename = "trade_report.csv") => {
+const exportToCSV = (trades: TradeReport[], traceIndex: ReturnType<typeof buildTraceIndex>, filename = "trade_report.csv") => {
   const headers = [
     "Trade #", "Symbol", "Side", "Entry Time", "Exit Time", "Duration", "Entry Price", "Exit Price",
     "Quantity", "Leverage", "Gross PnL", "Entry Fee", "Exit Fee", "Execution Cost",
-    "Funding Cost", "Net PnL", "Return %", "Equity After", "Exit Reason"
+    "Funding Cost", "Net PnL", "Return %", "Equity After", "Exit Trigger"
   ];
 
   const csvRows = [headers.join(",")];
 
   for (const t of trades) {
+    const exitTrace = resolveTraceForSequence(traceIndex, t.exit_sequence);
     const row = [
       t.trade_number,
       t.symbol,
@@ -139,7 +119,7 @@ const exportToCSV = (trades: TradeReport[], filename = "trade_report.csv") => {
       t.net_pnl.toFixed(4),
       t.return_pct.toFixed(4),
       t.equity_after.toFixed(4),
-      `"${t.exit_reason.label}"`
+      `"${exitTrace?.triggered_action || ""}"`
     ];
     csvRows.push(row.join(","));
   }
@@ -155,24 +135,43 @@ const exportToCSV = (trades: TradeReport[], filename = "trade_report.csv") => {
   document.body.removeChild(link);
 };
 
-const getBadgeVariant = (reasonCode: string) => {
-  switch (reasonCode) {
-    case "take_profit": return "bg-emerald-500/10 dark:bg-emerald-400/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20";
-    case "stop_loss": return "bg-rose-500/10 dark:bg-rose-400/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20";
-    case "liquidation": return "bg-red-500/15 dark:bg-red-950/40 text-red-600 dark:text-red-400 font-bold border border-red-500/20";
-    case "risk_close_all": return "bg-amber-500/10 dark:bg-amber-400/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20";
-    case "strategy_exit": return "bg-blue-500/10 dark:bg-blue-400/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20";
-    case "signal_reversal": return "bg-indigo-500/10 dark:bg-indigo-400/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20";
-    case "end_of_backtest": return "bg-zinc-500/10 dark:bg-zinc-400/10 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-500/20";
-    case "trailing_stop": return "bg-purple-500/10 dark:bg-purple-400/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500/20";
+// Matches against the resolved trace's triggered_action — which is either an
+// ExitPolicy.type ("STOP_LOSS" | "TAKE_PROFIT" | "TRAILING_STOP") or an
+// action_id/action_type from a compiled/hand-written strategy (e.g. "close_all").
+const getBadgeVariant = (trigger: string | null | undefined) => {
+  switch ((trigger || "").toUpperCase()) {
+    case "TAKE_PROFIT": return "bg-emerald-500/10 dark:bg-emerald-400/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20";
+    case "STOP_LOSS": return "bg-rose-500/10 dark:bg-rose-400/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20";
+    case "LIQUIDATION": return "bg-red-500/15 dark:bg-red-950/40 text-red-600 dark:text-red-400 font-bold border border-red-500/20";
+    case "TRAILING_STOP": return "bg-purple-500/10 dark:bg-purple-400/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500/20";
+    case "CLOSE_ALL": return "bg-blue-500/10 dark:bg-blue-400/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20";
     default: return "bg-muted text-muted-foreground";
   }
 };
 
-export function TradeAnalysisTable({ trades }: { trades: any[] }) {
+const PAGE_SIZE = 10;
+
+export function TradeAnalysisTable({ trades, events = [] }: { trades: any[], events?: RuntimeEvent[] }) {
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [selectedTrade, setSelectedTrade] = useState<TradeReport | null>(null);
-  const parentRef = useRef<HTMLDivElement>(null);
+
+  // Built once from the full event stream — O(1) lookups per trade instead
+  // of re-scanning the event stream for every row (see src/lib/replay.ts).
+  // The static report page doesn't fetch runtime_events at all, so this is
+  // usually empty — the decision-trace drill-down below only appears when a
+  // caller actually supplies events (e.g. a future replay view).
+  const hasEventData = events.length > 0;
+  const traceIndex = useMemo(() => buildTraceIndex(events), [events]);
+
+  const selectedEntryTrace = useMemo(
+    () => resolveTraceForSequence(traceIndex, selectedTrade?.entry_sequence),
+    [traceIndex, selectedTrade]
+  );
+  const selectedExitTrace = useMemo(
+    () => resolveTraceForSequence(traceIndex, selectedTrade?.exit_sequence),
+    [traceIndex, selectedTrade]
+  );
 
   // Map Backend trades to TradeReport
   const mappedTrades = useMemo<TradeReport[]>(() => {
@@ -215,8 +214,8 @@ export function TradeAnalysisTable({ trades }: { trades: any[] }) {
         net_pnl: net_pnl,
         return_pct: return_pct,
         equity_after: t.portfolio_equity_after || 0,
-        exit_reason: t.exit_reason || { code: "unknown", label: "Unknown", price: 0 },
-        entry_reason: t.entry_reason || null,
+        entry_sequence: t.entry_sequence ?? null,
+        exit_sequence: t.exit_sequence ?? null,
         advanced_metrics: {
           mae: null,
           mfe: null,
@@ -237,13 +236,12 @@ export function TradeAnalysisTable({ trades }: { trades: any[] }) {
     return result.sort((a, b) => b.trade_number - a.trade_number);
   }, [mappedTrades, search]);
 
-  // Virtualization
-  const rowVirtualizer = useVirtualizer({
-    count: filteredTrades.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 56, // Row height
-    overscan: 10,
-  });
+  const totalPages = Math.max(1, Math.ceil(filteredTrades.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedTrades = useMemo(
+    () => filteredTrades.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filteredTrades, currentPage]
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -256,85 +254,105 @@ export function TradeAnalysisTable({ trades }: { trades: any[] }) {
             placeholder="Search symbol..." 
             className="pl-8" 
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           />
         </div>
-        <Button variant="outline" size="sm" onClick={() => exportToCSV(mappedTrades)} className="gap-2">
+        <Button variant="outline" size="sm" onClick={() => exportToCSV(mappedTrades, traceIndex)} className="gap-2">
           <IconDownload className="h-4 w-4" />
           Export CSV
         </Button>
       </div>
 
-      {/* Virtualized Table Container */}
-      <div 
-        ref={parentRef} 
-        className="rounded-xl border border-border bg-card overflow-auto h-[600px] w-full"
-      >
-        <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, width: "100%", position: "relative" }}>
-          {/* Header Row */}
-          <div className="sticky top-0 z-10 grid grid-cols-[80px_100px_80px_140px_140px_100px_120px_120px_100px_120px_80px_120px_100px_120px_100px_140px] gap-2 border-b border-border bg-muted/65 backdrop-blur-sm p-3 text-xs font-semibold text-muted-foreground uppercase min-w-max h-12 items-center shadow-sm">
-            <div>Trade #</div>
-            <div>Symbol</div>
-            <div>Side</div>
-            <div>Entry Time</div>
-            <div>Exit Time</div>
-            <div>Duration</div>
-            <div className="text-right">Entry Price</div>
-            <div className="text-right">Exit Price</div>
-            <div className="text-right">Qty</div>
-            <div className="text-right">Pos Value</div>
-            <div className="text-center">Lev</div>
-            <div className="text-right">Gross PnL</div>
-            <div className="text-right">Fees</div>
-            <div className="text-right">Net PnL</div>
-            <div className="text-right">Return</div>
-            <div>Exit Reason</div>
-          </div>
-
-          {/* Virtual Rows */}
-          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-            const t = filteredTrades[virtualRow.index];
-            const isWinner = t.net_pnl > 0;
-            return (
-              <div
-                key={virtualRow.index}
-                className="absolute top-0 left-0 w-full min-w-max grid grid-cols-[80px_100px_80px_140px_140px_100px_120px_120px_100px_120px_80px_120px_100px_120px_100px_140px] gap-2 p-3 text-sm border-b border-border/40 hover:bg-muted/10 cursor-pointer items-center h-14 transition-colors"
-                style={{ transform: `translateY(${virtualRow.start + 48}px)` }} // +48 for header
-                onClick={() => setSelectedTrade(t)}
-              >
-                <div className="font-mono text-muted-foreground">#{t.trade_number}</div>
-                <div className="font-semibold">{t.symbol}</div>
-                <div>
-                  <Badge variant={t.side === "LONG" ? "default" : "destructive"} className="text-[10px]">
-                    {t.side}
-                  </Badge>
-                </div>
-                <div className="text-xs text-muted-foreground font-mono">{formatTimestamp(t.entry_time)}</div>
-                <div className="text-xs text-muted-foreground font-mono">{formatTimestamp(t.exit_time)}</div>
-                <div className="text-xs font-mono text-muted-foreground">{formatDuration(t.duration_ms)}</div>
-                <div className="text-right font-mono text-foreground">{formatCurrency(t.entry_price)}</div>
-                <div className="text-right font-mono text-foreground">{formatCurrency(t.exit_price)}</div>
-                <div className="text-right font-mono text-foreground">{t.quantity.toFixed(4)}</div>
-                <div className="text-right font-mono text-muted-foreground">${formatCurrency(t.position_value)}</div>
-                <div className="text-center font-mono text-xs text-foreground/80">{t.leverage}x</div>
-                <div className="text-right font-mono text-foreground">${formatCurrency(t.gross_pnl)}</div>
-                <div className="text-right font-mono text-destructive/80">-${formatCurrency(t.execution_cost + t.funding_cost)}</div>
-                <div className={cn("text-right font-mono font-semibold", isWinner ? "text-success" : "text-destructive")}>
-                  {isWinner ? '+' : ''}${formatCurrency(t.net_pnl)}
-                </div>
-                <div className={cn("text-right font-mono font-semibold", isWinner ? "text-success" : "text-destructive")}>
-                  {isWinner ? '+' : ''}{t.return_pct.toFixed(2)}%
-                </div>
-                <div>
-                  <Badge className={cn("text-[10px] whitespace-nowrap", getBadgeVariant(t.exit_reason.code))} variant="outline">
-                    {t.exit_reason.label}
-                  </Badge>
-                </div>
-              </div>
-            );
-          })}
+      {/* Paginated Table */}
+      <div className="rounded-xl border border-border/60 bg-card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border/40">
+                <th className="text-left font-medium px-5 py-2.5">Symbol</th>
+                <th className="text-left font-medium px-3 py-2.5">Side</th>
+                <th className="text-left font-medium px-3 py-2.5">Opened</th>
+                <th className="text-right font-medium px-3 py-2.5">Entry</th>
+                <th className="text-right font-medium px-3 py-2.5">Exit</th>
+                <th className="text-right font-medium px-3 py-2.5">Qty</th>
+                <th className="text-right font-medium px-3 py-2.5">Duration</th>
+                <th className="text-right font-medium px-3 py-2.5">PnL</th>
+                <th className="text-right font-medium px-5 py-2.5">Result</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pagedTrades.map((t) => {
+                const isWinner = t.net_pnl > 0;
+                return (
+                  <tr
+                    key={t.id}
+                    className="border-b border-border/20 hover:bg-muted/20 cursor-pointer"
+                    onClick={() => setSelectedTrade(t)}
+                  >
+                    <td className="px-5 py-2.5">
+                      <span className="flex items-center gap-2 font-semibold">
+                        <CoinLogo symbol={t.symbol} size={16} />
+                        {t.symbol}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <Badge
+                        className={cn(
+                          "text-[9px] font-bold px-1.5 py-0",
+                          t.side === "LONG"
+                            ? "bg-success/10 text-success border border-success/25"
+                            : "bg-destructive/10 text-destructive border border-destructive/25"
+                        )}
+                      >
+                        {t.side}
+                      </Badge>
+                    </td>
+                    <td className="px-3 py-2.5 font-mono text-muted-foreground">{formatTimestamp(t.entry_time)}</td>
+                    <td className="px-3 py-2.5 text-right font-mono">{formatCurrency(t.entry_price)}</td>
+                    <td className="px-3 py-2.5 text-right font-mono">{formatCurrency(t.exit_price)}</td>
+                    <td className="px-3 py-2.5 text-right font-mono">{t.quantity.toFixed(4)}</td>
+                    <td className="px-3 py-2.5 text-right font-mono text-muted-foreground">{formatDuration(t.duration_ms)}</td>
+                    <td className={cn("px-3 py-2.5 text-right font-mono font-bold", isWinner ? "text-success" : "text-destructive")}>
+                      {isWinner ? "+" : ""}
+                      {formatCurrency(t.net_pnl)}
+                    </td>
+                    <td className="px-5 py-2.5 text-right">
+                      <Badge
+                        className={cn(
+                          "text-[9px] font-bold px-1.5 py-0",
+                          isWinner
+                            ? "bg-success/10 text-success border border-success/25"
+                            : "bg-destructive/10 text-destructive border border-destructive/25"
+                        )}
+                      >
+                        {isWinner ? "WIN" : "LOSS"}
+                      </Badge>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
+
+      {/* Pagination controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground font-mono">
+            {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredTrades.length)} of {filteredTrades.length} trades
+          </span>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} className="cursor-pointer">
+              Previous
+            </Button>
+            <span className="text-xs text-muted-foreground font-medium">Page {currentPage} of {totalPages}</span>
+            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="cursor-pointer">
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Trade Details Drawer */}
       <Sheet open={!!selectedTrade} onOpenChange={(open) => !open && setSelectedTrade(null)}>
@@ -402,9 +420,9 @@ export function TradeAnalysisTable({ trades }: { trades: any[] }) {
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
                             <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">Entry</span>
-                            {selectedTrade.entry_reason && (
+                            {selectedEntryTrace?.triggered_action && (
                               <Badge variant="outline" className="border-indigo-500/20 text-indigo-500 text-[10px] py-0 px-2 bg-indigo-500/5">
-                                Node: {selectedTrade.entry_reason.action_node}
+                                {selectedEntryTrace.triggered_action}
                               </Badge>
                             )}
                           </div>
@@ -414,6 +432,10 @@ export function TradeAnalysisTable({ trades }: { trades: any[] }) {
                           <div className="text-xs text-muted-foreground font-mono">
                             {formatTimestamp(selectedTrade.entry_time)}
                           </div>
+
+                          {hasEventData && selectedTrade.entry_sequence != null && (
+                            <DecisionTraceTimeline trace={selectedEntryTrace} />
+                          )}
                         </div>
                       </div>
 
@@ -423,7 +445,7 @@ export function TradeAnalysisTable({ trades }: { trades: any[] }) {
                           <Badge variant="secondary" className="text-[10px] font-bold uppercase py-0 px-1.5">
                             {selectedTrade.side}
                           </Badge>
-                          <span>{selectedTrade.quantity.toFixed(4)} {selectedTrade.symbol.replace("USD", "")}</span>
+                          <span>{selectedTrade.quantity.toFixed(2)} {selectedTrade.symbol.replace("USD", "")}</span>
                         </div>
                         <span className="font-semibold text-foreground/80">{selectedTrade.leverage}x Leverage</span>
                       </div>
@@ -434,9 +456,11 @@ export function TradeAnalysisTable({ trades }: { trades: any[] }) {
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
                             <span className="text-[10px] font-bold text-purple-500 uppercase tracking-wider">Exit</span>
-                            <Badge className={cn("text-[10px] py-0 px-2", getBadgeVariant(selectedTrade.exit_reason.code))} variant="outline">
-                              {selectedTrade.exit_reason.label}
-                            </Badge>
+                            {hasEventData && selectedExitTrace?.triggered_action && (
+                              <Badge className={cn("text-[10px] py-0 px-2", getBadgeVariant(selectedExitTrace.triggered_action))} variant="outline">
+                                {selectedExitTrace.triggered_action}
+                              </Badge>
+                            )}
                           </div>
                           <div className="text-xl font-bold font-mono tracking-tight text-foreground">
                             ${formatCurrency(selectedTrade.exit_price)}
@@ -444,6 +468,10 @@ export function TradeAnalysisTable({ trades }: { trades: any[] }) {
                           <div className="text-xs text-muted-foreground font-mono">
                             {formatTimestamp(selectedTrade.exit_time)}
                           </div>
+
+                          {hasEventData && selectedTrade.exit_sequence != null && (
+                            <DecisionTraceTimeline trace={selectedExitTrace} />
+                          )}
                         </div>
                       </div>
                     </div>

@@ -3,11 +3,11 @@
 import React from "react";
 import { MetricRow, SectionCard, formatCurrencyValue } from "./MetricCard";
 import { IconShield } from "@tabler/icons-react";
-import type { RiskMetrics, DistributionMetric } from "@/types/strategy-actions";
+import type { RiskMetrics, DistributionMetrics } from "@/types/strategy-actions";
 
 interface RiskProfilePanelProps {
   riskMetrics: RiskMetrics;
-  distMetrics: DistributionMetric;
+  distMetrics: DistributionMetrics;
 }
 
 export function RiskProfilePanel({ riskMetrics, distMetrics }: RiskProfilePanelProps) {

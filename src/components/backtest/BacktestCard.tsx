@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import type { ApiBacktest } from "@/types/strategy-actions";
+import type { ResearchRun, BacktestSummary } from "@/types/strategy-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, YAxis } from "recharts";
@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 interface BacktestCardProps {
-  bt: ApiBacktest;
+  run: ResearchRun;
   onDelete: () => void;
   onClick?: () => void;
 }
@@ -63,46 +63,44 @@ function Metric({
   );
 }
 
-export function BacktestCard({ bt, onDelete, onClick }: BacktestCardProps) {
-  const m = bt.metrics_json || {};
-  const errorMsg = typeof m.error === "string" ? m.error : undefined;
-  const status = bt.status || "COMPLETED";
+export function BacktestCard({ run, onDelete, onClick }: BacktestCardProps) {
+  const s: BacktestSummary = (run.summary_json ?? {}) as BacktestSummary;
+  const status = run.status;
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
 
-  const profitPct = m.profit_pct ?? 0;
+  const profitPct = s.total_return_pct ?? 0;
   const isProfit = profitPct >= 0;
   const GREEN = "#22C55E";
   const RED = "#EF4444";
   const accent = isProfit ? GREEN : RED;
 
-  const fmt = (d: string) =>
-    new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const fmt = (d?: string | null) =>
+    d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
 
   let runtime = "–";
-  if (bt.started_at && bt.completed_at) {
-    const s = Math.round(
-      (new Date(bt.completed_at).getTime() - new Date(bt.started_at).getTime()) / 1000
+  if (run.started_at && run.completed_at) {
+    const seconds = Math.round(
+      (new Date(run.completed_at).getTime() - new Date(run.started_at).getTime()) / 1000
     );
-    runtime = `${s}s`;
+    runtime = `${seconds}s`;
   }
 
-  const rawCurve = bt.charting_json?.equity_curve;
-  const chartData: { i: number; v: number }[] = Array.isArray(rawCurve)
-    ? rawCurve.map((x: any, i: number) => ({ i, v: Array.isArray(x) ? x[1] : x.value }))
+  const chartData: { i: number; v: number }[] = Array.isArray(s.equity_preview)
+    ? s.equity_preview.map(([, v], i) => ({ i, v }))
     : [];
 
   // ─── FAILED ──────────────────────────────────────────────────────────────────
-  if (errorMsg || status === "FAILED") {
+  if (s.error || status === "FAILED") {
     return (
       <div className="rounded-2xl bg-card border border-destructive/30 p-5 flex flex-col gap-3 font-sans">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-bold text-foreground">{bt.name || "Backtest"}</span>
+          <span className="text-sm font-bold text-foreground">{run.name || "Backtest"}</span>
           <Badge className="bg-red-500/10 text-red-400 border-red-500/20 text-[10px] px-2">
             <IconX className="size-3 mr-1 inline" /> Failed
           </Badge>
         </div>
         <p className="text-xs text-destructive/80 bg-destructive/10 rounded-xl p-3 border border-destructive/15 line-clamp-3">
-          {errorMsg || "Simulation failed during execution."}
+          {s.error || "Simulation failed during execution."}
         </p>
         <div className="flex justify-end">
           <Button variant="outline" size="sm" onClick={onDelete}
@@ -126,21 +124,25 @@ export function BacktestCard({ bt, onDelete, onClick }: BacktestCardProps) {
           <div className="flex flex-col gap-1 min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-[13px] font-bold text-foreground tracking-tight truncate">
-                {bt.name || "Backtest Run"}
+                {run.name || "Backtest Run"}
               </span>
               <Badge className="bg-muted/80 text-muted-foreground border-transparent px-1.5 py-0 text-[9px] uppercase font-mono">
-                v{bt.strategy_version_id?.slice(0, 6) ?? "–"}
+                v{run.strategy_version_id?.slice(0, 6) ?? "–"}
               </Badge>
             </div>
             <div className="flex items-center gap-1.5 flex-wrap">
-              <Badge className="bg-primary/10 text-primary border-primary/20 px-1.5 py-0 text-[9px] font-semibold uppercase tracking-wide">
-                {bt.symbol}
-              </Badge>
-              <Badge className="bg-primary/10 text-primary border-primary/20 px-1.5 py-0 text-[9px] font-semibold uppercase tracking-wide">
-                {bt.exchange}
-              </Badge>
+              {s.symbol && (
+                <Badge className="bg-primary/10 text-primary border-primary/20 px-1.5 py-0 text-[9px] font-semibold uppercase tracking-wide">
+                  {s.symbol}
+                </Badge>
+              )}
+              {s.exchange && (
+                <Badge className="bg-primary/10 text-primary border-primary/20 px-1.5 py-0 text-[9px] font-semibold uppercase tracking-wide">
+                  {s.exchange}
+                </Badge>
+              )}
               <span className="text-[9px] text-muted-foreground/50">
-                {fmt(bt.start_date)} → {fmt(bt.end_date)}
+                {fmt(s.start_date)} → {fmt(s.end_date)}
               </span>
             </div>
           </div>
@@ -190,13 +192,13 @@ export function BacktestCard({ bt, onDelete, onClick }: BacktestCardProps) {
           </div>
         </div>
 
-        {/* ── EQUITY CHART — visual context directly under header ── */}
+        {/* ── EQUITY CHART ── */}
         <div className="relative h-[100px] w-full border-t border-border/30 bg-muted/5">
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
                 <defs>
-                  <linearGradient id={`g-${bt.id}`} x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id={`g-${run.id}`} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%"  stopColor={accent} stopOpacity={0.2} />
                     <stop offset="95%" stopColor={accent} stopOpacity={0} />
                   </linearGradient>
@@ -218,7 +220,7 @@ export function BacktestCard({ bt, onDelete, onClick }: BacktestCardProps) {
                   stroke={accent}
                   strokeWidth={1.5}
                   fillOpacity={1}
-                  fill={`url(#g-${bt.id})`}
+                  fill={`url(#g-${run.id})`}
                   isAnimationActive={false}
                   dot={false}
                 />
@@ -231,7 +233,7 @@ export function BacktestCard({ bt, onDelete, onClick }: BacktestCardProps) {
           )}
         </div>
 
-        {/* ── HERO NUMBERS — key output after seeing the curve ── */}
+        {/* ── HERO NUMBERS ── */}
         <div className="px-5 py-3.5 flex items-center gap-6 border-t border-border/40">
           <div className="flex flex-col gap-0.5">
             <span className="text-[9px] font-semibold tracking-widest uppercase text-muted-foreground/60">
@@ -253,7 +255,7 @@ export function BacktestCard({ bt, onDelete, onClick }: BacktestCardProps) {
               Net Profit
             </span>
             <span className="text-xl font-bold tabular-nums" style={{ color: accent }}>
-              {isProfit ? "+" : "-"}${Math.abs(m.net_profit ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              {isProfit ? "+" : "-"}${Math.abs(s.net_profit ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
             </span>
           </div>
 
@@ -261,24 +263,24 @@ export function BacktestCard({ bt, onDelete, onClick }: BacktestCardProps) {
 
           <div className="flex flex-col gap-1 text-right">
             <span className="text-[10px] text-muted-foreground/60">
-              {bt.initial_capital.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })} capital
+              {(s.initial_capital ?? 0).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })} capital
             </span>
             <span className="text-[10px] text-muted-foreground/60">
-              {bt.leverage}× leverage · {runtime}
+              {s.leverage ?? 1}× leverage · {runtime}
             </span>
           </div>
         </div>
 
-        {/* ── METRICS GRID — detail layer at the bottom ── */}
+        {/* ── METRICS GRID ── */}
         <div className="px-5 pt-3 pb-4 border-t border-border/40 grid grid-cols-4 gap-x-5 gap-y-3">
-          <Metric label="Trades"        value={String(m.total_trades ?? 0)} />
-          <Metric label="Win Rate"      value={`${(m.win_rate ?? 0).toFixed(1)}%`} />
-          <Metric label="Profit Factor" value={(m.profit_factor ?? 0).toFixed(2)} />
-          <Metric label="Max Drawdown"  value={`${(m.max_drawdown ?? 0).toFixed(2)}%`} className="text-red-400" />
-          <Metric label="Sharpe"        value={(m.sharpe_ratio ?? 0).toFixed(2)} />
-          <Metric label="Sortino"       value={(m.sortino_ratio ?? 0).toFixed(2)} />
-          <Metric label="Calmar"        value={(m.calmar_ratio ?? 0).toFixed(2)} />
-          <Metric label="Expectancy"    value={`$${(m.expectancy ?? 0).toFixed(2)}`} />
+          <Metric label="Trades"        value={String(s.trade_count ?? 0)} />
+          <Metric label="Win Rate"      value={`${((s.win_rate ?? 0) * 100).toFixed(1)}%`} />
+          <Metric label="Profit Factor" value={(s.profit_factor ?? 0).toFixed(2)} />
+          <Metric label="Max Drawdown"  value={`${(s.max_drawdown_pct ?? 0).toFixed(2)}%`} className="text-red-400" />
+          <Metric label="Sharpe"        value={(s.sharpe_ratio ?? 0).toFixed(2)} />
+          <Metric label="Sortino"       value={(s.sortino_ratio ?? 0).toFixed(2)} />
+          <Metric label="Calmar"        value={(s.calmar_ratio ?? 0).toFixed(2)} />
+          <Metric label="Expectancy"    value={`$${(s.expectancy ?? 0).toFixed(2)}`} />
         </div>
       </div>
 
@@ -288,7 +290,7 @@ export function BacktestCard({ bt, onDelete, onClick }: BacktestCardProps) {
             <AlertDialogTitle>Delete this backtest run?</AlertDialogTitle>
             <AlertDialogDescription>
               This permanently removes run{" "}
-              <span className="font-mono text-foreground font-semibold">#{bt.id.slice(0, 6)}</span>{" "}
+              <span className="font-mono text-foreground font-semibold">#{run.id.slice(0, 6)}</span>{" "}
               and all its data.
             </AlertDialogDescription>
           </AlertDialogHeader>

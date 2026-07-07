@@ -10,13 +10,13 @@ import {
   IconFileSpreadsheet,
   IconChartBar,
 } from "@tabler/icons-react";
-import type { GlobalMetrics, DistributionMetric } from "@/types/strategy-actions";
+import type { GlobalMetrics, DistributionMetrics } from "@/types/strategy-actions";
 
 interface MetricsGridProps {
   profitVal: number;
   isProfit: boolean;
   globalMetrics: GlobalMetrics;
-  distMetrics: DistributionMetric;
+  distMetrics: DistributionMetrics;
   metricsJson: Record<string, number>;
 }
 
@@ -61,7 +61,7 @@ export function MetricsGrid({
             : `${(metricsJson?.win_rate ?? 0).toFixed(1)}%`
         }
         subValue={
-          distMetrics.payoff_ratio !== undefined
+          distMetrics.payoff_ratio !== undefined && distMetrics.payoff_ratio !== null
             ? `${distMetrics.payoff_ratio.toFixed(2)}x`
             : undefined
         }
