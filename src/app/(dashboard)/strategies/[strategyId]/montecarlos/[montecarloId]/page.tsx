@@ -4,7 +4,7 @@ import React, { useMemo } from "react";
 import { useParams } from "next/navigation";
 import { useStrategyMonteCarlo, useRunArtifact, useMonteCarloDataset } from "@/api-actions/hooks/strategy-hooks";
 import type { MonteCarloArtifact } from "@/types/strategy-actions";
-import type { SamplePathRow, PercentileBandRow, RealEquityRow, DistributionBinRow, DistributionMetric } from "@/types/montecarlo";
+import type { SamplePathRow, PercentileBandRow, RealEquityRow, DistributionBinRow, DistributionMetric, SimulationSummaryRow } from "@/types/montecarlo";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,7 @@ import { SpaghettiFanChart } from "./_components/SpaghettiFanChart";
 import { PercentileFanChart } from "./_components/PercentileFanChart";
 import { UnderwaterChart } from "./_components/UnderwaterChart";
 import { HistogramChart } from "./_components/HistogramChart";
+import { SimulationExplorerTable } from "./_components/SimulationExplorerTable";
 
 const DISTRIBUTION_TILES: { metric: DistributionMetric; title: string; color: string; signAware?: boolean; valueFormatter: (v: number) => string }[] = [
   { metric: "ending_return", title: "Ending Return", color: "#818cf8", signAware: true, valueFormatter: (v) => `${v.toFixed(1)}%` },
@@ -42,14 +43,6 @@ function statusBadge(status: string) {
     case "FAILED": return <Badge className="bg-red-500/10 text-red-400 border-red-500/20 text-[10px] px-2"><IconX className="size-3 mr-1 inline" /> Failed</Badge>;
     default: return <Badge className="bg-muted/80 text-muted-foreground border-transparent px-2 text-[10px]">{status}</Badge>;
   }
-}
-
-function ComingSoon({ label }: { label: string }) {
-  return (
-    <Card className="p-10 text-center text-sm text-muted-foreground">
-      {label} — coming soon.
-    </Card>
-  );
 }
 
 export default function MonteCarloDetailPage() {
@@ -86,6 +79,8 @@ export default function MonteCarloDetailPage() {
   const drawdownLoading = samplePathsLoading || percentileBandsLoading || realEquityLoading;
 
   const { data: distributionsRaw, isLoading: distributionsLoading } = useMonteCarloDataset(runId, "distributions");
+  const { data: simulationSummaryRaw, isLoading: simulationSummaryLoading } = useMonteCarloDataset(runId, "simulation_summary");
+  const simulationRows = (simulationSummaryRaw ?? []) as SimulationSummaryRow[];
   const binsByMetric = useMemo(() => {
     const map = new Map<DistributionMetric, DistributionBinRow[]>();
     for (const row of (distributionsRaw ?? []) as DistributionBinRow[]) {
@@ -238,8 +233,13 @@ export default function MonteCarloDetailPage() {
           <ProbabilityTable report={report} />
           <MonteCarloRiskPanel report={report} />
         </TabsContent>
-        <TabsContent value="simulations">
-          <ComingSoon label="Simulation Explorer" />
+        <TabsContent value="simulations" className="flex flex-col gap-5">
+          <ReportSectionLabel>Simulation Explorer</ReportSectionLabel>
+          {simulationSummaryLoading ? (
+            <Skeleton className="h-[400px] w-full rounded-xl" />
+          ) : (
+            <SimulationExplorerTable rows={simulationRows} samplePaths={samplePaths} />
+          )}
         </TabsContent>
       </Tabs>
     </div>
