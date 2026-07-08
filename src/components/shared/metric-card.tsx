@@ -19,9 +19,11 @@ interface MetricCardProps {
   color?: string;
   subValue?: string;
   icon?: React.ComponentType<{ className?: string }>;
+  /** Optional one-line explanation rendered below the value, muted and small. */
+  description?: string;
 }
 
-export function MetricCard({ title, value, color, subValue, icon: Icon }: MetricCardProps) {
+export function MetricCard({ title, value, color, subValue, icon: Icon, description }: MetricCardProps) {
   return (
     <div className="relative flex flex-col gap-3 rounded-xl bg-card border border-border/60 px-5 py-4 overflow-hidden group hover:border-border transition-colors duration-200">
       {/* Faint watermark icon */}
@@ -50,6 +52,9 @@ export function MetricCard({ title, value, color, subValue, icon: Icon }: Metric
       >
         {value}
       </span>
+      {description && (
+        <span className="text-[10px] text-muted-foreground/70 leading-snug -mt-1">{description}</span>
+      )}
     </div>
   );
 }

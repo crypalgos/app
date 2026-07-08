@@ -32,33 +32,39 @@ export function MonteCarloKpiStrip({ report }: { report: MonteCarloReport }) {
         value={prob ? fmtPct(prob.probability_profit * 100) : "—"}
         color="text-success"
         icon={IconTargetArrow}
+        description="Share of simulations ending above break-even."
       />
       <MetricCard
         title="Expected Return"
         value={fmtPct(ra.mean_return)}
         color={signClass(ra.mean_return)}
         icon={ra.mean_return >= 0 ? IconTrendingUp : IconTrendingDown}
+        description="Mean ending return across all simulations."
       />
       <MetricCard
         title="Median Return"
         value={fmtPct(s.median_return)}
         color={signClass(s.median_return)}
+        description="The typical outcome — half of simulations did better."
       />
       <MetricCard
         title="Worst Simulation"
         value={fmtPct(s.worst_return)}
         color="text-destructive"
+        description="Lowest ending return across every simulation run."
       />
       <MetricCard
         title="Best Simulation"
         value={fmtPct(s.best_return)}
         color="text-success"
+        description="Highest ending return across every simulation run."
       />
       <MetricCard
         title="Probability of Ruin"
         value={fmtPct((prob?.probability_ruin ?? s.probability_of_ruin ?? 0) * 100)}
         color={isRuinLow ? "text-success" : "text-destructive"}
         icon={IconSkull}
+        description="Share of simulations breaching the ruin threshold."
       />
     </div>
   );
@@ -67,23 +73,27 @@ export function MonteCarloKpiStrip({ report }: { report: MonteCarloReport }) {
 // ─── Return / Drawdown side-by-side panels ────────────────────────────────────
 
 export function ReturnDrawdownPanels({ report }: { report: MonteCarloReport }) {
-  const { summary: s, robustness: rob } = report;
+  const { summary: s, risk_analysis: ra, probability: prob } = report;
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <ReportCard title="Return Distribution">
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
           <StatCell label="Median Return" value={fmtPct(s.median_return)} valueClass={signClass(s.median_return)} />
-          <StatCell label="Median Sharpe" value={fmtNum(s.median_sharpe)} valueClass={signClass(s.median_sharpe)} />
+          <StatCell label="Expected Return" value={fmtPct(ra.mean_return)} valueClass={signClass(ra.mean_return)} />
           <StatCell label="Best Return" value={fmtPct(s.best_return)} valueClass="text-success" />
           <StatCell label="Worst Return" value={fmtPct(s.worst_return)} valueClass="text-destructive" />
+          <StatCell label="Median Sharpe" value={fmtNum(s.median_sharpe)} valueClass={signClass(s.median_sharpe)} />
+          <StatCell label="Return Std Dev" value={fmtPct(ra.std_return)} />
         </div>
       </ReportCard>
-      <ReportCard title="Drawdown Analysis">
+      <ReportCard title="Drawdown Summary">
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
           <StatCell label="Median Drawdown" value={fmtPct(s.median_drawdown)} valueClass="text-destructive" />
-          <StatCell label="Overfit Risk" value={rob.overfit_risk} valueClass={rob.overfit_risk === "LOW" ? "text-success" : rob.overfit_risk === "MEDIUM" ? "text-amber-500" : "text-destructive"} />
+          <StatCell label="Expected DD" value={prob ? fmtPct(prob.expected_dd) : "—"} valueClass="text-destructive" />
           <StatCell label="Best Drawdown" value={fmtPct(s.best_drawdown)} valueClass="text-success" />
           <StatCell label="Worst Drawdown" value={fmtPct(s.worst_drawdown)} valueClass="text-destructive" />
+          <StatCell label="Probability DD >20%" value={prob ? fmtPct(prob.probability_dd_gt_20 * 100) : "—"} valueClass="text-destructive" />
+          <StatCell label="Probability DD >30%" value={prob ? fmtPct(prob.probability_dd_gt_30 * 100) : "—"} valueClass="text-destructive" />
         </div>
       </ReportCard>
     </div>

@@ -92,6 +92,8 @@ export interface MonteCarloReport {
     probability_gt_10: number;
     probability_gt_20: number;
     probability_lt_neg20: number;
+    probability_dd_gt_10: number;
+    probability_dd_gt_20: number;
     probability_dd_gt_30: number;
     probability_dd_gt_50: number;
     probability_ruin: number;
@@ -146,6 +148,10 @@ export interface SimulationSummaryRow {
   calmar: number;
   omega: number;
   profit_factor: number;
+  /** p95/abs(p5) of THIS simulation's own trade pnls — distinct from the
+   * report-level risk_analysis.tail_ratio, which compares across
+   * simulations' ending returns, not within one. */
+  tail_ratio: number;
   expectancy: number;
   trade_count: number;
   win_rate: number;
@@ -160,8 +166,9 @@ export interface SimulationSummaryRow {
 }
 
 export type DistributionMetric =
-  | "ending_return" | "sharpe" | "sortino" | "profit_factor"
-  | "max_drawdown" | "recovery_steps" | "trade_count";
+  | "ending_return" | "sharpe" | "sortino" | "calmar" | "profit_factor"
+  | "max_drawdown" | "recovery_steps" | "trade_count" | "expectancy"
+  | "win_rate" | "omega" | "tail_ratio";
 
 export interface DistributionBinRow {
   metric: DistributionMetric;

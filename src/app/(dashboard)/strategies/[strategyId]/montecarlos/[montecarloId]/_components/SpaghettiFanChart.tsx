@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ComposedChart,
   Line,
@@ -12,7 +12,14 @@ import {
   ReferenceLine,
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import type { SamplePathRow, RealEquityRow } from "@/types/montecarlo";
+
+export interface SimulationHoverStats {
+  ending_return: number;
+  sharpe: number;
+  max_drawdown: number;
+}
 
 interface SpaghettiFanChartProps {
   title: string;
@@ -24,6 +31,8 @@ interface SpaghettiFanChartProps {
   medianRows: { step: number; p50: number }[];
   /** The actual backtest's real curve — the bold reference overlay. */
   realRows: RealEquityRow[];
+  /** simulation_id -> summary stats, for the hover info panel (Return/Sharpe/Max DD). */
+  simulationStats?: Map<number, SimulationHoverStats>;
   /** Subtract the step-0 value so the chart reads as cumulative P&L from 0 — used for equity, not drawdown (which already starts at 0). */
   zeroBaseline?: boolean;
   realColor?: string;
@@ -82,18 +91,39 @@ function FanTooltip({
   );
 }
 
+function ToggleChip({ active, onClick, color, label }: { active: boolean; onClick: () => void; color: string; label: string }) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-1 px-1.5 py-0.5 rounded-md transition-opacity",
+        active ? "opacity-100" : "opacity-35 hover:opacity-60"
+      )}
+    >
+      <span className="size-2 rounded-full" style={{ backgroundColor: color }} />
+      <span className="text-[10px] font-mono text-muted-foreground/70">{label}</span>
+    </button>
+  );
+}
+
 export function SpaghettiFanChart({
   title,
   sampleRows,
   field,
   medianRows,
   realRows,
+  simulationStats,
   zeroBaseline = false,
   realColor = "var(--primary)",
   realLabel = "Real Strategy",
   valueFormatter = (v) => v.toFixed(2),
   isLoading,
 }: SpaghettiFanChartProps) {
+  const [showReal, setShowReal] = useState(true);
+  const [showMedian, setShowMedian] = useState(true);
+  const [showSamples, setShowSamples] = useState(true);
+  const [hoveredSimId, setHoveredSimId] = useState<number | null>(null);
+
   const bySimulation = useMemo(() => {
     const map = new Map<number, SamplePathRow[]>();
     for (const row of sampleRows) {
@@ -132,25 +162,32 @@ export function SpaghettiFanChart({
     });
   }, [bySimulation, simIds, medianRows, realRows, field, zeroBaseline]);
 
+  const hoveredStats = hoveredSimId != null ? simulationStats?.get(hoveredSimId) : undefined;
+
   return (
-    <div className="rounded-xl bg-card border border-border/60 overflow-hidden flex flex-col">
+    <div className="rounded-xl bg-card border border-border/60 overflow-hidden flex flex-col relative">
       <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/40">
         <div className="flex items-center gap-2">
           <div className="size-2 rounded-full" style={{ backgroundColor: realColor }} />
           <h3 className="text-[13px] font-semibold text-foreground/80 tracking-wide">{title}</h3>
         </div>
-        <div className="flex items-center gap-3 text-[10px] font-mono text-muted-foreground/70">
-          <span className="flex items-center gap-1">
-            <span className="size-2 rounded-full" style={{ backgroundColor: SAMPLE_PALETTE[2] }} /> Simulated paths
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="size-2 rounded-full" style={{ backgroundColor: MEDIAN_COLOR }} /> Median
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="size-2 rounded-full" style={{ backgroundColor: realColor }} /> {realLabel}
-          </span>
+        <div className="flex items-center gap-1">
+          <ToggleChip active={showSamples} onClick={() => setShowSamples((v) => !v)} color={SAMPLE_PALETTE[2]} label="Simulations" />
+          <ToggleChip active={showMedian} onClick={() => setShowMedian((v) => !v)} color={MEDIAN_COLOR} label="Median" />
+          <ToggleChip active={showReal} onClick={() => setShowReal((v) => !v)} color={realColor} label={realLabel} />
         </div>
       </div>
+
+      {hoveredStats && hoveredSimId != null && (
+        <div className="absolute top-14 right-4 z-10 bg-popover/95 backdrop-blur-xl border border-border rounded-lg px-3 py-2 shadow-xl text-[11px] pointer-events-none">
+          <p className="font-semibold text-foreground mb-1">Simulation #{hoveredSimId}</p>
+          <div className="flex flex-col gap-0.5 text-muted-foreground font-mono">
+            <span>Return: <span className={hoveredStats.ending_return >= 0 ? "text-success" : "text-destructive"}>{(hoveredStats.ending_return * 100).toFixed(1)}%</span></span>
+            <span>Sharpe: {hoveredStats.sharpe.toFixed(2)}</span>
+            <span>Max DD: <span className="text-destructive">{hoveredStats.max_drawdown.toFixed(1)}%</span></span>
+          </div>
+        </div>
+      )}
 
       <div className="h-[340px] px-2 pb-2 pt-1">
         {isLoading ? (
@@ -182,36 +219,48 @@ export function SpaghettiFanChart({
               />
               {zeroBaseline && <ReferenceLine y={0} stroke="var(--muted-foreground)" strokeOpacity={0.6} />}
               <RechartsTooltip content={<FanTooltip realLabel={realLabel} valueFormatter={valueFormatter} />} />
-              {simIds.map((simId, i) => (
+              {showSamples &&
+                simIds.map((simId, i) => {
+                  const isHovered = hoveredSimId === simId;
+                  const isDimmed = hoveredSimId != null && !isHovered;
+                  return (
+                    <Line
+                      key={simId}
+                      type="monotone"
+                      dataKey={`sim_${simId}`}
+                      stroke={SAMPLE_PALETTE[i % SAMPLE_PALETTE.length]}
+                      strokeWidth={isHovered ? 2.5 : 1}
+                      strokeOpacity={isDimmed ? 0.05 : isHovered ? 0.9 : 0.15}
+                      dot={false}
+                      isAnimationActive={false}
+                      legendType="none"
+                      onMouseEnter={() => setHoveredSimId(simId)}
+                      onMouseLeave={() => setHoveredSimId(null)}
+                      style={{ cursor: "pointer" }}
+                    />
+                  );
+                })}
+              {showMedian && (
                 <Line
-                  key={simId}
                   type="monotone"
-                  dataKey={`sim_${simId}`}
-                  stroke={SAMPLE_PALETTE[i % SAMPLE_PALETTE.length]}
-                  strokeWidth={1}
-                  strokeOpacity={0.15}
+                  dataKey="median"
+                  stroke={MEDIAN_COLOR}
+                  strokeWidth={2}
                   dot={false}
                   isAnimationActive={false}
-                  legendType="none"
                 />
-              ))}
-              <Line
-                type="monotone"
-                dataKey="median"
-                stroke={MEDIAN_COLOR}
-                strokeWidth={2}
-                dot={false}
-                isAnimationActive={false}
-              />
-              <Line
-                type="monotone"
-                dataKey="real"
-                stroke={realColor}
-                strokeWidth={3}
-                dot={false}
-                activeDot={{ r: 4, strokeWidth: 0, fill: realColor }}
-                isAnimationActive={false}
-              />
+              )}
+              {showReal && (
+                <Line
+                  type="monotone"
+                  dataKey="real"
+                  stroke={realColor}
+                  strokeWidth={3}
+                  dot={false}
+                  activeDot={{ r: 4, strokeWidth: 0, fill: realColor }}
+                  isAnimationActive={false}
+                />
+              )}
             </ComposedChart>
           </ResponsiveContainer>
         )}
