@@ -121,6 +121,38 @@ export function MonteCarloRiskPanel({ report }: { report: MonteCarloReport }) {
   );
 }
 
+// ─── Probability table — plain stats, no charts (ADR-009 report.probability) ──
+
+export function ProbabilityTable({ report }: { report: MonteCarloReport }) {
+  const p = report.probability;
+  if (!p) return null;
+
+  const cells: { label: string; value: string; cls?: string }[] = [
+    { label: "Probability Profit", value: fmtPct(p.probability_profit * 100), cls: "text-success" },
+    { label: "Probability Loss", value: fmtPct(p.probability_loss * 100), cls: "text-destructive" },
+    { label: "Probability >10%", value: fmtPct(p.probability_gt_10 * 100), cls: "text-success" },
+    { label: "Probability >20%", value: fmtPct(p.probability_gt_20 * 100), cls: "text-success" },
+    { label: "Probability <-20%", value: fmtPct(p.probability_lt_neg20 * 100), cls: "text-destructive" },
+    { label: "Probability DD >30%", value: fmtPct(p.probability_dd_gt_30 * 100), cls: "text-destructive" },
+    { label: "Probability DD >50%", value: fmtPct(p.probability_dd_gt_50 * 100), cls: "text-destructive" },
+    { label: "Probability Ruin", value: fmtPct(p.probability_ruin * 100), cls: p.probability_ruin < 0.05 ? "text-success" : "text-destructive" },
+    { label: "Expected DD", value: fmtPct(p.expected_dd), cls: "text-destructive" },
+    { label: "Worst DD", value: fmtPct(p.worst_dd), cls: "text-destructive" },
+    { label: "VaR 95%", value: fmtPct(p.var_95), cls: signClass(p.var_95) },
+    { label: "CVaR 95%", value: fmtPct(p.cvar_95), cls: signClass(p.cvar_95) },
+  ];
+
+  return (
+    <ReportCard title="Probability">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-4">
+        {cells.map((c) => (
+          <StatCell key={c.label} label={c.label} value={c.value} valueClass={c.cls} />
+        ))}
+      </div>
+    </ReportCard>
+  );
+}
+
 // ─── Percentile distribution ───────────────────────────────────────────────────
 
 const PERCENTILE_KEYS = ["p01", "p05", "p10", "p25", "p50", "p75", "p90", "p95", "p99"] as const;

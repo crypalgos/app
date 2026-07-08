@@ -16,6 +16,7 @@ import {
   MonteCarloKpiStrip,
   ReturnDrawdownPanels,
   MonteCarloRiskPanel,
+  ProbabilityTable,
   PercentileDistribution,
   RecommendationCard,
 } from "./_components/montecarlo-report-sections";
@@ -232,11 +233,10 @@ export default function MonteCarloDetailPage() {
             ))}
           </div>
         </TabsContent>
-        <TabsContent value="probability">
-          <ReportSectionLabel>Risk</ReportSectionLabel>
-          <div className="mt-3">
-            <MonteCarloRiskPanel report={report} />
-          </div>
+        <TabsContent value="probability" className="flex flex-col gap-5">
+          <ReportSectionLabel>Probability</ReportSectionLabel>
+          <ProbabilityTable report={report} />
+          <MonteCarloRiskPanel report={report} />
         </TabsContent>
         <TabsContent value="simulations">
           <ComingSoon label="Simulation Explorer" />
