@@ -34,6 +34,11 @@ interface HistogramChartProps {
    * fabricating one). Renders a solid reference line when provided. */
   realValue?: number;
   realColor?: string;
+  /** Shown instead of the generic "No data" when bins is genuinely empty —
+   * use this to say WHY there's nothing to show (e.g. "0 of 1,000
+   * simulations recovered") rather than leaving it ambiguous between "no
+   * data" and "fetch failed". */
+  emptyMessage?: string;
 }
 
 function HistogramTooltip({
@@ -93,6 +98,7 @@ export function HistogramChart({
   signAware = false,
   realValue,
   realColor = "var(--primary)",
+  emptyMessage = "No data",
 }: HistogramChartProps) {
   const sorted = useMemo(() => [...bins].sort((a, b) => a.bin_index - b.bin_index), [bins]);
   const median = sorted[0]?.median ?? null;
@@ -126,7 +132,25 @@ export function HistogramChart({
             <Skeleton className="h-full w-full rounded-lg" />
           </div>
         ) : sorted.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-[13px] text-muted-foreground">No data</div>
+          <div className="flex h-full flex-col items-center justify-center gap-1 text-center px-6">
+            <p className="text-[13px] text-muted-foreground">{emptyMessage}</p>
+          </div>
+        ) : sorted.length === 1 ? (
+          // Degenerate case: every simulation landed on the same value (e.g.
+          // order-invariant metrics like Profit Factor under Trade Shuffle —
+          // reordering trades doesn't change their sum, so the ratio is
+          // identical across all N runs). A single bar stretched to fill the
+          // whole chart reads as a rendering bug, not "no variation" — show
+          // the shared value directly instead.
+          <div className="flex h-full flex-col items-center justify-center gap-1.5 text-center">
+            <span className="text-[11px] text-muted-foreground">No variation across simulations</span>
+            <span className="text-[26px] font-bold font-mono" style={{ color: signAware ? headerColor : color }}>
+              {valueFormatter(sorted[0].mean)}
+            </span>
+            <span className="text-[10px] text-muted-foreground/60">
+              all {sorted[0].count.toLocaleString()} simulations landed on this value
+            </span>
+          </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={sorted} margin={{ top: 8, right: 12, left: 8, bottom: 4 }}>

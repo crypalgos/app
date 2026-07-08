@@ -37,6 +37,10 @@ interface DistributionTile {
    * derivable from already-fetched curve data (see HistogramChart's
    * realValue doc comment) — "real" key into the computed real-value map. */
   realKey?: "endingReturn" | "maxDrawdown";
+  /** When bins come back empty, explain WHY rather than a bare "No data" —
+   * takes the run's total simulation count so the message can say e.g.
+   * "0 of 1,000 simulations recovered". */
+  emptyMessage?: (simulationCount: number) => string;
 }
 
 const DISTRIBUTION_TILES: DistributionTile[] = [
@@ -46,7 +50,10 @@ const DISTRIBUTION_TILES: DistributionTile[] = [
   { metric: "calmar", title: "Calmar", color: "#22d3ee", signAware: true, valueFormatter: (v) => v.toFixed(2) },
   { metric: "profit_factor", title: "Profit Factor", color: "#22d3ee", valueFormatter: (v) => v.toFixed(2) },
   { metric: "max_drawdown", title: "Max Drawdown", color: "#f87171", valueFormatter: (v) => `${v.toFixed(1)}%`, realKey: "maxDrawdown" },
-  { metric: "recovery_steps", title: "Recovery", color: "#fb923c", valueFormatter: (v) => `${v.toFixed(0)} steps` },
+  {
+    metric: "recovery_steps", title: "Recovery", color: "#fb923c", valueFormatter: (v) => `${v.toFixed(0)} steps`,
+    emptyMessage: (n) => `0 of ${n.toLocaleString()} simulations recovered to their prior peak within the horizon`,
+  },
   { metric: "trade_count", title: "Trade Count", color: "#a78bfa", valueFormatter: (v) => v.toFixed(0) },
   { metric: "expectancy", title: "Expectancy", color: "#818cf8", signAware: true, valueFormatter: (v) => v.toFixed(1) },
   { metric: "win_rate", title: "Win Rate", color: "#34d399", valueFormatter: (v) => `${v.toFixed(1)}%` },
@@ -290,6 +297,7 @@ export default function MonteCarloDetailPage() {
                 isLoading={distributionsLoading}
                 realValue={tile.realKey ? realDistributionValues?.[tile.realKey] : undefined}
                 realColor={tile.color}
+                emptyMessage={tile.emptyMessage?.(report.summary.simulation_count)}
               />
             ))}
           </div>
