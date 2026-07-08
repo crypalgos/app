@@ -13,7 +13,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { PercentileBandRow } from "@/types/montecarlo";
+import type { PercentileBandRow, RealEquityRow } from "@/types/montecarlo";
 
 interface PercentileFanChartProps {
   /** Rows already filtered to one metric ("equity" or "drawdown") by the caller. */
@@ -21,22 +21,27 @@ interface PercentileFanChartProps {
   title: string;
   color?: string;
   /** true for equity (subtract the step-0 median so it reads as cumulative
-   * P&L, matching EquityFanChart's convention) — false for drawdown, which
+   * P&L, matching SpaghettiFanChart's convention) — false for drawdown, which
    * already starts at 0 by definition. */
   zeroBaseline?: boolean;
+  /** Optional real-strategy overlay — same baseline convention as the band data. */
+  realRows?: RealEquityRow[];
+  realField?: "equity" | "drawdown";
+  realColor?: string;
   valueFormatter?: (v: number) => string;
   isLoading?: boolean;
 }
 
 interface Point {
   step: number;
+  band99: [number, number];
+  band95: [number, number];
   band90: [number, number];
   band75: [number, number];
   median: number;
-  p10: number;
-  p90: number;
-  p25: number;
-  p75: number;
+  p01: number; p05: number; p10: number; p25: number;
+  p75: number; p90: number; p95: number; p99: number;
+  real?: number;
 }
 
 function FanBandTooltip({
@@ -52,15 +57,29 @@ function FanBandTooltip({
 }) {
   if (!active || !payload?.length) return null;
   const p = payload[0].payload;
+  const rows: [string, number][] = [
+    ["P99", p.p99], ["P95", p.p95], ["P90", p.p90], ["P75", p.p75],
+  ];
   return (
     <div className="bg-popover/95 backdrop-blur-xl border border-border px-4 py-3 rounded-lg shadow-2xl min-w-[170px]">
       <p className="text-[10px] font-medium text-muted-foreground mb-1.5 tracking-wide">Step {label}</p>
       <div className="flex flex-col gap-1 text-[11px]">
-        <div className="flex justify-between gap-4"><span className="text-muted-foreground">P90</span><span className="font-mono font-medium">{valueFormatter(p.p90)}</span></div>
-        <div className="flex justify-between gap-4"><span className="text-muted-foreground">P75</span><span className="font-mono font-medium">{valueFormatter(p.p75)}</span></div>
-        <div className="flex justify-between gap-4 border-t border-border/40 pt-1 mt-0.5"><span className="text-foreground/80 font-medium">Median</span><span className="font-mono font-semibold">{valueFormatter(p.median)}</span></div>
-        <div className="flex justify-between gap-4"><span className="text-muted-foreground">P25</span><span className="font-mono font-medium">{valueFormatter(p.p25)}</span></div>
-        <div className="flex justify-between gap-4"><span className="text-muted-foreground">P10</span><span className="font-mono font-medium">{valueFormatter(p.p10)}</span></div>
+        {rows.map(([label2, val]) => (
+          <div key={label2} className="flex justify-between gap-4">
+            <span className="text-muted-foreground">{label2}</span>
+            <span className="font-mono font-medium">{valueFormatter(val)}</span>
+          </div>
+        ))}
+        <div className="flex justify-between gap-4 border-t border-border/40 pt-1 mt-0.5">
+          <span className="text-foreground/80 font-medium">Median</span>
+          <span className="font-mono font-semibold">{valueFormatter(p.median)}</span>
+        </div>
+        {([["P25", p.p25], ["P10", p.p10], ["P05", p.p05], ["P01", p.p01]] as [string, number][]).map(([label2, val]) => (
+          <div key={label2} className="flex justify-between gap-4">
+            <span className="text-muted-foreground">{label2}</span>
+            <span className="font-mono font-medium">{valueFormatter(val)}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -71,6 +90,9 @@ export function PercentileFanChart({
   title,
   color = "#818cf8",
   zeroBaseline = false,
+  realRows,
+  realField = "equity",
+  realColor = "var(--primary)",
   valueFormatter = (v) => v.toFixed(1),
   isLoading = false,
 }: PercentileFanChartProps) {
@@ -80,15 +102,16 @@ export function PercentileFanChart({
     const baseline = zeroBaseline ? (sorted[0]?.p50 ?? 0) : 0;
     return sorted.map((r) => ({
       step: r.step,
+      band99: [r.p01 - baseline, r.p99 - baseline],
+      band95: [r.p05 - baseline, r.p95 - baseline],
       band90: [r.p10 - baseline, r.p90 - baseline],
       band75: [r.p25 - baseline, r.p75 - baseline],
       median: r.p50 - baseline,
-      p10: r.p10 - baseline,
-      p90: r.p90 - baseline,
-      p25: r.p25 - baseline,
-      p75: r.p75 - baseline,
+      p01: r.p01 - baseline, p05: r.p05 - baseline, p10: r.p10 - baseline, p25: r.p25 - baseline,
+      p75: r.p75 - baseline, p90: r.p90 - baseline, p95: r.p95 - baseline, p99: r.p99 - baseline,
+      real: realRows?.[r.step] ? realRows[r.step][realField] - baseline : undefined,
     }));
-  }, [rows, zeroBaseline]);
+  }, [rows, zeroBaseline, realRows, realField]);
 
   return (
     <div className="rounded-xl bg-card border border-border/60 overflow-hidden flex flex-col">
@@ -97,13 +120,24 @@ export function PercentileFanChart({
           <div className="size-2 rounded-full" style={{ backgroundColor: color }} />
           <h3 className="text-[13px] font-semibold text-foreground/80 tracking-wide">{title}</h3>
         </div>
-        <div className="flex items-center gap-3 text-[10px] font-mono text-muted-foreground/70">
+        <div className="flex items-center gap-2.5 text-[10px] font-mono text-muted-foreground/70">
           <span className="flex items-center gap-1">
-            <span className="size-2 rounded-full" style={{ backgroundColor: color, opacity: 0.3 }} /> P10–P90
+            <span className="size-2 rounded-full" style={{ backgroundColor: color, opacity: 0.18 }} /> P1–P99
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="size-2 rounded-full" style={{ backgroundColor: color, opacity: 0.35 }} /> P5–P95
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="size-2 rounded-full" style={{ backgroundColor: color, opacity: 0.55 }} /> P25–P75
           </span>
           <span className="flex items-center gap-1">
             <span className="size-2 rounded-full" style={{ backgroundColor: color }} /> Median
           </span>
+          {realRows && (
+            <span className="flex items-center gap-1">
+              <span className="size-2 rounded-full" style={{ backgroundColor: realColor }} /> Real
+            </span>
+          )}
         </div>
       </div>
 
@@ -137,23 +171,22 @@ export function PercentileFanChart({
               />
               {zeroBaseline && <ReferenceLine y={0} stroke="var(--muted-foreground)" strokeOpacity={0.6} />}
               <RechartsTooltip content={<FanBandTooltip valueFormatter={valueFormatter} />} />
-              <Area
-                dataKey="band90"
-                stroke="none"
-                fill={color}
-                fillOpacity={0.1}
-                isAnimationActive={false}
-                activeDot={false}
-              />
-              <Area
-                dataKey="band75"
-                stroke="none"
-                fill={color}
-                fillOpacity={0.22}
-                isAnimationActive={false}
-                activeDot={false}
-              />
+              <Area dataKey="band99" stroke="none" fill={color} fillOpacity={0.08} isAnimationActive={false} activeDot={false} />
+              <Area dataKey="band95" stroke="none" fill={color} fillOpacity={0.14} isAnimationActive={false} activeDot={false} />
+              <Area dataKey="band90" stroke="none" fill={color} fillOpacity={0.2} isAnimationActive={false} activeDot={false} />
+              <Area dataKey="band75" stroke="none" fill={color} fillOpacity={0.3} isAnimationActive={false} activeDot={false} />
               <Line type="monotone" dataKey="median" stroke={color} strokeWidth={2} dot={false} isAnimationActive={false} />
+              {realRows && (
+                <Line
+                  type="monotone"
+                  dataKey="real"
+                  stroke={realColor}
+                  strokeWidth={2.5}
+                  dot={false}
+                  isAnimationActive={false}
+                  connectNulls
+                />
+              )}
             </ComposedChart>
           </ResponsiveContainer>
         )}

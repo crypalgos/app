@@ -20,9 +20,10 @@ import {
   PercentileDistribution,
   RecommendationCard,
 } from "./_components/montecarlo-report-sections";
-import { SpaghettiFanChart } from "./_components/SpaghettiFanChart";
+import { SpaghettiFanChart, type SimulationHoverStats } from "./_components/SpaghettiFanChart";
 import { PercentileFanChart } from "./_components/PercentileFanChart";
 import { UnderwaterChart } from "./_components/UnderwaterChart";
+import { RealVsMedianChart } from "./_components/RealVsMedianChart";
 import { HistogramChart } from "./_components/HistogramChart";
 import { SimulationExplorerTable } from "./_components/SimulationExplorerTable";
 
@@ -80,7 +81,7 @@ export default function MonteCarloDetailPage() {
 
   const { data: distributionsRaw, isLoading: distributionsLoading } = useMonteCarloDataset(runId, "distributions");
   const { data: simulationSummaryRaw, isLoading: simulationSummaryLoading } = useMonteCarloDataset(runId, "simulation_summary");
-  const simulationRows = (simulationSummaryRaw ?? []) as SimulationSummaryRow[];
+  const simulationRows = useMemo(() => (simulationSummaryRaw ?? []) as SimulationSummaryRow[], [simulationSummaryRaw]);
   const binsByMetric = useMemo(() => {
     const map = new Map<DistributionMetric, DistributionBinRow[]>();
     for (const row of (distributionsRaw ?? []) as DistributionBinRow[]) {
@@ -90,6 +91,14 @@ export default function MonteCarloDetailPage() {
     }
     return map;
   }, [distributionsRaw]);
+
+  const simulationStatsById = useMemo(() => {
+    const map = new Map<number, SimulationHoverStats>();
+    for (const r of simulationRows) {
+      map.set(r.simulation_id, { ending_return: r.ending_return, sharpe: r.sharpe, max_drawdown: r.max_drawdown });
+    }
+    return map;
+  }, [simulationRows]);
 
   if (runLoading || reportLoading) {
     return (
@@ -137,6 +146,7 @@ export default function MonteCarloDetailPage() {
             <h1 className="text-xl font-bold text-foreground">{run?.name || "Monte Carlo Run"}</h1>
             <p className="text-xs text-muted-foreground font-mono">
               {report.configuration.scenario_type} · {report.summary.simulation_count} simulations
+              {report.timestamp ? ` · Generated ${new Date(report.timestamp * 1000).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}` : ""}
             </p>
           </div>
         </div>
@@ -170,6 +180,7 @@ export default function MonteCarloDetailPage() {
             field="equity"
             medianRows={equityMedianRows}
             realRows={realEquity}
+            simulationStats={simulationStatsById}
             zeroBaseline
             realColor="var(--primary)"
             realLabel="Real Strategy"
@@ -181,8 +192,18 @@ export default function MonteCarloDetailPage() {
             title="Percentile Fan"
             color="#818cf8"
             zeroBaseline
+            realRows={realEquity}
+            realField="equity"
+            realColor="var(--primary)"
             valueFormatter={(v) => `${v >= 0 ? "+" : ""}$${(v / 1000).toFixed(1)}k`}
             isLoading={percentileBandsLoading}
+          />
+          <RealVsMedianChart
+            medianRows={equityMedianRows}
+            realRows={realEquity}
+            field="equity"
+            valueFormatter={(v) => `${v >= 0 ? "+" : ""}$${(v / 1000).toFixed(1)}k`}
+            isLoading={equityLoading}
           />
         </TabsContent>
 
@@ -194,6 +215,7 @@ export default function MonteCarloDetailPage() {
             field="drawdown"
             medianRows={drawdownMedianRows}
             realRows={realEquity}
+            simulationStats={simulationStatsById}
             zeroBaseline={false}
             realColor="#f87171"
             realLabel="Real Strategy"
@@ -206,11 +228,21 @@ export default function MonteCarloDetailPage() {
               title="Percentile Drawdown"
               color="#f87171"
               zeroBaseline={false}
+              realRows={realEquity}
+              realField="drawdown"
+              realColor="#f87171"
               valueFormatter={(v) => `${v.toFixed(1)}%`}
               isLoading={percentileBandsLoading}
             />
             <UnderwaterChart rows={realEquity} isLoading={realEquityLoading} />
           </div>
+          <HistogramChart
+            title="Max Drawdown Distribution"
+            bins={binsByMetric.get("max_drawdown") ?? []}
+            color="#f87171"
+            valueFormatter={(v) => `${v.toFixed(1)}%`}
+            isLoading={distributionsLoading}
+          />
         </TabsContent>
         <TabsContent value="distributions" className="flex flex-col gap-5">
           <ReportSectionLabel>Distributions</ReportSectionLabel>
