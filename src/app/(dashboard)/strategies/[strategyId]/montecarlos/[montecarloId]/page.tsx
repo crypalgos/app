@@ -27,14 +27,31 @@ import { RealVsMedianChart } from "./_components/RealVsMedianChart";
 import { HistogramChart } from "./_components/HistogramChart";
 import { SimulationExplorerTable } from "./_components/SimulationExplorerTable";
 
-const DISTRIBUTION_TILES: { metric: DistributionMetric; title: string; color: string; signAware?: boolean; valueFormatter: (v: number) => string }[] = [
-  { metric: "ending_return", title: "Ending Return", color: "#818cf8", signAware: true, valueFormatter: (v) => `${v.toFixed(1)}%` },
+interface DistributionTile {
+  metric: DistributionMetric;
+  title: string;
+  color: string;
+  signAware?: boolean;
+  valueFormatter: (v: number) => string;
+  /** Only set for metrics where the real strategy's own value is honestly
+   * derivable from already-fetched curve data (see HistogramChart's
+   * realValue doc comment) — "real" key into the computed real-value map. */
+  realKey?: "endingReturn" | "maxDrawdown";
+}
+
+const DISTRIBUTION_TILES: DistributionTile[] = [
+  { metric: "ending_return", title: "Ending Return", color: "#818cf8", signAware: true, valueFormatter: (v) => `${v.toFixed(1)}%`, realKey: "endingReturn" },
   { metric: "sharpe", title: "Sharpe", color: "#34d399", signAware: true, valueFormatter: (v) => v.toFixed(2) },
   { metric: "sortino", title: "Sortino", color: "#34d399", signAware: true, valueFormatter: (v) => v.toFixed(2) },
+  { metric: "calmar", title: "Calmar", color: "#22d3ee", signAware: true, valueFormatter: (v) => v.toFixed(2) },
   { metric: "profit_factor", title: "Profit Factor", color: "#22d3ee", valueFormatter: (v) => v.toFixed(2) },
-  { metric: "max_drawdown", title: "Max Drawdown", color: "#f87171", valueFormatter: (v) => `${v.toFixed(1)}%` },
+  { metric: "max_drawdown", title: "Max Drawdown", color: "#f87171", valueFormatter: (v) => `${v.toFixed(1)}%`, realKey: "maxDrawdown" },
   { metric: "recovery_steps", title: "Recovery", color: "#fb923c", valueFormatter: (v) => `${v.toFixed(0)} steps` },
   { metric: "trade_count", title: "Trade Count", color: "#a78bfa", valueFormatter: (v) => v.toFixed(0) },
+  { metric: "expectancy", title: "Expectancy", color: "#818cf8", signAware: true, valueFormatter: (v) => v.toFixed(1) },
+  { metric: "win_rate", title: "Win Rate", color: "#34d399", valueFormatter: (v) => `${v.toFixed(1)}%` },
+  { metric: "omega", title: "Omega", color: "#a78bfa", valueFormatter: (v) => v.toFixed(2) },
+  { metric: "tail_ratio", title: "Tail Ratio", color: "#fb923c", valueFormatter: (v) => v.toFixed(2) },
 ];
 
 function statusBadge(status: string) {
@@ -62,7 +79,7 @@ export default function MonteCarloDetailPage() {
   const { data: realEquityRaw, isLoading: realEquityLoading } = useMonteCarloDataset(runId, "real_equity");
 
   const samplePaths = (samplePathsRaw ?? []) as SamplePathRow[];
-  const realEquity = (realEquityRaw ?? []) as RealEquityRow[];
+  const realEquity = useMemo(() => (realEquityRaw ?? []) as RealEquityRow[], [realEquityRaw]);
 
   const equityBands = useMemo(
     () => ((percentileBandsRaw ?? []) as PercentileBandRow[]).filter((r) => r.metric === "equity"),
@@ -78,6 +95,19 @@ export default function MonteCarloDetailPage() {
 
   const equityLoading = samplePathsLoading || percentileBandsLoading || realEquityLoading;
   const drawdownLoading = samplePathsLoading || percentileBandsLoading || realEquityLoading;
+
+  // The real strategy's own ending return / max drawdown — plain arithmetic
+  // on the curve already fetched, not a Monte Carlo statistic. Used to mark
+  // "where does the real strategy fall" on the matching histograms.
+  const realDistributionValues = useMemo(() => {
+    if (realEquity.length === 0) return null;
+    const first = realEquity[0].equity;
+    const last = realEquity[realEquity.length - 1].equity;
+    return {
+      endingReturn: first !== 0 ? ((last - first) / first) * 100 : 0,
+      maxDrawdown: Math.max(...realEquity.map((r) => r.drawdown)),
+    };
+  }, [realEquity]);
 
   const { data: distributionsRaw, isLoading: distributionsLoading } = useMonteCarloDataset(runId, "distributions");
   const { data: simulationSummaryRaw, isLoading: simulationSummaryLoading } = useMonteCarloDataset(runId, "simulation_summary");
@@ -242,6 +272,8 @@ export default function MonteCarloDetailPage() {
             color="#f87171"
             valueFormatter={(v) => `${v.toFixed(1)}%`}
             isLoading={distributionsLoading}
+            realValue={realDistributionValues?.maxDrawdown}
+            realColor="#f87171"
           />
         </TabsContent>
         <TabsContent value="distributions" className="flex flex-col gap-5">
@@ -256,6 +288,8 @@ export default function MonteCarloDetailPage() {
                 signAware={tile.signAware}
                 valueFormatter={tile.valueFormatter}
                 isLoading={distributionsLoading}
+                realValue={tile.realKey ? realDistributionValues?.[tile.realKey] : undefined}
+                realColor={tile.color}
               />
             ))}
           </div>
@@ -270,7 +304,7 @@ export default function MonteCarloDetailPage() {
           {simulationSummaryLoading ? (
             <Skeleton className="h-[400px] w-full rounded-xl" />
           ) : (
-            <SimulationExplorerTable rows={simulationRows} samplePaths={samplePaths} />
+            <SimulationExplorerTable rows={simulationRows} samplePaths={samplePaths} realDistributionValues={realDistributionValues} />
           )}
         </TabsContent>
       </Tabs>

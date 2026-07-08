@@ -27,6 +27,13 @@ interface HistogramChartProps {
   valueFormatter?: (v: number) => string;
   /** Colors bars red/green either side of zero instead of a flat accent — useful for return-like metrics. */
   signAware?: boolean;
+  /** Where the REAL strategy's own value falls, if honestly derivable from
+   * already-fetched curve data (only for ending_return / max_drawdown today
+   * — every other metric here is a per-simulation statistic the real
+   * strategy doesn't have an equivalent single value for without
+   * fabricating one). Renders a solid reference line when provided. */
+  realValue?: number;
+  realColor?: string;
 }
 
 function HistogramTooltip({
@@ -41,13 +48,19 @@ function HistogramTooltip({
   if (!active || !payload?.length) return null;
   const bin = payload[0].payload;
   return (
-    <div className="bg-popover/95 backdrop-blur-xl border border-border px-4 py-3 rounded-lg shadow-2xl min-w-[150px]">
+    <div className="bg-popover/95 backdrop-blur-xl border border-border px-4 py-3 rounded-lg shadow-2xl min-w-[170px]">
       <p className="text-[10px] font-medium text-muted-foreground mb-1.5 tracking-wide">
         {valueFormatter(bin.bin_start)} – {valueFormatter(bin.bin_end)}
       </p>
       <div className="flex items-center gap-2">
         <span className="text-[11px] text-muted-foreground">Simulations</span>
         <span className="text-[13px] font-semibold font-mono text-foreground ml-auto tabular-nums">{bin.count}</span>
+      </div>
+      <div className="flex flex-col gap-0.5 mt-2 pt-2 border-t border-border/40 text-[10px] text-muted-foreground font-mono">
+        <div className="flex justify-between"><span>Mean</span><span>{valueFormatter(bin.mean)}</span></div>
+        <div className="flex justify-between"><span>Median</span><span>{valueFormatter(bin.median)}</span></div>
+        <div className="flex justify-between"><span>Std</span><span>{valueFormatter(bin.std)}</span></div>
+        <div className="flex justify-between"><span>P05 – P95</span><span>{valueFormatter(bin.p05)} – {valueFormatter(bin.p95)}</span></div>
       </div>
     </div>
   );
@@ -56,6 +69,21 @@ function HistogramTooltip({
 const POSITIVE_COLOR = "#34d399"; // emerald-400
 const NEGATIVE_COLOR = "#f87171"; // red-400
 
+function nearestBinIndex(sorted: DistributionBinRow[], target: number): number | null {
+  if (sorted.length === 0) return null;
+  let closest = sorted[0].bin_index;
+  let closestDist = Math.abs((sorted[0].bin_start + sorted[0].bin_end) / 2 - target);
+  for (const b of sorted) {
+    const mid = (b.bin_start + b.bin_end) / 2;
+    const dist = Math.abs(mid - target);
+    if (dist < closestDist) {
+      closest = b.bin_index;
+      closestDist = dist;
+    }
+  }
+  return closest;
+}
+
 export function HistogramChart({
   title,
   bins,
@@ -63,32 +91,22 @@ export function HistogramChart({
   isLoading = false,
   valueFormatter = (v) => v.toFixed(2),
   signAware = false,
+  realValue,
+  realColor = "var(--primary)",
 }: HistogramChartProps) {
   const sorted = useMemo(() => [...bins].sort((a, b) => a.bin_index - b.bin_index), [bins]);
-  const mean = sorted[0]?.mean ?? null;
+  const median = sorted[0]?.median ?? null;
   const totalCount = useMemo(() => sorted.reduce((sum, b) => sum + b.count, 0), [sorted]);
 
-  // Nearest bin index for the mean marker — ReferenceLine on a categorical
-  // axis needs an index, not the raw float value.
-  const meanBinIndex = useMemo(() => {
-    if (mean == null || sorted.length === 0) return null;
-    let closest = sorted[0].bin_index;
-    let closestDist = Math.abs((sorted[0].bin_start + sorted[0].bin_end) / 2 - mean);
-    for (const b of sorted) {
-      const mid = (b.bin_start + b.bin_end) / 2;
-      const dist = Math.abs(mid - mean);
-      if (dist < closestDist) {
-        closest = b.bin_index;
-        closestDist = dist;
-      }
-    }
-    return closest;
-  }, [mean, sorted]);
+  // Nearest bin index for the median/real markers — ReferenceLine on a
+  // categorical axis needs an index, not the raw float value.
+  const medianBinIndex = useMemo(() => (median != null ? nearestBinIndex(sorted, median) : null), [median, sorted]);
+  const realBinIndex = useMemo(() => (realValue != null ? nearestBinIndex(sorted, realValue) : null), [realValue, sorted]);
 
   // Green = good outcome, red = bad — matches signAware bar coloring instead
   // of always showing the same accent dot regardless of whether this run's
   // data is actually positive or negative.
-  const headerColor = signAware && mean != null ? (mean >= 0 ? POSITIVE_COLOR : NEGATIVE_COLOR) : color;
+  const headerColor = signAware && median != null ? (median >= 0 ? POSITIVE_COLOR : NEGATIVE_COLOR) : color;
 
   return (
     <div className="rounded-xl bg-card border border-border/60 overflow-hidden flex flex-col">
@@ -127,8 +145,11 @@ export function HistogramChart({
                 minTickGap={40}
               />
               <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 9, fill: "var(--muted-foreground)" }} width={28} />
-              {meanBinIndex != null && (
-                <ReferenceLine x={meanBinIndex} stroke="var(--muted-foreground)" strokeDasharray="3 3" strokeOpacity={0.5} />
+              {medianBinIndex != null && (
+                <ReferenceLine x={medianBinIndex} stroke="var(--muted-foreground)" strokeDasharray="3 3" strokeOpacity={0.5} />
+              )}
+              {realBinIndex != null && (
+                <ReferenceLine x={realBinIndex} stroke={realColor} strokeWidth={2} strokeOpacity={0.8} />
               )}
               <RechartsTooltip content={<HistogramTooltip valueFormatter={valueFormatter} />} cursor={{ fill: "var(--muted)", opacity: 0.3 }} />
               <Bar dataKey="count" radius={[2, 2, 0, 0]}>
