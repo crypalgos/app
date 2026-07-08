@@ -59,66 +59,64 @@ export interface OptimizationRunSummary {
 }
 
 // ─── Optimization Report (S3 artifact: report.msgpack.zstd) ──────────────────
+//
+// NOTE: api/.../tasks/optimization_tasks.py builds this payload directly via
+// crypalgos_core.optimization.build_leaderboard() + the raw best
+// OptimizationResult — it does NOT use crypalgos_core's richer
+// OptimizationReport/build_optimization_report() (that path is currently
+// unused/dead code). These types match the actual flat wire shape, not the
+// unused rich one — verified against a real API response.
 
-export interface OptimizationResultEntry {
+export interface OptimizationLeaderboardEntry {
   rank: number;
-  score: number;
-  params: Record<string, unknown>;
-  metrics: {
-    net_profit: number;
-    profit_pct: number;
-    max_drawdown: number;
-    max_drawdown_pct: number;
-    sharpe_ratio: number;
-    sortino_ratio: number;
-    calmar_ratio: number;
-    win_rate: number;
-    total_trades: number;
-    profit_factor: number;
-    final_balance: number;
-    expectancy: number;
-    average_trade: number;
-    recovery_factor: number;
-  };
+  /** Key is "parameters" here, but "params" on OptimizationBestResult below — genuinely inconsistent between the two, not a typo. */
+  parameters: Record<string, number>;
+  sharpe_ratio: number;
+  sortino_ratio: number;
+  calmar_ratio: number;
+  profit_factor: number;
+  net_profit: number;
+  /** Percent already (e.g. 20.25), no "_pct" suffix on this flat shape. */
+  max_drawdown: number;
+  /** Percent already (e.g. 29.66) — do not multiply by 100. */
+  win_rate: number;
+  total_trades: number;
 }
 
-export interface OptimizationReport {
-  schema_version: number;
-  run_id: string;
-  timestamp: number;
-  objective: { metric: string; direction: "maximize" | "minimize" };
-  optimizer: {
-    algorithm: "grid_search" | "random_search";
-    version: number;
-    status: "COMPLETED";
-    total_candidates: number;
-    completed_candidates: number;
-    failed_candidates: number;
-    duration_ms: number;
-  };
-  parameter_space: Record<string, {
-    type: "integer" | "float";
-    min: number;
-    max: number;
-    step: number;
-  }>;
-  summary: {
-    best_rank: number;
-    best_score: number;
-    best_parameters: Record<string, unknown>;
-  };
-  asset_summary: Record<string, AssetSummaryItem>;
-  results: OptimizationResultEntry[];
-  parameter_sensitivity: {
-    net_profit_std: number;
-    net_profit_range: number;
-    sharpe_std: number;
-    trade_count_range: number;
-    parameter_importance: Record<string, number>;
-  };
-  asset_reports: Record<string, string>;
-  health: HealthReport;
+export interface OptimizationBestResultMetrics {
+  net_profit: number;
+  profit_pct: number;
+  max_drawdown: number;
+  max_drawdown_pct: number;
+  sharpe_ratio: number;
+  sortino_ratio: number;
+  calmar_ratio: number;
+  /** Percent already (e.g. 29.66) — do not multiply by 100. */
+  win_rate: number;
+  total_trades: number;
+  profit_factor: number;
+  final_balance: number;
+  expectancy: number;
+  average_trade: number;
+  recovery_factor: number;
+  // equity_curve intentionally omitted — OptimizationResult.equity_curve is
+  // never populated anywhere in crypalgos_core (always []); the backend no
+  // longer ships this dead field in the report payload.
 }
+
+export interface OptimizationBestResult {
+  params: Record<string, number>;
+  metrics: OptimizationBestResultMetrics;
+  rank: number;
+}
+
+// NOTE: an earlier OptimizationReport type here (schema_version/objective/
+// optimizer/parameter_space/results[]/parameter_sensitivity/health) modeled
+// crypalgos_core.workspace.reporting_models.OptimizationReport — but
+// api/optimization_tasks.py never actually builds or serves that shape (it
+// calls build_leaderboard() + raw OptimizationResult directly instead, see
+// OptimizationLeaderboardEntry/OptimizationBestResult above). Removed rather
+// than left around as a plausible-looking type nothing produces.
 
 // ─── Card-level summary ──────────────────────────────────────────────────────
 
@@ -132,7 +130,7 @@ export interface OptimizationCardSummary {
 // ─── S3 artifact wrapper (what the API returns for artifact type "report") ───
 
 export interface OptimizationArtifact {
-  leaderboard: OptimizationResultEntry[];
-  best_result: OptimizationResultEntry | null;
+  leaderboard: OptimizationLeaderboardEntry[];
+  best_result: OptimizationBestResult | null;
   total_runs: number;
 }

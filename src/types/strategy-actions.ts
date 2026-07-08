@@ -63,8 +63,9 @@ export type {
   AssetSummaryItem,
   HealthReport,
   // Optimization
-  OptimizationReport,
-  OptimizationResultEntry,
+  OptimizationLeaderboardEntry,
+  OptimizationBestResult,
+  OptimizationBestResultMetrics,
   OptimizationArtifact,
   OptimizationCardSummary,
 } from "./optimization";
