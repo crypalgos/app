@@ -19,8 +19,9 @@ import {
   PercentileDistribution,
   RecommendationCard,
 } from "./_components/montecarlo-report-sections";
-import { EquityFanChart } from "./_components/EquityFanChart";
+import { SpaghettiFanChart } from "./_components/SpaghettiFanChart";
 import { PercentileFanChart } from "./_components/PercentileFanChart";
+import { UnderwaterChart } from "./_components/UnderwaterChart";
 
 function statusBadge(status: string) {
   switch (status) {
@@ -63,7 +64,14 @@ export default function MonteCarloDetailPage() {
   );
   const equityMedianRows = useMemo(() => equityBands.map((r) => ({ step: r.step, p50: r.p50 })), [equityBands]);
 
+  const drawdownBands = useMemo(
+    () => ((percentileBandsRaw ?? []) as PercentileBandRow[]).filter((r) => r.metric === "drawdown"),
+    [percentileBandsRaw]
+  );
+  const drawdownMedianRows = useMemo(() => drawdownBands.map((r) => ({ step: r.step, p50: r.p50 })), [drawdownBands]);
+
   const equityLoading = samplePathsLoading || percentileBandsLoading || realEquityLoading;
+  const drawdownLoading = samplePathsLoading || percentileBandsLoading || realEquityLoading;
 
   if (runLoading || reportLoading) {
     return (
@@ -138,10 +146,16 @@ export default function MonteCarloDetailPage() {
 
         <TabsContent value="equity" className="flex flex-col gap-5">
           <ReportSectionLabel>Equity</ReportSectionLabel>
-          <EquityFanChart
+          <SpaghettiFanChart
+            title="Equity Fan"
             sampleRows={samplePaths}
+            field="equity"
             medianRows={equityMedianRows}
-            realEquityRows={realEquity}
+            realRows={realEquity}
+            zeroBaseline
+            realColor="var(--primary)"
+            realLabel="Real Strategy"
+            valueFormatter={(v) => `${v >= 0 ? "+" : ""}$${(v / 1000).toFixed(1)}k`}
             isLoading={equityLoading}
           />
           <PercentileFanChart
@@ -154,8 +168,31 @@ export default function MonteCarloDetailPage() {
           />
         </TabsContent>
 
-        <TabsContent value="drawdown">
-          <ComingSoon label="Drawdown tab" />
+        <TabsContent value="drawdown" className="flex flex-col gap-5">
+          <ReportSectionLabel>Drawdown</ReportSectionLabel>
+          <SpaghettiFanChart
+            title="Drawdown Spaghetti"
+            sampleRows={samplePaths}
+            field="drawdown"
+            medianRows={drawdownMedianRows}
+            realRows={realEquity}
+            zeroBaseline={false}
+            realColor="#f87171"
+            realLabel="Real Strategy"
+            valueFormatter={(v) => `${v.toFixed(1)}%`}
+            isLoading={drawdownLoading}
+          />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <PercentileFanChart
+              rows={drawdownBands}
+              title="Percentile Drawdown"
+              color="#f87171"
+              zeroBaseline={false}
+              valueFormatter={(v) => `${v.toFixed(1)}%`}
+              isLoading={percentileBandsLoading}
+            />
+            <UnderwaterChart rows={realEquity} isLoading={realEquityLoading} />
+          </div>
         </TabsContent>
         <TabsContent value="distributions">
           <ComingSoon label="Distributions tab" />
