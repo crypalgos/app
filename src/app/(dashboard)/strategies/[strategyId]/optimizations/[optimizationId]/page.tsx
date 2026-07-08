@@ -3,7 +3,7 @@
 import React from "react";
 import { useParams } from "next/navigation";
 import { useStrategyOptimization, useRunArtifact } from "@/api-actions/hooks/strategy-hooks";
-import type { OptimizationArtifact, OptimizationResultEntry } from "@/types/strategy-actions";
+import type { OptimizationArtifact, OptimizationLeaderboardEntry } from "@/types/strategy-actions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -83,7 +83,7 @@ export default function OptimizationDetailPage() {
 
       {/* KPI Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <MetricCard label="Best Score" value={(bestResult?.score ?? 0).toFixed(4)} />
+        <MetricCard label="Net Profit" value={`$${(bestResult?.metrics.net_profit ?? 0).toLocaleString()}`} className="text-emerald-400" />
         <MetricCard label="Total Runs" value={String(totalRuns)} />
         <MetricCard label="Sharpe" value={(bestResult?.metrics.sharpe_ratio ?? 0).toFixed(3)} />
         <MetricCard label="Best Rank" value={`#${bestResult?.rank ?? "—"}`} />
@@ -113,7 +113,7 @@ export default function OptimizationDetailPage() {
             <MetricCard label="Return" value={`${bestResult.metrics.profit_pct.toFixed(2)}%`} className="text-emerald-400" />
             <MetricCard label="Sharpe" value={bestResult.metrics.sharpe_ratio.toFixed(3)} />
             <MetricCard label="Max Drawdown" value={`${bestResult.metrics.max_drawdown_pct.toFixed(2)}%`} className="text-red-400" />
-            <MetricCard label="Win Rate" value={`${(bestResult.metrics.win_rate * 100).toFixed(1)}%`} />
+            <MetricCard label="Win Rate" value={`${bestResult.metrics.win_rate.toFixed(1)}%`} />
             <MetricCard label="Profit Factor" value={bestResult.metrics.profit_factor.toFixed(2)} />
             <MetricCard label="Total Trades" value={String(bestResult.metrics.total_trades)} />
             <MetricCard label="Expectancy" value={`$${bestResult.metrics.expectancy.toFixed(2)}`} />
@@ -132,8 +132,8 @@ export default function OptimizationDetailPage() {
               <thead>
                 <tr className="text-left text-muted-foreground border-b border-border/40">
                   <th className="py-2 pr-3 font-semibold">Rank</th>
-                  <th className="py-2 pr-3 font-semibold">Score</th>
                   <th className="py-2 pr-3 font-semibold">Sharpe</th>
+                  <th className="py-2 pr-3 font-semibold">Sortino</th>
                   <th className="py-2 pr-3 font-semibold">Net Profit</th>
                   <th className="py-2 pr-3 font-semibold">Max DD</th>
                   <th className="py-2 pr-3 font-semibold">Win Rate</th>
@@ -142,17 +142,17 @@ export default function OptimizationDetailPage() {
                 </tr>
               </thead>
               <tbody>
-                {leaderboard.map((r: OptimizationResultEntry) => (
+                {leaderboard.map((r: OptimizationLeaderboardEntry) => (
                   <tr key={r.rank} className={cn("border-b border-border/20 hover:bg-muted/5", r.rank === 1 && "bg-emerald-500/5")}>
                     <td className="py-2 pr-3 font-mono font-bold">{r.rank}</td>
-                    <td className="py-2 pr-3 font-mono">{r.score.toFixed(4)}</td>
-                    <td className="py-2 pr-3 font-mono">{r.metrics.sharpe_ratio.toFixed(2)}</td>
-                    <td className="py-2 pr-3 font-mono text-emerald-400">${r.metrics.net_profit.toLocaleString()}</td>
-                    <td className="py-2 pr-3 font-mono text-red-400">{r.metrics.max_drawdown_pct.toFixed(1)}%</td>
-                    <td className="py-2 pr-3 font-mono">{(r.metrics.win_rate * 100).toFixed(1)}%</td>
-                    <td className="py-2 pr-3 font-mono">{r.metrics.total_trades}</td>
+                    <td className="py-2 pr-3 font-mono">{r.sharpe_ratio.toFixed(2)}</td>
+                    <td className="py-2 pr-3 font-mono">{r.sortino_ratio.toFixed(2)}</td>
+                    <td className="py-2 pr-3 font-mono text-emerald-400">${r.net_profit.toLocaleString()}</td>
+                    <td className="py-2 pr-3 font-mono text-red-400">{r.max_drawdown.toFixed(1)}%</td>
+                    <td className="py-2 pr-3 font-mono">{r.win_rate.toFixed(1)}%</td>
+                    <td className="py-2 pr-3 font-mono">{r.total_trades}</td>
                     <td className="py-2 font-mono text-[10px] text-muted-foreground">
-                      {Object.entries(r.params).map(([k, v]) => `${k}=${v}`).join(", ")}
+                      {Object.entries(r.parameters).map(([k, v]) => `${k}=${v}`).join(", ")}
                     </td>
                   </tr>
                 ))}
