@@ -14,24 +14,43 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import type { SamplePathRow, RealEquityRow } from "@/types/montecarlo";
 
-interface EquityFanChartProps {
+interface SpaghettiFanChartProps {
+  title: string;
   /** Long-format rows from sample_paths.arrow (ADR-009) — grouped client-side by simulation_id. */
   sampleRows: SamplePathRow[];
-  /** percentile_bands.arrow rows filtered to metric === "equity", for the p50 median line. */
+  /** Which curve to plot from each sample/real row. */
+  field: "equity" | "drawdown";
+  /** percentile_bands.arrow rows (already filtered to the matching metric), for the p50 median line. */
   medianRows: { step: number; p50: number }[];
-  /** The actual backtest's real equity curve — the bold "Real Strategy" overlay. */
-  realEquityRows: RealEquityRow[];
+  /** The actual backtest's real curve — the bold reference overlay. */
+  realRows: RealEquityRow[];
+  /** Subtract the step-0 value so the chart reads as cumulative P&L from 0 — used for equity, not drawdown (which already starts at 0). */
+  zeroBaseline?: boolean;
+  realColor?: string;
+  realLabel?: string;
+  valueFormatter?: (v: number) => string;
   isLoading?: boolean;
 }
 
-const REAL_COLOR = "var(--primary)"; // bold 3px reference line — the real backtest
 const MEDIAN_COLOR = "#818cf8"; // indigo-400
 const SAMPLE_PALETTE = [
   "#f87171", "#fb923c", "#fbbf24", "#a3e635", "#34d399",
   "#2dd4bf", "#22d3ee", "#60a5fa", "#a78bfa", "#f472b6",
 ];
 
-function FanTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number; dataKey: string }[]; label?: number }) {
+function FanTooltip({
+  active,
+  payload,
+  label,
+  realLabel,
+  valueFormatter,
+}: {
+  active?: boolean;
+  payload?: { value: number; dataKey: string }[];
+  label?: number;
+  realLabel: string;
+  valueFormatter: (v: number) => string;
+}) {
   if (!active || !payload?.length) return null;
   const real = payload.find((p) => p.dataKey === "real");
   const median = payload.find((p) => p.dataKey === "median");
@@ -40,19 +59,19 @@ function FanTooltip({ active, payload, label }: { active?: boolean; payload?: { 
       <p className="text-[10px] font-medium text-muted-foreground mb-1.5 tracking-wide">Step {label}</p>
       {real && (
         <div className="flex items-center gap-2">
-          <div className="size-1.5 rounded-full shrink-0" style={{ backgroundColor: REAL_COLOR }} />
-          <span className="text-[11px] text-muted-foreground">Real Strategy</span>
+          <div className="size-1.5 rounded-full shrink-0 bg-primary" />
+          <span className="text-[11px] text-muted-foreground">{realLabel}</span>
           <span className="text-[13px] font-semibold font-mono text-foreground ml-auto tabular-nums">
-            {real.value >= 0 ? "+" : ""}${real.value.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            {valueFormatter(real.value)}
           </span>
         </div>
       )}
       {median && (
         <div className="flex items-center gap-2 mt-1">
           <div className="size-1.5 rounded-full shrink-0" style={{ backgroundColor: MEDIAN_COLOR }} />
-          <span className="text-[11px] text-muted-foreground">Median P&amp;L</span>
+          <span className="text-[11px] text-muted-foreground">Median</span>
           <span className="text-[13px] font-semibold font-mono text-foreground ml-auto tabular-nums">
-            {median.value >= 0 ? "+" : ""}${median.value.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            {valueFormatter(median.value)}
           </span>
         </div>
       )}
@@ -63,7 +82,18 @@ function FanTooltip({ active, payload, label }: { active?: boolean; payload?: { 
   );
 }
 
-export function EquityFanChart({ sampleRows, medianRows, realEquityRows, isLoading }: EquityFanChartProps) {
+export function SpaghettiFanChart({
+  title,
+  sampleRows,
+  field,
+  medianRows,
+  realRows,
+  zeroBaseline = false,
+  realColor = "var(--primary)",
+  realLabel = "Real Strategy",
+  valueFormatter = (v) => v.toFixed(2),
+  isLoading,
+}: SpaghettiFanChartProps) {
   const bySimulation = useMemo(() => {
     const map = new Map<number, SamplePathRow[]>();
     for (const row of sampleRows) {
@@ -82,34 +112,32 @@ export function EquityFanChart({ sampleRows, medianRows, realEquityRows, isLoadi
       0,
       ...Array.from(bySimulation.values()).map((arr) => arr.length),
       medianRows.length,
-      realEquityRows.length
+      realRows.length
     );
     if (stepCount === 0) return [];
 
-    // Every path (real, median, simulated) starts at the same initial
-    // capital — use that as the zero baseline so the chart reads as
-    // cumulative profit/loss, not absolute equity.
-    const baseline =
-      realEquityRows[0]?.equity ?? medianRows[0]?.p50 ?? bySimulation.get(simIds[0])?.[0]?.equity ?? 0;
+    const baseline = zeroBaseline
+      ? realRows[0]?.[field] ?? medianRows[0]?.p50 ?? bySimulation.get(simIds[0])?.[0]?.[field] ?? 0
+      : 0;
 
     return Array.from({ length: stepCount }, (_, i) => {
       const row: Record<string, number> = { step: i };
       for (const simId of simIds) {
-        const v = bySimulation.get(simId)?.[i]?.equity;
+        const v = bySimulation.get(simId)?.[i]?.[field];
         if (v != null) row[`sim_${simId}`] = v - baseline;
       }
       if (medianRows[i]) row.median = medianRows[i].p50 - baseline;
-      if (realEquityRows[i]) row.real = realEquityRows[i].equity - baseline;
+      if (realRows[i]) row.real = realRows[i][field] - baseline;
       return row;
     });
-  }, [bySimulation, simIds, medianRows, realEquityRows]);
+  }, [bySimulation, simIds, medianRows, realRows, field, zeroBaseline]);
 
   return (
     <div className="rounded-xl bg-card border border-border/60 overflow-hidden flex flex-col">
       <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/40">
         <div className="flex items-center gap-2">
-          <div className="size-2 rounded-full" style={{ backgroundColor: REAL_COLOR }} />
-          <h3 className="text-[13px] font-semibold text-foreground/80 tracking-wide">Equity Fan</h3>
+          <div className="size-2 rounded-full" style={{ backgroundColor: realColor }} />
+          <h3 className="text-[13px] font-semibold text-foreground/80 tracking-wide">{title}</h3>
         </div>
         <div className="flex items-center gap-3 text-[10px] font-mono text-muted-foreground/70">
           <span className="flex items-center gap-1">
@@ -119,12 +147,12 @@ export function EquityFanChart({ sampleRows, medianRows, realEquityRows, isLoadi
             <span className="size-2 rounded-full" style={{ backgroundColor: MEDIAN_COLOR }} /> Median
           </span>
           <span className="flex items-center gap-1">
-            <span className="size-2 rounded-full" style={{ backgroundColor: REAL_COLOR }} /> Real Strategy
+            <span className="size-2 rounded-full" style={{ backgroundColor: realColor }} /> {realLabel}
           </span>
         </div>
       </div>
 
-      <div className="h-[360px] px-2 pb-2 pt-1">
+      <div className="h-[340px] px-2 pb-2 pt-1">
         {isLoading ? (
           <div className="flex h-full items-end px-4 pb-4">
             <Skeleton className="h-full w-full rounded-lg" />
@@ -149,11 +177,11 @@ export function EquityFanChart({ sampleRows, medianRows, realEquityRows, isLoadi
                 tickLine={false}
                 axisLine={false}
                 tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
-                tickFormatter={(v) => `${v >= 0 ? "+" : ""}$${(v / 1000).toFixed(1)}k`}
+                tickFormatter={valueFormatter}
                 width={56}
               />
-              <ReferenceLine y={0} stroke="var(--muted-foreground)" strokeOpacity={0.6} />
-              <RechartsTooltip content={<FanTooltip />} />
+              {zeroBaseline && <ReferenceLine y={0} stroke="var(--muted-foreground)" strokeOpacity={0.6} />}
+              <RechartsTooltip content={<FanTooltip realLabel={realLabel} valueFormatter={valueFormatter} />} />
               {simIds.map((simId, i) => (
                 <Line
                   key={simId}
@@ -178,10 +206,10 @@ export function EquityFanChart({ sampleRows, medianRows, realEquityRows, isLoadi
               <Line
                 type="monotone"
                 dataKey="real"
-                stroke={REAL_COLOR}
+                stroke={realColor}
                 strokeWidth={3}
                 dot={false}
-                activeDot={{ r: 4, strokeWidth: 0, fill: REAL_COLOR }}
+                activeDot={{ r: 4, strokeWidth: 0, fill: realColor }}
                 isAnimationActive={false}
               />
             </ComposedChart>
