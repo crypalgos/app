@@ -4,7 +4,7 @@ import React, { useMemo } from "react";
 import { useParams } from "next/navigation";
 import { useStrategyMonteCarlo, useRunArtifact, useMonteCarloDataset } from "@/api-actions/hooks/strategy-hooks";
 import type { MonteCarloArtifact } from "@/types/strategy-actions";
-import type { SamplePathRow, PercentileBandRow, RealEquityRow } from "@/types/montecarlo";
+import type { SamplePathRow, PercentileBandRow, RealEquityRow, DistributionBinRow, DistributionMetric } from "@/types/montecarlo";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,17 @@ import {
 import { SpaghettiFanChart } from "./_components/SpaghettiFanChart";
 import { PercentileFanChart } from "./_components/PercentileFanChart";
 import { UnderwaterChart } from "./_components/UnderwaterChart";
+import { HistogramChart } from "./_components/HistogramChart";
+
+const DISTRIBUTION_TILES: { metric: DistributionMetric; title: string; color: string; signAware?: boolean; valueFormatter: (v: number) => string }[] = [
+  { metric: "ending_return", title: "Ending Return", color: "#818cf8", signAware: true, valueFormatter: (v) => `${v.toFixed(1)}%` },
+  { metric: "sharpe", title: "Sharpe", color: "#34d399", signAware: true, valueFormatter: (v) => v.toFixed(2) },
+  { metric: "sortino", title: "Sortino", color: "#34d399", signAware: true, valueFormatter: (v) => v.toFixed(2) },
+  { metric: "profit_factor", title: "Profit Factor", color: "#22d3ee", valueFormatter: (v) => v.toFixed(2) },
+  { metric: "max_drawdown", title: "Max Drawdown", color: "#f87171", valueFormatter: (v) => `${v.toFixed(1)}%` },
+  { metric: "recovery_steps", title: "Recovery", color: "#fb923c", valueFormatter: (v) => `${v.toFixed(0)} steps` },
+  { metric: "trade_count", title: "Trade Count", color: "#a78bfa", valueFormatter: (v) => v.toFixed(0) },
+];
 
 function statusBadge(status: string) {
   switch (status) {
@@ -72,6 +83,17 @@ export default function MonteCarloDetailPage() {
 
   const equityLoading = samplePathsLoading || percentileBandsLoading || realEquityLoading;
   const drawdownLoading = samplePathsLoading || percentileBandsLoading || realEquityLoading;
+
+  const { data: distributionsRaw, isLoading: distributionsLoading } = useMonteCarloDataset(runId, "distributions");
+  const binsByMetric = useMemo(() => {
+    const map = new Map<DistributionMetric, DistributionBinRow[]>();
+    for (const row of (distributionsRaw ?? []) as DistributionBinRow[]) {
+      const arr = map.get(row.metric);
+      if (arr) arr.push(row);
+      else map.set(row.metric, [row]);
+    }
+    return map;
+  }, [distributionsRaw]);
 
   if (runLoading || reportLoading) {
     return (
@@ -194,8 +216,21 @@ export default function MonteCarloDetailPage() {
             <UnderwaterChart rows={realEquity} isLoading={realEquityLoading} />
           </div>
         </TabsContent>
-        <TabsContent value="distributions">
-          <ComingSoon label="Distributions tab" />
+        <TabsContent value="distributions" className="flex flex-col gap-5">
+          <ReportSectionLabel>Distributions</ReportSectionLabel>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {DISTRIBUTION_TILES.map((tile) => (
+              <HistogramChart
+                key={tile.metric}
+                title={tile.title}
+                bins={binsByMetric.get(tile.metric) ?? []}
+                color={tile.color}
+                signAware={tile.signAware}
+                valueFormatter={tile.valueFormatter}
+                isLoading={distributionsLoading}
+              />
+            ))}
+          </div>
         </TabsContent>
         <TabsContent value="probability">
           <ReportSectionLabel>Risk</ReportSectionLabel>
