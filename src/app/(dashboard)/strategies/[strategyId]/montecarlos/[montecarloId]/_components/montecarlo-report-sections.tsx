@@ -143,6 +143,8 @@ export function ProbabilityTable({ report }: { report: MonteCarloReport }) {
     { label: "Probability >10%", value: fmtPct(p.probability_gt_10 * 100), cls: "text-success" },
     { label: "Probability >20%", value: fmtPct(p.probability_gt_20 * 100), cls: "text-success" },
     { label: "Probability <-20%", value: fmtPct(p.probability_lt_neg20 * 100), cls: "text-destructive" },
+    { label: "Probability DD >10%", value: fmtPct(p.probability_dd_gt_10 * 100), cls: "text-destructive" },
+    { label: "Probability DD >20%", value: fmtPct(p.probability_dd_gt_20 * 100), cls: "text-destructive" },
     { label: "Probability DD >30%", value: fmtPct(p.probability_dd_gt_30 * 100), cls: "text-destructive" },
     { label: "Probability DD >50%", value: fmtPct(p.probability_dd_gt_50 * 100), cls: "text-destructive" },
     { label: "Probability Ruin", value: fmtPct(p.probability_ruin * 100), cls: p.probability_ruin < 0.05 ? "text-success" : "text-destructive" },
