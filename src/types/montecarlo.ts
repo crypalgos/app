@@ -15,7 +15,12 @@ export interface MonteCarloRequest {
 export interface MonteCarloRunSummary {
   median_drawdown: number;
   worst_drawdown: number;
-  probability_of_ruin: number;
+  /** Two distinct ruin definitions — do not conflate. capital_ruin_probability:
+   * equity ever fell below a fixed floor off starting capital.
+   * drawdown_ruin_probability: peak-to-trough drawdown breached the
+   * threshold (can trip without ever falling below starting capital). */
+  capital_ruin_probability: number;
+  drawdown_ruin_probability: number;
 }
 
 // ─── Monte Carlo Report (S3 artifact) ────────────────────────────────────────
@@ -43,7 +48,9 @@ export interface MonteCarloReport {
     worst_drawdown: number;
     median_sharpe: number;
     probability_of_profit: number | null;
-    probability_of_ruin: number;
+    /** See MonteCarloRunSummary — two distinct ruin definitions, not renames of the same number. */
+    capital_ruin_probability: number;
+    drawdown_ruin_probability: number;
     simulation_count: number;
   };
   asset_summary: Record<string, AssetSummaryItem>;
@@ -96,7 +103,9 @@ export interface MonteCarloReport {
     probability_dd_gt_20: number;
     probability_dd_gt_30: number;
     probability_dd_gt_50: number;
-    probability_ruin: number;
+    /** See MonteCarloRunSummary — two distinct ruin definitions, not renames of the same number. */
+    capital_ruin_probability: number;
+    drawdown_ruin_probability: number;
     expected_dd: number;
     worst_dd: number;
     var_95: number;
@@ -162,7 +171,9 @@ export interface SimulationSummaryRow {
   longest_loss_streak: number;
   /** Trade-indexed steps, not calendar days — null if never recovered. */
   recovery_steps: number | null;
-  ruin: boolean;
+  /** Peak-to-trough drawdown ruin — distinct from the report-level
+   * capital_ruin_probability (absolute equity floor off starting capital). */
+  drawdown_ruin: boolean;
 }
 
 export type DistributionMetric =
@@ -193,7 +204,7 @@ export interface RealEquityRow {
 
 export interface MonteCarloCardSummary {
   simulations_count: number;
-  risk_of_ruin_pct: number;
+  capital_ruin_risk_pct: number;
   median_return_pct: number;
   worst_case_drawdown_pct: number;
   probability_of_profit: number | null;

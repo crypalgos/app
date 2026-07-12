@@ -23,7 +23,7 @@ import type { MonteCarloReport } from "@/types/montecarlo";
 
 export function MonteCarloKpiStrip({ report }: { report: MonteCarloReport }) {
   const { summary: s, risk_analysis: ra, probability: prob } = report;
-  const isRuinLow = (prob?.probability_ruin ?? s.probability_of_ruin ?? 0) < 0.05;
+  const isRuinLow = (prob?.capital_ruin_probability ?? s.capital_ruin_probability ?? 0) < 0.05;
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
@@ -60,11 +60,11 @@ export function MonteCarloKpiStrip({ report }: { report: MonteCarloReport }) {
         description="Highest ending return across every simulation run."
       />
       <MetricCard
-        title="Probability of Ruin"
-        value={fmtPct((prob?.probability_ruin ?? s.probability_of_ruin ?? 0) * 100)}
+        title="Capital Ruin Probability"
+        value={fmtPct((prob?.capital_ruin_probability ?? s.capital_ruin_probability ?? 0) * 100)}
         color={isRuinLow ? "text-success" : "text-destructive"}
         icon={IconSkull}
-        description="Share of simulations breaching the ruin threshold."
+        description="Share of simulations where equity ever fell below the capital preservation floor."
       />
     </div>
   );
@@ -147,7 +147,8 @@ export function ProbabilityTable({ report }: { report: MonteCarloReport }) {
     { label: "Probability DD >20%", value: fmtPct(p.probability_dd_gt_20 * 100), cls: "text-destructive" },
     { label: "Probability DD >30%", value: fmtPct(p.probability_dd_gt_30 * 100), cls: "text-destructive" },
     { label: "Probability DD >50%", value: fmtPct(p.probability_dd_gt_50 * 100), cls: "text-destructive" },
-    { label: "Probability Ruin", value: fmtPct(p.probability_ruin * 100), cls: p.probability_ruin < 0.05 ? "text-success" : "text-destructive" },
+    { label: "Capital Ruin Probability", value: fmtPct(p.capital_ruin_probability * 100), cls: p.capital_ruin_probability < 0.05 ? "text-success" : "text-destructive" },
+    { label: "Drawdown Ruin Probability", value: fmtPct(p.drawdown_ruin_probability * 100), cls: p.drawdown_ruin_probability < 0.05 ? "text-success" : "text-destructive" },
     { label: "Expected DD", value: fmtPct(p.expected_dd), cls: "text-destructive" },
     { label: "Worst DD", value: fmtPct(p.worst_dd), cls: "text-destructive" },
     { label: "VaR 95%", value: fmtPct(p.var_95), cls: signClass(p.var_95) },

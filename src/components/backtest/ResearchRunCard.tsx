@@ -196,7 +196,7 @@ export function ResearchRunCard({ run, onDelete, onClick }: ResearchRunCardProps
           <div className="px-5 pt-3 pb-4 border-t border-border/40 grid grid-cols-3 gap-x-5 gap-y-3">
             <Metric label="Median DD" value={`${(m.median_drawdown ?? 0).toFixed(2)}%`} className="text-red-400" />
             <Metric label="Worst DD" value={`${(m.worst_drawdown ?? 0).toFixed(2)}%`} className="text-red-400" />
-            <Metric label="Ruin Prob." value={`${((m.probability_of_ruin ?? 0) * 100).toFixed(2)}%`} className="text-amber-400" />
+            <Metric label="Capital Ruin Prob." value={`${((m.capital_ruin_probability ?? 0) * 100).toFixed(2)}%`} className="text-amber-400" />
           </div>
         );
       }
