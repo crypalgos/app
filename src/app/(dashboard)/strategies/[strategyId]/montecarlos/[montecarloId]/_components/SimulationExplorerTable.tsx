@@ -233,9 +233,9 @@ export function SimulationExplorerTable({ rows, samplePaths, realDistributionVal
                     <Badge className="text-[9px] font-bold px-1.5 py-0 bg-muted/80 text-muted-foreground border-transparent">
                       {r.scenario_type}
                     </Badge>
-                    {r.ruin && (
+                    {r.drawdown_ruin && (
                       <Badge className="text-[9px] font-bold px-1.5 py-0 ml-1 bg-destructive/10 text-destructive border border-destructive/25">
-                        RUIN
+                        DD RUIN
                       </Badge>
                     )}
                   </td>
@@ -373,7 +373,7 @@ export function SimulationExplorerTable({ rows, samplePaths, realDistributionVal
                     <StatCell label="Longest Loss Streak" value={String(selected.longest_loss_streak)} />
                     <StatCell label="Recovery Time" value={selected.recovery_steps != null ? `${selected.recovery_steps} steps` : "Never"} />
                     <StatCell label="Trade Count" value={String(selected.trade_count)} />
-                    <StatCell label="Ruin" value={selected.ruin ? "Yes" : "No"} valueClass={selected.ruin ? "text-destructive" : "text-success"} />
+                    <StatCell label="Drawdown Ruin" value={selected.drawdown_ruin ? "Yes" : "No"} valueClass={selected.drawdown_ruin ? "text-destructive" : "text-success"} />
                     <StatCell label="Seed" value={selected.seed != null ? String(selected.seed) : "—"} />
                   </div>
 
