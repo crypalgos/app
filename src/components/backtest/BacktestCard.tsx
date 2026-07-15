@@ -19,6 +19,7 @@ import {
   IconArrowDownRight,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
+import { getCoinLogoUrl } from "@/lib/instruments";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,6 +39,8 @@ import {
 
 interface BacktestCardProps {
   run: ResearchRun;
+  /** Human-readable strategy version number, resolved from run.strategy_version_id. */
+  versionNumber?: number;
   onDelete: () => void;
   onClick?: () => void;
 }
@@ -63,7 +66,7 @@ function Metric({
   );
 }
 
-export function BacktestCard({ run, onDelete, onClick }: BacktestCardProps) {
+export function BacktestCard({ run, versionNumber, onDelete, onClick }: BacktestCardProps) {
   const s: BacktestSummary = (run.summary_json ?? {}) as BacktestSummary;
   const status = run.status;
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
@@ -112,64 +115,139 @@ export function BacktestCard({ run, onDelete, onClick }: BacktestCardProps) {
     );
   }
 
+  // ─── RUNNING / PENDING ───────────────────────────────────────────────────────
+  if (status === "RUNNING" || status === "PENDING") {
+    return (
+      <>
+        <div className="rounded-2xl bg-card border border-amber-500/20 p-5 flex flex-col gap-3 font-sans">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-bold text-foreground">{run.name || "Backtest Run"}</span>
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-400 animate-pulse">
+                <IconClock className="size-3" /> {status === "RUNNING" ? "Running" : "Pending"}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowDeleteAlert(true)}
+                className="size-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              >
+                <IconTrash className="size-3.5" />
+              </Button>
+            </div>
+          </div>
+          <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+            <div
+              className="bg-amber-500 h-1.5 rounded-full transition-all duration-500"
+              style={{ width: `${run.progress_percent ?? 0}%` }}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-muted-foreground">{run.progress_percent ?? 0}% complete</span>
+            <span className="text-[10px] text-muted-foreground">Started {fmt(run.started_at)}</span>
+          </div>
+        </div>
+
+        <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete this backtest run?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This run is still {status === "RUNNING" ? "running" : "pending"}. Deleting it removes the tracking
+                record and any partial results — it doesn&apos;t stop a task that&apos;s already executing on the worker.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={onDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </>
+    );
+  }
+
   // ─── NORMAL ──────────────────────────────────────────────────────────────────
   return (
     <>
       <div
         onClick={onClick}
-        className="group relative rounded-2xl bg-card border border-border transition-all duration-200 hover:shadow-2xl hover:-translate-y-0.5 cursor-pointer flex flex-col overflow-hidden font-sans"
+        className={cn(
+          "group relative rounded-[20px] bg-card dark:bg-[#0a0a0a] backdrop-blur-xl border transition-all duration-500 ease-out hover:-translate-y-1 cursor-pointer flex flex-col overflow-hidden font-sans min-h-[260px]",
+          "border-black/5 dark:border-[#1e1e1e]",
+          "shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] dark:shadow-none",
+          isProfit 
+            ? "hover:border-emerald-500/30 hover:shadow-[0_12px_40px_-15px_rgba(34,197,94,0.2)] dark:hover:shadow-[0_12px_40px_-15px_rgba(34,197,94,0.15)]"
+            : "hover:border-rose-500/30 hover:shadow-[0_12px_40px_-15px_rgba(244,63,94,0.2)] dark:hover:shadow-[0_12px_40px_-15px_rgba(244,63,94,0.15)]"
+        )}
       >
+        <div className={cn(
+          "absolute inset-0 bg-gradient-to-br via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 pointer-events-none",
+          isProfit ? "from-emerald-500/5" : "from-rose-500/5"
+        )} />
+
         {/* ── HEADER ── */}
-        <div className="px-5 pt-4 pb-3 flex items-start justify-between gap-3">
-          <div className="flex flex-col gap-1 min-w-0">
+        <div className="px-5 pt-5 pb-3 flex items-start justify-between gap-3 relative z-10">
+          <div className="flex flex-col gap-1.5 min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[13px] font-bold text-foreground tracking-tight truncate">
+              <span className="text-[14px] font-extrabold text-foreground tracking-tight truncate">
                 {run.name || "Backtest Run"}
               </span>
-              <Badge className="bg-muted/80 text-muted-foreground border-transparent px-1.5 py-0 text-[9px] uppercase font-mono">
-                v{run.strategy_version_id?.slice(0, 6) ?? "–"}
-              </Badge>
+              <div className="h-3 w-px bg-border/60 mx-1" />
+              <span className="text-muted-foreground/60 text-[9.5px] uppercase font-mono font-bold tracking-widest">
+                {versionNumber != null ? `v${versionNumber}` : "v–"}
+              </span>
             </div>
-            <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
               {s.symbol && (
-                <Badge className="bg-primary/10 text-primary border-primary/20 px-1.5 py-0 text-[9px] font-semibold uppercase tracking-wide">
-                  {s.symbol}
-                </Badge>
+                <div className="flex items-center gap-1.5 border border-border/60 rounded-md px-1.5 py-0.5 bg-muted/20 shadow-sm">
+                  <img 
+                    src={getCoinLogoUrl(s.symbol.replace(/USD[T]?|PERP/i, ''))} 
+                    alt={s.symbol}
+                    className="w-3.5 h-3.5 rounded-full"
+                    onError={(e) => {
+                       (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${s.symbol}&background=random`;
+                    }}
+                  />
+                  <span className="text-[9.5px] font-bold text-foreground font-mono uppercase tracking-wider pr-0.5">
+                    {s.symbol}
+                  </span>
+                </div>
               )}
               {s.exchange && (
-                <Badge className="bg-primary/10 text-primary border-primary/20 px-1.5 py-0 text-[9px] font-semibold uppercase tracking-wide">
-                  {s.exchange}
-                </Badge>
+                <div className="flex items-center gap-1 border border-border/60 rounded-md px-2 py-0.5 bg-muted/20 shadow-sm">
+                  <span className="text-[9.5px] font-bold text-muted-foreground font-mono uppercase tracking-wider">
+                    {s.exchange}
+                  </span>
+                </div>
               )}
-              <span className="text-[9px] text-muted-foreground/50">
+              <div className="h-3 w-px bg-border/60 mx-0.5" />
+              <span className="text-[9.5px] text-muted-foreground font-mono tracking-tight font-medium">
                 {fmt(s.start_date)} → {fmt(s.end_date)}
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center shrink-0 -mt-1 -mr-2">
             {status === "COMPLETED" ? (
-              <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-400">
+              <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-500 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 mr-2">
                 <IconCheck className="size-3" /> Done
               </span>
             ) : (
-              <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-400 animate-pulse">
+              <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-500 dark:text-amber-400 animate-pulse bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20 mr-2">
                 <IconClock className="size-3" /> Running
               </span>
             )}
-            <Button
-              size="sm"
-              onClick={(e) => { e.stopPropagation(); onClick?.(); }}
-              className="h-7 px-3 text-[11px] font-semibold"
-            >
-              <IconChartBar className="size-3.5 mr-1.5" /> Analyze
-            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button variant="ghost" size="icon"
-                  className="size-7 text-muted-foreground hover:text-foreground hover:bg-muted">
+                <button className="size-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all opacity-0 group-hover:opacity-100 cursor-pointer">
                   <IconDotsVertical className="size-3.5" />
-                </Button>
+                </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-40 bg-card border-border">
                 <DropdownMenuItem onClick={(e) => e.stopPropagation()} className="text-xs cursor-pointer">
@@ -192,15 +270,65 @@ export function BacktestCard({ run, onDelete, onClick }: BacktestCardProps) {
           </div>
         </div>
 
+        {/* ── HERO NUMBERS ── */}
+        <div className="px-5 pt-6 pb-2 flex items-center gap-6 flex-wrap relative z-10">
+          <div className="flex flex-col gap-1">
+            <span className="text-[9.5px] font-bold tracking-widest uppercase text-muted-foreground">
+              Total Return
+            </span>
+            <div className="flex items-center gap-1">
+              {isProfit
+                ? <IconArrowUpRight className="size-4" style={{ color: accent }} />
+                : <IconArrowDownRight className="size-4" style={{ color: accent }} />
+              }
+              <span className="text-2xl lg:text-3xl font-black tabular-nums tracking-tight" style={{ color: accent }}>
+                {isProfit ? "+" : ""}{profitPct.toFixed(2)}%
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-[9.5px] font-bold tracking-widest uppercase text-muted-foreground">
+              Net Profit
+            </span>
+            <span className="text-lg lg:text-xl font-extrabold tabular-nums tracking-tight" style={{ color: accent }}>
+              {isProfit ? "+" : "-"}${Math.abs(s.net_profit ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            </span>
+          </div>
+
+          <div className="w-px h-10 bg-border/50 ml-auto hidden sm:block" />
+
+          <div className="flex flex-col gap-1 text-right ml-auto sm:ml-0">
+            <span className="text-[10px] text-muted-foreground font-medium">
+              <span className="text-foreground/70 font-semibold">{(s.initial_capital ?? 0).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}</span> cap
+            </span>
+            <span className="text-[10px] text-muted-foreground font-medium">
+              <span className="text-foreground/70 font-semibold">{s.leverage ?? 1}×</span> lev · <span className="text-foreground/70 font-semibold">{runtime}</span>
+            </span>
+          </div>
+        </div>
+
+        {/* ── METRICS GRID ── */}
+        <div className="px-5 pt-3 pb-2 grid grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-4 relative z-10">
+          <Metric label="Trades"        value={String(s.trade_count ?? 0)} />
+          <Metric label="Win Rate"      value={`${((s.win_rate ?? 0) * 100).toFixed(1)}%`} />
+          <Metric label="Profit Factor" value={(s.profit_factor ?? 0).toFixed(2)} />
+          <Metric label="Max Drawdown"  value={`${(s.max_drawdown_pct ?? 0).toFixed(2)}%`} className="text-rose-500 dark:text-rose-400" />
+          <Metric label="Sharpe"        value={(s.sharpe_ratio ?? 0).toFixed(2)} />
+          <Metric label="Sortino"       value={(s.sortino_ratio ?? 0).toFixed(2)} />
+          <Metric label="Calmar"        value={(s.calmar_ratio ?? 0).toFixed(2)} />
+          <Metric label="Expectancy"    value={`$${(s.expectancy ?? 0).toFixed(2)}`} />
+        </div>
+
         {/* ── EQUITY CHART ── */}
-        <div className="relative h-[100px] w-full border-t border-border/30 bg-muted/5">
+        <div className="relative h-[80px] w-full mt-auto relative z-0 opacity-80 group-hover:opacity-100 transition-opacity">
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+              <AreaChart data={chartData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id={`g-${run.id}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor={accent} stopOpacity={0.2} />
-                    <stop offset="95%" stopColor={accent} stopOpacity={0} />
+                    <stop offset="0%"  stopColor={accent} stopOpacity={0.2} />
+                    <stop offset="100%" stopColor={accent} stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <YAxis domain={["auto", "auto"]} hide />
@@ -231,56 +359,6 @@ export function BacktestCard({ run, onDelete, onClick }: BacktestCardProps) {
               No equity curve
             </div>
           )}
-        </div>
-
-        {/* ── HERO NUMBERS ── */}
-        <div className="px-5 py-3.5 flex items-center gap-6 border-t border-border/40">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[9px] font-semibold tracking-widest uppercase text-muted-foreground/60">
-              Total Return
-            </span>
-            <div className="flex items-center gap-1">
-              {isProfit
-                ? <IconArrowUpRight className="size-4" style={{ color: accent }} />
-                : <IconArrowDownRight className="size-4" style={{ color: accent }} />
-              }
-              <span className="text-3xl font-black tabular-nums tracking-tight" style={{ color: accent }}>
-                {isProfit ? "+" : ""}{profitPct.toFixed(2)}%
-              </span>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[9px] font-semibold tracking-widest uppercase text-muted-foreground/60">
-              Net Profit
-            </span>
-            <span className="text-xl font-bold tabular-nums" style={{ color: accent }}>
-              {isProfit ? "+" : "-"}${Math.abs(s.net_profit ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-            </span>
-          </div>
-
-          <div className="w-px h-10 bg-border/50 ml-auto" />
-
-          <div className="flex flex-col gap-1 text-right">
-            <span className="text-[10px] text-muted-foreground/60">
-              {(s.initial_capital ?? 0).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })} capital
-            </span>
-            <span className="text-[10px] text-muted-foreground/60">
-              {s.leverage ?? 1}× leverage · {runtime}
-            </span>
-          </div>
-        </div>
-
-        {/* ── METRICS GRID ── */}
-        <div className="px-5 pt-3 pb-4 border-t border-border/40 grid grid-cols-4 gap-x-5 gap-y-3">
-          <Metric label="Trades"        value={String(s.trade_count ?? 0)} />
-          <Metric label="Win Rate"      value={`${((s.win_rate ?? 0) * 100).toFixed(1)}%`} />
-          <Metric label="Profit Factor" value={(s.profit_factor ?? 0).toFixed(2)} />
-          <Metric label="Max Drawdown"  value={`${(s.max_drawdown_pct ?? 0).toFixed(2)}%`} className="text-red-400" />
-          <Metric label="Sharpe"        value={(s.sharpe_ratio ?? 0).toFixed(2)} />
-          <Metric label="Sortino"       value={(s.sortino_ratio ?? 0).toFixed(2)} />
-          <Metric label="Calmar"        value={(s.calmar_ratio ?? 0).toFixed(2)} />
-          <Metric label="Expectancy"    value={`$${(s.expectancy ?? 0).toFixed(2)}`} />
         </div>
       </div>
 

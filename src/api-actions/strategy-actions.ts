@@ -21,6 +21,9 @@ import type {
   PaginatedWalkForwardRunsResponse,
   PaginatedMonteCarloRunsResponse,
   ApiRunReport,
+  StrategyVersion,
+  VersionDiff,
+  SaveBacktestResponse,
 } from "@/types/strategy-actions";
 
 export type {
@@ -43,6 +46,9 @@ export type {
   PaginatedWalkForwardRunsResponse,
   PaginatedMonteCarloRunsResponse,
   ApiRunReport,
+  StrategyVersion,
+  VersionDiff,
+  SaveBacktestResponse,
 };
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
@@ -70,6 +76,36 @@ export const StrategyActions = {
   ): Promise<unknown> => {
     const response = await axiosInstance.post<ApiResponse<unknown>>(
       `/strategies/${strategyId}/versions/${version}/golden`
+    );
+    return response.data.data;
+  },
+
+  /** List the full version history (newest first) for a strategy. */
+  listVersions: async (strategyId: string): Promise<StrategyVersion[]> => {
+    const response = await axiosInstance.get<ApiResponse<StrategyVersion[]>>(
+      `/strategies/${strategyId}/versions`
+    );
+    return response.data.data;
+  },
+
+  /** Restore a historical version snapshot into the current draft. */
+  restoreVersion: async (
+    strategyId: string,
+    version: number
+  ): Promise<ApiStrategy> => {
+    const response = await axiosInstance.post<ApiResponse<ApiStrategy>>(
+      `/strategies/${strategyId}/versions/${version}/restore`
+    );
+    return response.data.data;
+  },
+
+  /** Diff a historical version's compiled code against the current draft. */
+  diffVersion: async (
+    strategyId: string,
+    version: number
+  ): Promise<VersionDiff> => {
+    const response = await axiosInstance.get<ApiResponse<VersionDiff>>(
+      `/strategies/${strategyId}/versions/${version}/diff`
     );
     return response.data.data;
   },
@@ -135,19 +171,46 @@ export const StrategyActions = {
     return response.data.data;
   },
 
-  /** List all backtest runs for a strategy with pagination and filtering. */
+  /** List all backtest runs for a strategy with pagination and filtering.
+   * isTemporary defaults to false server-side (excludes Analyse-tab runs);
+   * pass true explicitly to list temporary/exploratory runs instead. */
   listBacktests: async (
     strategyId: string,
     page = 1,
     limit = 8,
     exchange?: string,
-    symbol?: string
+    symbol?: string,
+    isTemporary?: boolean
   ): Promise<PaginatedBacktestsResponse> => {
     const response = await axiosInstance.get<
       ApiResponse<PaginatedBacktestsResponse>
     >(`/strategies/${strategyId}/backtests`, {
-      params: { page, limit, exchange, symbol },
+      params: { page, limit, exchange, symbol, is_temporary: isTemporary },
     });
+    return response.data.data;
+  },
+
+  /** Promote a temporary Analyse-tab run into a permanent, saved backtest. */
+  saveBacktest: async (
+    runId: string,
+    commitMessage?: string
+  ): Promise<SaveBacktestResponse> => {
+    const response = await axiosInstance.post<ApiResponse<SaveBacktestResponse>>(
+      `/research-runs/${runId}/save`,
+      { commit_message: commitMessage }
+    );
+    return response.data.data;
+  },
+
+  /** Toggle favorite/pin status of a run (pinned temporary runs are exempt from retention cleanup). */
+  toggleRunFavorite: async (
+    runId: string,
+    isFavorite: boolean
+  ): Promise<ResearchRun> => {
+    const response = await axiosInstance.patch<ApiResponse<ResearchRun>>(
+      `/research-runs/${runId}/favorite`,
+      { is_favorite: isFavorite }
+    );
     return response.data.data;
   },
 
@@ -180,6 +243,17 @@ export const StrategyActions = {
   ): Promise<unknown[]> => {
     const response = await axiosInstance.get<ApiResponse<unknown[]>>(
       `/research-runs/${runId}/montecarlo-datasets/${datasetName}`
+    );
+    return response.data.data;
+  },
+
+  /** Fetch a walk-forward chart dataset (equity, rolling, or a per-window window_{id}_train/window_{id}_validation pair) */
+  getWalkforwardDataset: async (
+    runId: string,
+    datasetName: string
+  ): Promise<unknown[]> => {
+    const response = await axiosInstance.get<ApiResponse<unknown[]>>(
+      `/research-runs/${runId}/walkforward-datasets/${datasetName}`
     );
     return response.data.data;
   },

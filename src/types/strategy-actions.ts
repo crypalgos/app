@@ -121,6 +121,35 @@ export interface ApiStrategy {
   is_archived?: boolean;
 }
 
+// ─── Strategy version history ─────────────────────────────────────────────────
+
+export interface StrategyVersion {
+  id: string;
+  strategy_id: string;
+  version: number;
+  commit_message?: string | null;
+  canvas_json?: CanvasPayload | null;
+  source_code?: string | null;
+  compiled_code: string;
+  compiled_hash: string;
+  is_code_modified: boolean;
+  label?: string | null;
+  approval_status: string;
+  is_golden: boolean;
+  created_at: string;
+}
+
+export interface VersionDiff {
+  diff_code: string;
+  canvas_changed: boolean;
+}
+
+export interface SaveBacktestResponse {
+  run: ResearchRun;
+  created_new_version: boolean;
+  version_number: number;
+}
+
 // ─── Unified trigger response (all four engines) ─────────────────────────────
 
 export interface ResearchRunTriggerResponse {
@@ -156,6 +185,7 @@ export interface ResearchRun {
   name: string;
   description?: string | null;
   is_favorite: boolean;
+  is_temporary?: boolean;
   status: string;
   progress_percent: number;
   report_version?: string | null;

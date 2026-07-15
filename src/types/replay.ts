@@ -117,3 +117,77 @@ export interface IndicatorSnapshotRecord {
   datasource: string;
   values: Record<string, number>;
 }
+
+// ─── Replay session / window API (crypalgos_core.pipeline.replay_tree +
+//     api/app/modules/replay) — a pure read-only re-slicing layer over
+//     already-persisted workspace artifacts, never recomputed client-side. ──
+
+export interface ReplayMarker {
+  candle_index: number | null;
+  timestamp: number | null;
+  type: "entry" | "exit" | "policy" | "liquidation";
+  symbol_id: string | null;
+  sequence_number: number | null;
+}
+
+export interface ReplaySession {
+  schema_version: number;
+  engine_version: string | null;
+  created_at: string | null;
+  bar_count: number;
+  /** Window against [first_candle_index, last_candle_index] — never [0, bar_count-1];
+   * indicator warmup means candle_index rarely starts at 0. */
+  first_candle_index: number | null;
+  last_candle_index: number | null;
+  trade_count: number;
+  indicator_count: number;
+  symbols: string[];
+  datasets: string[];
+  markers: ReplayMarker[];
+  max_window_candles: number;
+}
+
+export interface ReplayCandle {
+  candle_index: number;
+  timestamp?: number;
+  open?: number;
+  high?: number;
+  low?: number;
+  close?: number;
+  volume?: number;
+  [key: string]: unknown;
+}
+
+/** A RuntimeEvent plus its nested children — build_candle_trees() output. */
+export type ReplayEventNode = RuntimeEvent & { children: ReplayEventNode[] };
+
+export interface CandleTreeGroup {
+  candle_index: number;
+  bar: ReplayEventNode | null;
+  events: ReplayEventNode[];
+  orphans: ReplayEventNode[];
+}
+
+export interface ReplayWindow {
+  schema_version: number;
+  from_candle: number;
+  to_candle: number;
+  candles: ReplayCandle[];
+  candle_trees: CandleTreeGroup[];
+  decision_traces: ConditionEvent[];
+  indicator_snapshots: IndicatorSnapshotRecord[];
+}
+
+export interface ReplayTradeDetail {
+  schema_version: number;
+  trade: Record<string, unknown>;
+  entry_candle: number | null;
+  exit_candle: number | null;
+  entry_event: RuntimeEvent | null;
+  exit_event: RuntimeEvent | null;
+  events: RuntimeEvent[];
+  entry_tree: CandleTreeGroup | null;
+  exit_tree: CandleTreeGroup | null;
+  indicators_at_entry: IndicatorSnapshotRecord[];
+  indicators_at_exit: IndicatorSnapshotRecord[];
+}

@@ -6,6 +6,7 @@ export interface UISlice {
   reactFlowInstance: ReactFlowInstance | null;
   isSynced: boolean;
   activeView: string;
+  builderTab: "build" | "analyse" | "live";
   isRunning: boolean;
   isBacktesting: boolean;
   isSaving: boolean;
@@ -32,6 +33,7 @@ export interface UISlice {
   setReactFlowInstance: (instance: ReactFlowInstance) => void;
   setIsSynced: (synced: boolean) => void;
   setActiveView: (view: string) => void;
+  setBuilderTab: (tab: "build" | "analyse" | "live") => void;
   setIsRunning: (running: boolean) => void;
   setIsBacktesting: (backtesting: boolean) => void;
   setIsSaving: (saving: boolean) => void;
@@ -65,6 +67,7 @@ export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set, get) 
   reactFlowInstance: null,
   isSynced: true,
   activeView: "canvas",
+  builderTab: "build",
   isRunning: false,
   isBacktesting: false,
   isSaving: false,
@@ -85,6 +88,7 @@ export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set, get) 
   setReactFlowInstance: (instance) => set({ reactFlowInstance: instance }),
   setIsSynced: (synced) => set({ isSynced: synced }),
   setActiveView: (activeView) => set({ activeView }),
+  setBuilderTab: (builderTab) => set({ builderTab }),
   setIsRunning: (isRunning) => set({ isRunning }),
   setIsBacktesting: (isBacktesting) => set({ isBacktesting }),
   setIsSaving: (isSaving) => set({ isSaving }),

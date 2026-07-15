@@ -31,9 +31,21 @@ import { useNodesStore } from "../store/nodes-store";
 import { useSaveCode, useStrategy, useUpdateCanvas } from "@/api-actions/hooks/strategy-hooks";
 import { QuantumOrbitLoader } from "@/components/orbit-loader/QuantumOrbitLoader";
 import Editor from "@monaco-editor/react";
-import { IconCode, IconX } from "@tabler/icons-react";
+import { IconCode, IconX, IconLayout, IconColumns, IconAlertTriangle } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import AnalyseTab from "./analyse/analyse-tab";
+import LiveTab from "./live/live-tab";
 
 // Define custom node types
 const nodeTypes = {
@@ -66,6 +78,7 @@ export default function Canvas({ strategyId }: CanvasProps) {
     reactFlowInstance,
     activeView,
     setActiveView,
+    builderTab,
     codeContent,
     setCodeContent,
     isCodeModified,
@@ -88,6 +101,11 @@ export default function Canvas({ strategyId }: CanvasProps) {
   } = useNodesStore();
   const { theme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+
+  // Canvas/Both/Code view-switch confirmation (relocated from the old
+  // toolbar's segmented control — unchanged logic, just moved with it).
+  const [viewConfirmOpen, setViewConfirmOpen] = useState(false);
+  const [pendingView, setPendingView] = useState<string | null>(null);
 
   // Split-screen drag resizing state & handlers
   const [editorWidth, setEditorWidth] = useState(600);
@@ -307,8 +325,74 @@ export default function Canvas({ strategyId }: CanvasProps) {
     <>
       <SubNav strategyId={strategyId} />
 
+      {builderTab === "analyse" ? (
+        <AnalyseTab strategyId={strategyId} />
+      ) : builderTab === "live" ? (
+        <LiveTab />
+      ) : (
+      <>
       {/* Main workspace: canvas + optional code panel side-by-side */}
       <div ref={containerRef} className="fixed inset-0 top-[68px] overflow-hidden flex">
+
+        {/* ─── Canvas / Both / Code view-mode control — floats above both
+             panes so it stays reachable even when the canvas is fully
+             collapsed in "code" view (relocated from the old toolbar). ─── */}
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30">
+          <div className="flex p-0.5 bg-card/95 backdrop-blur-sm border border-border/80 rounded-full shadow-lg">
+            <button
+              onClick={() => {
+                if (isCodeModified && activeView === "code") {
+                  setPendingView("canvas");
+                  setViewConfirmOpen(true);
+                } else {
+                  setActiveView("canvas");
+                }
+              }}
+              className={cn(
+                "flex items-center gap-1.5 h-8 px-4 rounded-full text-xs font-semibold transition-all duration-200 cursor-pointer select-none border border-transparent",
+                activeView === "canvas"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <IconLayout className="size-3.5" />
+              <span>Canvas</span>
+            </button>
+
+            <button
+              onClick={() => {
+                if (isCodeModified && activeView === "code") {
+                  setPendingView("both");
+                  setViewConfirmOpen(true);
+                } else {
+                  setActiveView("both");
+                }
+              }}
+              className={cn(
+                "flex items-center gap-1.5 h-8 px-4 rounded-full text-xs font-semibold transition-all duration-200 cursor-pointer select-none border border-transparent",
+                activeView === "both"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <IconColumns className="size-3.5" />
+              <span>Both</span>
+            </button>
+
+            <button
+              onClick={() => setActiveView("code")}
+              className={cn(
+                "flex items-center gap-1.5 h-8 px-4 rounded-full text-xs font-semibold transition-all duration-200 cursor-pointer select-none border border-transparent",
+                activeView === "code"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <IconCode className="size-3.5" />
+              <span>Code</span>
+            </button>
+          </div>
+        </div>
 
         {/* ─── Canvas area ─── */}
         <motion.div
@@ -443,6 +527,44 @@ export default function Canvas({ strategyId }: CanvasProps) {
 
       </div>
 
+      <AlertDialog open={viewConfirmOpen} onOpenChange={setViewConfirmOpen}>
+        <AlertDialogContent className="sm:max-w-[440px] border border-border/80 bg-card/95 backdrop-blur-md shadow-2xl rounded-2xl p-6">
+          <AlertDialogHeader className="gap-2.5 select-none flex flex-col items-start">
+            <div className="flex size-10 items-center justify-center rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 shadow-xs">
+              <IconAlertTriangle className="size-5" />
+            </div>
+            <AlertDialogTitle className="text-[17px] font-extrabold tracking-tight text-foreground leading-snug">
+              Confirm Visual Switch
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-muted-foreground/80 font-medium leading-relaxed mt-1 text-left">
+              {pendingView === "both"
+                ? "Warning: Exposing the canvas in split-screen mode will allow block-editing. Any block action will overwrite your custom Python code. You will lose all manual changes. Do you want to proceed?"
+                : "Warning: Leaving the code-only editor will allow block-editing. Any block action will overwrite your custom Python code. You will lose all manual changes. Do you want to proceed?"}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter className="mt-6 flex flex-row items-center justify-end gap-2.5">
+            <AlertDialogCancel
+              onClick={() => setViewConfirmOpen(false)}
+              className="h-9.5 px-5 rounded-full border border-border text-xs font-bold hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition-all duration-200 shadow-xs"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingView) {
+                  setActiveView(pendingView);
+                }
+                setViewConfirmOpen(false);
+              }}
+              className="h-9.5 px-5 rounded-full text-xs font-bold bg-red-600 hover:bg-red-500 text-white cursor-pointer shadow-md shadow-red-950/20 hover:shadow-lg hover:shadow-red-500/20 transition-all duration-200 border-0"
+            >
+              Proceed
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* ── Node Configuration — Dialog & Drawer architecture ── */}
       <StartNodeDialog />
       <DataNodeDialog />
@@ -452,6 +574,8 @@ export default function Canvas({ strategyId }: CanvasProps) {
       <PolicyGroupDrawer />
 
       <NodeCreationDialog />
+      </>
+      )}
     </>
   );
 }

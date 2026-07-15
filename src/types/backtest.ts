@@ -182,6 +182,8 @@ export interface TriggerBacktestRequest {
   start_date: string;
   end_date: string;
   initial_capital?: number;
+  /** Analyse-tab exploratory run: never bumps the strategy version until saved. */
+  temporary?: boolean;
 }
 
 export interface BacktestSummary {
