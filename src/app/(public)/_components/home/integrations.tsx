@@ -80,8 +80,8 @@ export default function IntegrationsSection() {
                     <span className="text-xs font-semibold text-foreground">{item.name}</span>
                     <span className={cn(
                       "text-[9px] font-semibold px-2 py-0.5 rounded-full",
-                      item.status === "Supported" && "bg-emerald-500/10 text-emerald-500",
-                      item.status === "Beta" && "bg-amber-500/10 text-amber-500",
+                      item.status === "Supported" && "bg-success/10 text-success",
+                      item.status === "Beta" && "bg-warning/10 text-warning",
                       item.status === "Soon" && "bg-muted text-muted-foreground"
                     )}>
                       {item.status}

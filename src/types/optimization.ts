@@ -81,6 +81,49 @@ export interface OptimizationLeaderboardEntry {
   /** Percent already (e.g. 29.66) — do not multiply by 100. */
   win_rate: number;
   total_trades: number;
+  // Previously only on best_result — now on every leaderboard row (widened
+  // build_leaderboard()) so a drill-in drawer has the full metric set.
+  profit_pct: number;
+  max_drawdown_pct: number;
+  final_balance: number;
+  expectancy: number;
+  average_trade: number;
+  recovery_factor: number;
+}
+
+// ─── Parameter Sensitivity / Stability Region / raw grid results ─────────────
+// Computed by crypalgos_core.optimization.stability.compute_stability_region()
+// and OptimizationEngine.run()'s own parameter_sensitivity tracking. Both are
+// now wired through into report_payload (were previously silently dropped).
+
+export interface ParameterSensitivity {
+  net_profit_std: number;
+  net_profit_range: number;
+  sharpe_std: number;
+  trade_count_range: number;
+}
+
+export type OptimizationHealth = "OPTIMIZATION_HEALTHY" | "OPTIMIZATION_FLAT" | "OPTIMIZATION_SUSPICIOUS";
+
+export interface StabilityRegionParam {
+  low: number;
+  high: number;
+  winning_value: number;
+  /** 0-1 fraction of the tested range that stayed within tolerance of the best score. */
+  confidence: number;
+}
+
+export interface StabilityRegion {
+  available: boolean;
+  reason?: string;
+  regions?: Record<string, StabilityRegionParam>;
+  /** 0-1, mean confidence across all swept parameters. */
+  confidence?: number;
+}
+
+export interface OptimizationAllResultRow {
+  parameters: Record<string, number>;
+  objective_score: number;
 }
 
 export interface OptimizationBestResultMetrics {
@@ -133,4 +176,10 @@ export interface OptimizationArtifact {
   leaderboard: OptimizationLeaderboardEntry[];
   best_result: OptimizationBestResult | null;
   total_runs: number;
+  parameter_sensitivity: ParameterSensitivity;
+  optimization_health: OptimizationHealth;
+  all_results: OptimizationAllResultRow[];
+  stability_region: StabilityRegion;
+  /** % return of simply holding the primary symbol over the same date range — null if it couldn't be computed. */
+  benchmark_return_pct: number | null;
 }

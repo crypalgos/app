@@ -5,25 +5,24 @@ import { cn } from "@/lib/utils";
 import { useUser, useUpdateUser } from "@/api-actions/hooks/user-hooks";
 import { useSessions, useDeleteSession, useDeleteAllSessions } from "@/api-actions/hooks/session-hooks";
 import { useRouter } from "next/navigation";
-import { 
-  User, 
-  Settings, 
-  Key, 
-  Mail, 
-  Phone, 
-  Globe, 
-  Calendar, 
-  Copy, 
-  Eye, 
-  EyeOff, 
-  Trash2, 
-  Plus, 
-  Loader2, 
+import {
+  User,
+  Settings,
+  Mail,
+  Phone,
+  Globe,
+  Calendar,
+  Trash2,
+  Plus,
+  Loader2,
   ShieldCheck,
   AlertCircle,
   ExternalLink,
   Laptop,
   CheckCircle2,
+  XCircle,
+  RefreshCw,
+  Send,
   Coins
 } from "lucide-react";
 import { toast } from "sonner";
@@ -36,29 +35,75 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { QuantumOrbitLoader } from "@/components/orbit-loader/QuantumOrbitLoader";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  EXCHANGES,
+  VERIFIABLE_EXCHANGES,
+  type Exchange as ExchangeValue,
+  type BrokerCredential,
+} from "@/api-actions/credential-actions";
+import {
+  useBrokerCredentials,
+  useSaveBrokerCredential,
+  useVerifyBrokerCredential,
+  useRotateBrokerCredential,
+  useDeleteBrokerCredential,
+} from "@/api-actions/hooks/credential-hooks";
+import {
+  useNotificationPreference,
+  useSaveNotificationPreference,
+} from "@/api-actions/hooks/notification-hooks";
 
-// Define simulated Exchange type
-interface Exchange {
-  id: string;
-  name: string;
-  logo: string;
-  connected: boolean;
-  apiKey: string;
-  secret: string;
-  color: string;
-}
+const EXCHANGE_STYLE: Record<ExchangeValue, { logo: string; color: string }> = {
+  delta: { logo: "DELTA", color: "from-primary/10 to-indigo-500/5 text-primary border-primary/20" },
+  binance: { logo: "BNB", color: "from-amber-500/10 to-yellow-500/5 text-amber-600 dark:text-amber-400 border-amber-500/20" },
+  bybit: { logo: "BYBIT", color: "from-purple-500/10 to-indigo-500/5 text-purple-600 dark:text-purple-400 border-purple-500/20" },
+  okx: { logo: "OKX", color: "from-slate-500/10 to-gray-500/5 text-slate-700 dark:text-slate-300 border-slate-500/20" },
+};
 
-// Define simulated Platform API Key type
-interface PlatformKey {
-  id: string;
-  name: string;
-  key: string;
-  scope: "Read Only" | "Read & Trade";
-  created: string;
-  visible: boolean;
+type VerifyState = "idle" | "verifying" | "success" | "unsupported" | "failed";
+
+function verifyNote(state: VerifyState, message?: string): { tone: "muted" | "success" | "warning" | "danger"; text: string } | null {
+  switch (state) {
+    case "verifying":
+      return { tone: "muted", text: "Verifying connection..." };
+    case "success":
+      return { tone: "success", text: message || "Connection verified successfully." };
+    case "unsupported":
+      return {
+        tone: "warning",
+        text: "Live verification isn't available for this exchange yet — credentials will still be saved encrypted.",
+      };
+    case "failed":
+      return { tone: "danger", text: message || "Verification failed — check your API key/secret." };
+    default:
+      return null;
+  }
 }
 
 export default function ProfilePage() {
@@ -81,37 +126,169 @@ export default function ProfilePage() {
   const [countryCode, setCountryCode] = React.useState<number>(91);
   const [validationError, setValidationError] = React.useState<string | null>(null);
 
-  // Stateful interactive API / Exchange integrations with color themes
-  const [exchanges, setExchanges] = React.useState<Exchange[]>([
-    { id: "binance", name: "Binance Exchange", logo: "BNB", connected: true, apiKey: "binance_api_key_8da194f27da9", secret: "••••••••••••••••••••••••••••", color: "from-amber-500/10 to-yellow-500/5 text-amber-600 dark:text-amber-400 border-amber-500/20" },
-    { id: "alpaca", name: "Alpaca Trading", logo: "ALP", connected: true, apiKey: "alpaca_api_key_cf381daeff83", secret: "••••••••••••••••••••••••••••", color: "from-emerald-500/10 to-teal-500/5 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" },
-    { id: "bybit", name: "Bybit", logo: "BYB", connected: false, apiKey: "", secret: "", color: "from-purple-500/10 to-indigo-500/5 text-purple-600 dark:text-purple-400 border-purple-500/20" },
-    { id: "coinbase", name: "Coinbase Advanced", logo: "COIN", connected: false, apiKey: "", secret: "", color: "from-blue-500/10 to-sky-500/5 text-blue-600 dark:text-blue-400 border-blue-500/20" },
-  ]);
+  // ── Broker credentials (real backend) ────────────────────────────────────
+  const { data: credentials, isLoading: isCredentialsLoading } = useBrokerCredentials();
+  const { mutateAsync: saveCredential, isPending: isSavingCredential } = useSaveBrokerCredential();
+  const { mutateAsync: verifyCredential } = useVerifyBrokerCredential();
+  const { mutateAsync: rotateCredential, isPending: isRotatingCredential } = useRotateBrokerCredential();
+  const { mutateAsync: deleteCredential } = useDeleteBrokerCredential();
 
-  // Stateful Platform API Keys
-  const [platformKeys, setPlatformKeys] = React.useState<PlatformKey[]>([
-    { id: "key_1", name: "Platform Dashboard Bot", key: "ca_pk_live_d813f8ae702110c4", scope: "Read & Trade", created: "2026-05-10", visible: false },
-    { id: "key_2", name: "Local Python Script", key: "ca_pk_live_38bf8cda0281ef55", scope: "Read Only", created: "2026-05-14", visible: false },
-  ]);
+  const [connectOpen, setConnectOpen] = React.useState(false);
+  const [connectExchange, setConnectExchange] = React.useState<ExchangeValue>("delta");
+  const [connectLabel, setConnectLabel] = React.useState("");
+  const [connectKey, setConnectKey] = React.useState("");
+  const [connectSecret, setConnectSecret] = React.useState("");
+  const [connectPassphrase, setConnectPassphrase] = React.useState("");
+  const [connectTestnet, setConnectTestnet] = React.useState(true);
+  const [verifyState, setVerifyState] = React.useState<VerifyState>("idle");
+  const [verifyMessage, setVerifyMessage] = React.useState<string | undefined>();
 
-  // Modals / Input states
-  const [selectedExchange, setSelectedExchange] = React.useState<Exchange | null>(null);
-  const [inputApiKey, setInputApiKey] = React.useState("");
-  const [inputApiSecret, setInputApiSecret] = React.useState("");
-  
-  // Platform Key Generation State
-  const [newKeyName, setNewKeyName] = React.useState("");
-  const [newKeyScope, setNewKeyScope] = React.useState<"Read Only" | "Read & Trade">("Read & Trade");
-  const [isGeneratingKey, setIsGeneratingKey] = React.useState(false);
-  const [generatedKeyValue, setGeneratedKeyValue] = React.useState<string | null>(null);
+  const resetConnectForm = () => {
+    setConnectExchange("delta");
+    setConnectLabel("");
+    setConnectKey("");
+    setConnectSecret("");
+    setConnectPassphrase("");
+    setConnectTestnet(true);
+    setVerifyState("idle");
+    setVerifyMessage(undefined);
+  };
+
+  const canSubmitConnect = connectLabel.trim() && connectKey.trim() && connectSecret.trim() && !isSavingCredential;
+
+  const handleConnectExchange = async () => {
+    const isVerifiable = VERIFIABLE_EXCHANGES.includes(connectExchange);
+
+    if (isVerifiable) {
+      setVerifyState("verifying");
+      try {
+        const result = await verifyCredential({
+          exchange: connectExchange,
+          api_key: connectKey,
+          api_secret: connectSecret,
+          passphrase: connectPassphrase || undefined,
+          is_testnet: connectTestnet,
+        });
+        setVerifyState(result.success ? "success" : "failed");
+        setVerifyMessage(result.message);
+      } catch {
+        setVerifyState("failed");
+      }
+    } else {
+      setVerifyState("unsupported");
+    }
+
+    try {
+      await saveCredential({
+        exchange: connectExchange,
+        account_label: connectLabel.trim(),
+        api_key: connectKey,
+        api_secret: connectSecret,
+        passphrase: connectPassphrase || undefined,
+        is_testnet: connectTestnet,
+      });
+      toast.success(
+        isVerifiable ? "Broker credentials saved." : "Saved — live verification isn't supported for this exchange yet."
+      );
+      setConnectOpen(false);
+      resetConnectForm();
+    } catch {
+      toast.error("Failed to save broker credentials.");
+    }
+  };
+
+  const [rotateTarget, setRotateTarget] = React.useState<BrokerCredential | null>(null);
+  const [rotateKey, setRotateKey] = React.useState("");
+  const [rotateSecret, setRotateSecret] = React.useState("");
+  const [rotatePassphrase, setRotatePassphrase] = React.useState("");
+
+  const openRotate = (credential: BrokerCredential) => {
+    setRotateTarget(credential);
+    setRotateKey("");
+    setRotateSecret("");
+    setRotatePassphrase("");
+  };
+
+  const handleRotateExchange = async () => {
+    if (!rotateTarget) return;
+    try {
+      await rotateCredential({
+        credentialId: rotateTarget.id,
+        data: { api_key: rotateKey, api_secret: rotateSecret, passphrase: rotatePassphrase || undefined },
+      });
+      toast.success("Keys rotated successfully.");
+      setRotateTarget(null);
+    } catch {
+      toast.error("Failed to rotate keys.");
+    }
+  };
+
+  const [deleteExchangeTarget, setDeleteExchangeTarget] = React.useState<BrokerCredential | null>(null);
+
+  const handleDisconnectExchange = async () => {
+    if (!deleteExchangeTarget) return;
+    const target = deleteExchangeTarget;
+    setDeleteExchangeTarget(null);
+    try {
+      await deleteCredential(target.id);
+      toast.success("Exchange disconnected.");
+    } catch {
+      toast.error("Failed to disconnect exchange.");
+    }
+  };
+
+  // ── Telegram / notification integrations (real backend) ──────────────────
+  const { data: notificationPref, isLoading: isNotificationPrefLoading } = useNotificationPreference();
+  const { mutate: saveNotificationPref, isPending: isSavingNotificationPref } = useSaveNotificationPreference();
+
+  const [telegramEnabled, setTelegramEnabled] = React.useState(false);
+  const [telegramChatId, setTelegramChatId] = React.useState("");
+  const [timezone, setTimezone] = React.useState("UTC");
+  const [paperAlerts, setPaperAlerts] = React.useState(true);
+  const [liveAlerts, setLiveAlerts] = React.useState(true);
+  const [stoplossAlerts, setStoplossAlerts] = React.useState(true);
+  const [tpAlerts, setTpAlerts] = React.useState(true);
+
+  React.useEffect(() => {
+    if (notificationPref) {
+      setTelegramEnabled(notificationPref.telegram_enabled);
+      setTelegramChatId(notificationPref.telegram_chat_id || "");
+      setTimezone(notificationPref.timezone || "UTC");
+      setPaperAlerts(notificationPref.paper_alerts);
+      setLiveAlerts(notificationPref.live_alerts);
+      setStoplossAlerts(notificationPref.stoploss_alerts);
+      setTpAlerts(notificationPref.tp_alerts);
+    }
+  }, [notificationPref]);
+
+  const handleSaveNotificationPref = () => {
+    if (telegramEnabled && !telegramChatId.trim()) {
+      toast.error("Enter your Telegram chat ID, or turn off Telegram alerts.");
+      return;
+    }
+    saveNotificationPref(
+      {
+        telegram_chat_id: telegramChatId.trim() || null,
+        telegram_enabled: telegramEnabled,
+        timezone,
+        paper_alerts: paperAlerts,
+        live_alerts: liveAlerts,
+        stoploss_alerts: stoplossAlerts,
+        tp_alerts: tpAlerts,
+      },
+      {
+        onSuccess: () => toast.success("Notification preferences saved."),
+        onError: () => toast.error("Failed to save notification preferences."),
+      }
+    );
+  };
 
   // Sync tab state from URL parameters safely
   React.useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get("tab");
-      if (tab && ["profile", "exchanges", "keys", "preferences", "sessions"].includes(tab)) {
+      if (tab && ["profile", "exchanges", "integrations", "sessions"].includes(tab)) {
         setActiveTab(tab);
       }
     }
@@ -182,8 +359,6 @@ export default function ProfilePage() {
     );
   }
 
-  const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`;
-
   // Interactive profile saving
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
@@ -220,93 +395,6 @@ export default function ProfilePage() {
         toast.error(err?.response?.data?.message || "Failed to update profile.");
       }
     });
-  };
-
-  // Connect Exchange Flow
-  const handleConnectExchange = () => {
-    if (!selectedExchange || !inputApiKey || !inputApiSecret) {
-      toast.error("Please enter both API Key and API Secret.");
-      return;
-    }
-
-    setExchanges(prev => prev.map(ex => {
-      if (ex.id === selectedExchange.id) {
-        return {
-          ...ex,
-          connected: true,
-          apiKey: inputApiKey,
-          secret: "••••••••••••••••"
-        };
-      }
-      return ex;
-    }));
-
-    toast.success(`${selectedExchange.name} connected successfully!`);
-    setSelectedExchange(null);
-    setInputApiKey("");
-    setInputApiSecret("");
-  };
-
-  // Disconnect Exchange Flow
-  const handleDisconnectExchange = (exId: string) => {
-    setExchanges(prev => prev.map(ex => {
-      if (ex.id === exId) {
-        return { ...ex, connected: false, apiKey: "", secret: "" };
-      }
-      return ex;
-    }));
-    toast.success("Exchange disconnected successfully.");
-  };
-
-  // Generate Platform API Key
-  const handleGeneratePlatformKey = () => {
-    if (!newKeyName.trim()) {
-      toast.error("Please provide a label for the API Key.");
-      return;
-    }
-
-    setIsGeneratingKey(true);
-    setTimeout(() => {
-      const generatedPart = Math.random().toString(16).substring(2, 18);
-      const newKeyString = `ca_pk_live_${generatedPart}`;
-      
-      const newKey: PlatformKey = {
-        id: `key_${Date.now()}`,
-        name: newKeyName,
-        key: newKeyString,
-        scope: newKeyScope,
-        created: new Date().toISOString().split('T')[0],
-        visible: false
-      };
-
-      setPlatformKeys(prev => [newKey, ...prev]);
-      setGeneratedKeyValue(newKeyString);
-      setNewKeyName("");
-      setIsGeneratingKey(false);
-      toast.success("New API key generated!");
-    }, 800);
-  };
-
-  // Revoke Platform Key
-  const handleRevokePlatformKey = (keyId: string) => {
-    setPlatformKeys(prev => prev.filter(k => k.id !== keyId));
-    toast.success("API Key revoked successfully.");
-  };
-
-  // Toggle visible Platform Key
-  const handleToggleKeyVisibility = (keyId: string) => {
-    setPlatformKeys(prev => prev.map(k => {
-      if (k.id === keyId) {
-        return { ...k, visible: !k.visible };
-      }
-      return k;
-    }));
-  };
-
-  // Copy helper
-  const handleCopyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success("Copied to clipboard!");
   };
 
   return (
@@ -359,8 +447,7 @@ export default function ProfilePage() {
             <CardContent className="relative flex flex-col items-center p-6 -mt-12">
               <div className="size-20 rounded-full bg-background p-1 shadow-sm ring-4 ring-primary/10 border-2 border-background group-hover:scale-105 transition-all duration-300">
                 <Avatar className="size-full">
-                  <AvatarImage src={avatarUrl} alt={name} />
-                  <AvatarFallback className="bg-muted text-muted-foreground font-semibold text-lg">
+                  <AvatarFallback className="bg-primary/10 text-primary font-bold text-lg">
                     {name.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
@@ -429,13 +516,9 @@ export default function ProfilePage() {
                 <Coins className="size-3.5" />
                 Exchange Connections
               </TabsTrigger>
-              <TabsTrigger value="keys" className="flex items-center gap-1.5 py-2 px-1 text-xs font-semibold rounded-none cursor-pointer">
-                <Key className="size-3.5" />
-                Platform API Keys
-              </TabsTrigger>
-              <TabsTrigger value="preferences" className="flex items-center gap-1.5 py-2 px-1 text-xs font-semibold rounded-none cursor-pointer">
-                <Settings className="size-3.5" />
-                Preferences
+              <TabsTrigger value="integrations" className="flex items-center gap-1.5 py-2 px-1 text-xs font-semibold rounded-none cursor-pointer">
+                <Send className="size-3.5" />
+                Integrations
               </TabsTrigger>
               <TabsTrigger value="sessions" className="flex items-center gap-1.5 py-2 px-1 text-xs font-semibold rounded-none cursor-pointer">
                 <Laptop className="size-3.5" />
@@ -569,297 +652,231 @@ export default function ProfilePage() {
             {/* TAB CONTENT: EXCHANGE CONNECTIONS */}
             <TabsContent value="exchanges" className="animate-in fade-in duration-300">
               <Card className="border border-border/80 bg-card rounded-2xl shadow-xs">
-                <CardHeader>
-                  <CardTitle className="text-lg font-bold">Exchange Integrations</CardTitle>
-                  <CardDescription className="text-xs">Establish execution endpoints by integrating your API keys of exchange partners.</CardDescription>
+                <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+                  <div>
+                    <CardTitle className="text-lg font-bold">Exchange Integrations</CardTitle>
+                    <CardDescription className="text-xs">Establish execution endpoints by integrating your API keys of exchange partners.</CardDescription>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => setConnectOpen(true)}
+                    className="text-xs font-semibold bg-foreground text-background hover:bg-foreground/90 rounded-xl cursor-pointer gap-1.5 shrink-0"
+                  >
+                    <Plus className="size-3.5" /> Connect Exchange
+                  </Button>
                 </CardHeader>
-                <CardContent className="pt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {exchanges.map((ex) => (
-                    <div 
-                      key={ex.id}
-                      className={cn(
-                        "border rounded-2xl p-4 bg-gradient-to-br flex flex-col justify-between gap-4 transition-all hover:shadow-xs group/item relative overflow-hidden",
-                        ex.color
-                      )}
-                    >
-                      <div className="flex justify-between items-start z-10">
-                        <div className="flex items-center gap-3">
-                          <div className="size-9 rounded-xl bg-background border border-border/60 flex items-center justify-center font-black text-xs text-foreground shadow-xs group-hover/item:scale-105 transition-transform duration-300">
-                            {ex.logo}
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-sm tracking-tight text-foreground">{ex.name}</h4>
-                            <p className="text-[10px] text-muted-foreground mt-0.5">Algorithm Execution Target</p>
-                          </div>
-                        </div>
-                        <Badge 
-                          variant="secondary" 
-                          className={cn(
-                            "text-[9px] font-bold py-0.5 px-2 tracking-wide uppercase border",
-                            ex.connected 
-                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" 
-                              : "bg-muted text-muted-foreground border-border/40"
-                          )}
-                        >
-                          {ex.connected ? "Connected" : "Inactive"}
-                        </Badge>
-                      </div>
-
-                      {ex.connected ? (
-                        <div className="space-y-1 mt-1 z-10">
-                          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Active API Key</p>
-                          <div className="flex items-center justify-between bg-background/80 border border-border/45 backdrop-blur-xs p-2 rounded-xl text-xs font-mono">
-                            <span className="truncate max-w-[160px] text-foreground/80">{ex.apiKey}</span>
-                            <span className="text-[10px] text-muted-foreground font-semibold">Active</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="text-xs text-muted-foreground mt-1 z-10">
-                          Connect your programmatic account to enable real-time order generation.
-                        </p>
-                      )}
-
-                      <div className="flex gap-2 w-full mt-2 z-10">
-                        {ex.connected ? (
-                          <>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => {
-                                setSelectedExchange(ex);
-                                setInputApiKey(ex.apiKey);
-                              }}
-                              className="text-xs font-semibold rounded-xl bg-background flex-1 cursor-pointer"
-                            >
-                              Configure
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => handleDisconnectExchange(ex.id)}
-                              className="text-xs font-semibold border-destructive/20 hover:border-destructive/30 hover:bg-destructive/10 text-destructive bg-background rounded-xl flex-1 cursor-pointer"
-                            >
-                              Disconnect
-                            </Button>
-                          </>
-                        ) : (
-                          <Button 
-                            onClick={() => setSelectedExchange(ex)}
-                            className="w-full text-xs font-semibold bg-foreground text-background hover:bg-foreground/90 rounded-xl cursor-pointer"
-                          >
-                            Link Exchange Account
-                          </Button>
-                        )}
-                      </div>
+                <CardContent className="pt-2">
+                  {isCredentialsLoading ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {Array.from({ length: 2 }).map((_, i) => (
+                        <div key={i} className="h-[160px] rounded-2xl bg-muted/40 animate-pulse" />
+                      ))}
                     </div>
-                  ))}
+                  ) : !credentials || credentials.length === 0 ? (
+                    <div className="p-8 text-center border border-dashed border-border rounded-2xl">
+                      <p className="text-xs text-muted-foreground">
+                        No exchanges connected yet. Connect one above to enable live trading.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {credentials.map((credential) => {
+                        const style = EXCHANGE_STYLE[credential.exchange];
+                        return (
+                          <div
+                            key={credential.id}
+                            className={cn(
+                              "border rounded-2xl p-4 bg-gradient-to-br flex flex-col justify-between gap-4 transition-all hover:shadow-xs group/item relative overflow-hidden",
+                              style.color
+                            )}
+                          >
+                            <div className="flex justify-between items-start z-10">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="size-9 rounded-xl bg-background border border-border/60 flex items-center justify-center font-black text-[10px] text-foreground shadow-xs group-hover/item:scale-105 transition-transform duration-300 shrink-0">
+                                  {style.logo.slice(0, 4)}
+                                </div>
+                                <div className="min-w-0">
+                                  <h4 className="font-bold text-sm tracking-tight text-foreground truncate">{credential.account_label}</h4>
+                                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                                    {EXCHANGES.find((e) => e.value === credential.exchange)?.label ?? credential.exchange}
+                                  </p>
+                                </div>
+                              </div>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <button className="size-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background/60 transition-all cursor-pointer shrink-0 z-10">
+                                    <Settings className="size-3.5" />
+                                  </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-40">
+                                  <DropdownMenuItem onClick={() => openRotate(credential)} className="cursor-pointer">
+                                    <RefreshCw className="size-3.5 mr-2" /> Rotate Keys
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => setDeleteExchangeTarget(credential)}
+                                    variant="destructive"
+                                    className="cursor-pointer"
+                                  >
+                                    <Trash2 className="size-3.5 mr-2" /> Disconnect
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+
+                            <div className="space-y-1 mt-1 z-10">
+                              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Active API Key</p>
+                              <div className="flex items-center justify-between bg-background/80 border border-border/45 backdrop-blur-xs p-2 rounded-xl text-xs font-mono">
+                                <span className="truncate max-w-[160px] text-foreground/80">{credential.api_key_masked}</span>
+                                <Badge
+                                  variant="secondary"
+                                  className={cn(
+                                    "text-[9px] font-bold py-0.5 px-2 tracking-wide uppercase border shrink-0",
+                                    credential.is_testnet
+                                      ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                                      : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                                  )}
+                                >
+                                  {credential.is_testnet ? "Testnet" : "Live"}
+                                </Badge>
+                              </div>
+                            </div>
+
+                            <div className="text-[10px] text-muted-foreground/80 z-10 flex items-center gap-1.5">
+                              {credential.last_verified_at ? (
+                                <>
+                                  <CheckCircle2 className="size-3 text-emerald-500" />
+                                  Verified {new Date(credential.last_verified_at).toLocaleDateString()}
+                                </>
+                              ) : credential.last_error ? (
+                                <>
+                                  <AlertCircle className="size-3 text-amber-500" />
+                                  {credential.last_error}
+                                </>
+                              ) : (
+                                "Not yet verified"
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
 
-            {/* TAB CONTENT: PLATFORM API KEYS */}
-            <TabsContent value="keys" className="animate-in fade-in duration-300">
-              <div className="flex flex-col gap-6">
-                
-                {/* Generated Key Modal Helper Box */}
-                {generatedKeyValue ? (
-                  <Card className="border border-emerald-500/20 bg-emerald-500/5 rounded-2xl p-5 shadow-xs animate-in zoom-in-95 duration-300">
-                    <div className="flex items-start gap-3">
-                      <CheckCircle2 className="size-5 text-emerald-500 shrink-0 mt-0.5" />
-                      <div className="space-y-1">
-                        <h4 className="font-bold text-sm text-emerald-800 dark:text-emerald-300">Private Platform Key Generated</h4>
-                        <p className="text-xs text-emerald-700/80 dark:text-emerald-400/80">
-                          Please copy this API key now. For absolute safety, it will not be displayed again once you reload or navigate away.
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 mt-4 bg-background border border-emerald-500/15 p-3 rounded-xl">
-                      <code className="text-xs font-mono text-foreground font-semibold break-all flex-1 select-all">{generatedKeyValue}</code>
-                      <Button 
-                        size="icon" 
-                        variant="ghost" 
-                        onClick={() => handleCopyToClipboard(generatedKeyValue)} 
-                        className="size-8 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer"
-                      >
-                        <Copy className="size-4" />
-                      </Button>
-                    </div>
-                    <div className="flex justify-end mt-3">
-                      <Button size="sm" onClick={() => setGeneratedKeyValue(null)} className="text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl cursor-pointer">
-                        Dismiss Key Warning
-                      </Button>
-                    </div>
-                  </Card>
-                ) : null}
-
-                <Card className="border border-border/80 bg-card rounded-2xl shadow-xs">
-                  <CardHeader>
-                    <CardTitle className="text-lg font-bold">Generate Platform Access Keys</CardTitle>
-                    <CardDescription className="text-xs">Create custom access tokens to securely trigger strategies and request endpoints from outer scripts.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-2 space-y-5">
-                    
-                    <div className="p-4 border border-border/60 bg-black/[0.01] dark:bg-white/[0.01] rounded-2xl space-y-4">
-                      <h4 className="font-bold text-sm text-foreground">Create New Key</h4>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <Label htmlFor="key-name" className="text-xs font-bold text-foreground/80">API Key Label</Label>
-                          <Input 
-                            id="key-name"
-                            value={newKeyName}
-                            onChange={(e) => setNewKeyName(e.target.value)}
-                            placeholder="E.g., Python Trader Bot"
-                            className="h-10 rounded-xl border-border/50 bg-background focus-visible:ring-2 focus-visible:ring-primary/20"
-                          />
+            {/* TAB CONTENT: INTEGRATIONS (TELEGRAM) */}
+            <TabsContent value="integrations" className="animate-in fade-in duration-300">
+              <Card className="border border-border/80 bg-card rounded-2xl shadow-xs">
+                <CardHeader>
+                  <CardTitle className="text-lg font-bold">App Integrations</CardTitle>
+                  <CardDescription className="text-xs">
+                    Connect Telegram to receive real-time alerts for your strategies.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-2">
+                  {isNotificationPrefLoading ? (
+                    <div className="h-[220px] rounded-2xl bg-muted/40 animate-pulse" />
+                  ) : (
+                    <div className="space-y-5">
+                      <div className="p-4 border border-border/60 bg-black/[0.01] dark:bg-white/[0.01] rounded-2xl space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="size-9 rounded-xl bg-[#229ED9]/10 border border-[#229ED9]/20 flex items-center justify-center shrink-0">
+                              <Send className="size-4 text-[#229ED9]" />
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-sm tracking-tight text-foreground">Telegram</h4>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">
+                                Get instant alerts on trade fills, stop losses, and take profits.
+                              </p>
+                            </div>
+                          </div>
+                          <Switch checked={telegramEnabled} onCheckedChange={setTelegramEnabled} className="cursor-pointer" />
                         </div>
 
-                        <div className="space-y-1.5">
-                          <Label htmlFor="key-scope" className="text-xs font-bold text-foreground/80">Access Scope</Label>
-                          <select 
-                            id="key-scope"
-                            value={newKeyScope}
-                            onChange={(e) => setNewKeyScope(e.target.value as any)}
-                            className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            <option value="Read & Trade">Read & Trade (Execute orders)</option>
-                            <option value="Read Only">Read Only (Analytics only)</option>
-                          </select>
+                        {telegramEnabled && (
+                          <div className="space-y-3 pt-1">
+                            <div className="p-3 rounded-xl bg-primary/5 border border-primary/15 text-[11px] text-muted-foreground leading-relaxed">
+                              Message your Telegram bot to start a chat, then find your numeric chat ID with{" "}
+                              <span className="font-semibold text-foreground">@userinfobot</span> on Telegram and paste it below.
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label htmlFor="telegram-chat-id" className="text-xs font-bold text-foreground/80">Telegram Chat ID</Label>
+                              <Input
+                                id="telegram-chat-id"
+                                value={telegramChatId}
+                                onChange={(e) => setTelegramChatId(e.target.value)}
+                                placeholder="e.g. 123456789"
+                                className="h-10 rounded-xl font-mono text-xs"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label htmlFor="telegram-timezone" className="text-xs font-bold text-foreground/80">Timezone</Label>
+                              <Input
+                                id="telegram-timezone"
+                                value={timezone}
+                                onChange={(e) => setTimezone(e.target.value)}
+                                placeholder="e.g. UTC, Asia/Kolkata"
+                                className="h-10 rounded-xl text-xs"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-3">
+                        <h4 className="font-bold text-sm text-foreground">Alert Types</h4>
+                        <div className="space-y-2.5">
+                          <div className="flex items-center justify-between p-3 border border-border/60 bg-black/[0.01] dark:bg-white/[0.01] rounded-2xl">
+                            <div>
+                              <h5 className="font-semibold text-xs text-foreground">Paper Trading Fills</h5>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">Notify when a paper-trading order fills.</p>
+                            </div>
+                            <Switch checked={paperAlerts} onCheckedChange={setPaperAlerts} className="cursor-pointer" />
+                          </div>
+                          <div className="flex items-center justify-between p-3 border border-border/60 bg-black/[0.01] dark:bg-white/[0.01] rounded-2xl">
+                            <div>
+                              <h5 className="font-semibold text-xs text-foreground">Live Trading Fills</h5>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">Notify when a live order fills.</p>
+                            </div>
+                            <Switch checked={liveAlerts} onCheckedChange={setLiveAlerts} className="cursor-pointer" />
+                          </div>
+                          <div className="flex items-center justify-between p-3 border border-border/60 bg-black/[0.01] dark:bg-white/[0.01] rounded-2xl">
+                            <div>
+                              <h5 className="font-semibold text-xs text-foreground">Stop Loss Executions</h5>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">Notify when a stop loss triggers.</p>
+                            </div>
+                            <Switch checked={stoplossAlerts} onCheckedChange={setStoplossAlerts} className="cursor-pointer" />
+                          </div>
+                          <div className="flex items-center justify-between p-3 border border-border/60 bg-black/[0.01] dark:bg-white/[0.01] rounded-2xl">
+                            <div>
+                              <h5 className="font-semibold text-xs text-foreground">Take Profit Executions</h5>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">Notify when a take profit triggers.</p>
+                            </div>
+                            <Switch checked={tpAlerts} onCheckedChange={setTpAlerts} className="cursor-pointer" />
+                          </div>
                         </div>
                       </div>
 
                       <div className="flex justify-end pt-1">
-                        <Button 
-                          onClick={handleGeneratePlatformKey}
-                          disabled={isGeneratingKey}
-                          className="h-10 px-5 text-xs font-semibold bg-foreground text-background hover:bg-foreground/90 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-xs"
+                        <Button
+                          onClick={handleSaveNotificationPref}
+                          disabled={isSavingNotificationPref}
+                          className="h-10 px-6 font-semibold bg-foreground text-background hover:bg-foreground/90 transition-all duration-300 rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-xs"
                         >
-                          {isGeneratingKey ? (
+                          {isSavingNotificationPref ? (
                             <>
-                              <Loader2 className="size-3.5 animate-spin" />
-                              Generating...
+                              <Loader2 className="size-4 animate-spin" />
+                              Saving...
                             </>
                           ) : (
-                            <>
-                              <Plus className="size-3.5" />
-                              Generate Private Token
-                            </>
+                            "Save Notification Settings"
                           )}
                         </Button>
                       </div>
                     </div>
-
-                    <div className="space-y-3 pt-2">
-                      <h4 className="font-bold text-sm text-foreground">Active Access Tokens</h4>
-                      
-                      {platformKeys.length === 0 ? (
-                        <div className="p-8 text-center border border-dashed border-border rounded-2xl">
-                          <p className="text-xs text-muted-foreground">No platform API keys created yet. Generate one above.</p>
-                        </div>
-                      ) : (
-                        <div className="border border-border/60 rounded-2xl overflow-hidden divide-y divide-border/60">
-                          {platformKeys.map((k) => (
-                            <div key={k.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-4 bg-black/[0.005] dark:bg-white/[0.005] hover:bg-black/[0.015] dark:hover:bg-white/[0.015] transition-colors">
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-bold text-sm tracking-tight text-foreground">{k.name}</span>
-                                  <Badge variant="outline" className="text-[8px] uppercase tracking-wide px-1.5 font-bold py-0 bg-primary/5 text-primary border-primary/10">
-                                    {k.scope}
-                                  </Badge>
-                                </div>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <code className="text-xs font-mono font-medium text-muted-foreground bg-muted/40 px-2 py-0.5 rounded">
-                                    {k.visible ? k.key : "••••••••••••••••••••••••••••"}
-                                  </code>
-                                  <Button 
-                                    size="icon" 
-                                    variant="ghost" 
-                                    onClick={() => handleToggleKeyVisibility(k.id)} 
-                                    className="size-6 text-muted-foreground hover:text-foreground cursor-pointer"
-                                  >
-                                    {k.visible ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-                                  </Button>
-                                  <Button 
-                                    size="icon" 
-                                    variant="ghost" 
-                                    onClick={() => handleCopyToClipboard(k.key)} 
-                                    className="size-6 text-muted-foreground hover:text-foreground cursor-pointer"
-                                  >
-                                    <Copy className="size-3.5" />
-                                  </Button>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center justify-between sm:justify-end gap-6 text-xs shrink-0">
-                                <div className="text-right text-muted-foreground">
-                                  <p className="text-[10px] font-semibold text-muted-foreground/80 uppercase">Created</p>
-                                  <p className="font-medium mt-0.5">{k.created}</p>
-                                </div>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  onClick={() => handleRevokePlatformKey(k.id)}
-                                  className="size-9 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10 border border-transparent hover:border-destructive/15 transition-all cursor-pointer"
-                                >
-                                  <Trash2 className="size-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            {/* TAB CONTENT: PREFERENCES */}
-            <TabsContent value="preferences" className="animate-in fade-in duration-300">
-              <Card className="border border-border/80 bg-card rounded-2xl shadow-xs">
-                <CardHeader>
-                  <CardTitle className="text-lg font-bold">Preferences & Notifications</CardTitle>
-                  <CardDescription className="text-xs">Manage system notification rules and algorithmic trading behavior preferences.</CardDescription>
-                </CardHeader>
-                <CardContent className="pt-2 space-y-4">
-                  <div className="space-y-3.5">
-                    
-                    <div className="flex items-center justify-between p-3.5 border border-border/60 bg-black/[0.01] dark:bg-white/[0.01] rounded-2xl hover:border-border transition-colors">
-                      <div className="space-y-0.5">
-                        <h4 className="font-bold text-sm tracking-tight text-foreground">Email Notifications</h4>
-                        <p className="text-[11px] text-muted-foreground">Send real-time alerts on strategy transitions, backtest completions, and orders.</p>
-                      </div>
-                      <Switch defaultChecked className="cursor-pointer" />
-                    </div>
-
-                    <div className="flex items-center justify-between p-3.5 border border-border/60 bg-black/[0.01] dark:bg-white/[0.01] rounded-2xl hover:border-border transition-colors">
-                      <div className="space-y-0.5">
-                        <h4 className="font-bold text-sm tracking-tight text-foreground">Auto-Slippage Mitigation</h4>
-                        <p className="text-[11px] text-muted-foreground">Use AI model estimation to automatically place limit order corrections for slippage.</p>
-                      </div>
-                      <Switch defaultChecked className="cursor-pointer" />
-                    </div>
-
-                    <div className="flex items-center justify-between p-3.5 border border-border/60 bg-black/[0.01] dark:bg-white/[0.01] rounded-2xl hover:border-border transition-colors">
-                      <div className="space-y-0.5">
-                        <h4 className="font-bold text-sm tracking-tight text-foreground">Multi-Device Session Sync</h4>
-                        <p className="text-[11px] text-muted-foreground">Keep trading instances globally synced in real-time across multiple tabs/devices.</p>
-                      </div>
-                      <Switch defaultChecked className="cursor-pointer" />
-                    </div>
-
-                    <div className="flex items-center justify-between p-3.5 border border-border/60 bg-black/[0.01] dark:bg-white/[0.01] rounded-2xl hover:border-border transition-colors">
-                      <div className="space-y-0.5 flex gap-1.5 items-center">
-                        <Laptop className="size-4 text-primary shrink-0" />
-                        <div>
-                          <h4 className="font-bold text-sm tracking-tight text-foreground">Hardware Acceleration</h4>
-                          <p className="text-[11px] text-muted-foreground">Utilize GPU acceleration in the web dashboard for rendering charting metrics.</p>
-                        </div>
-                      </div>
-                      <Switch defaultChecked className="cursor-pointer" />
-                    </div>
-
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -1012,64 +1029,230 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* DIALOG CONNECTOR MODAL FOR EXCHANGES */}
-      <Dialog open={selectedExchange !== null} onOpenChange={(open) => !open && setSelectedExchange(null)}>
+      {/* CONNECT EXCHANGE DIALOG */}
+      <Dialog
+        open={connectOpen}
+        onOpenChange={(open) => {
+          setConnectOpen(open);
+          if (!open) resetConnectForm();
+        }}
+      >
         <DialogContent className="max-w-md p-6 bg-card border border-border rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-foreground">
-              Link {selectedExchange?.name} API
-            </DialogTitle>
+            <DialogTitle className="text-lg font-bold text-foreground">Connect Exchange</DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Please enter your programmatic API credentials. Read-Write trading scopes must be enabled in your exchange portal.
+              Your API key and secret are encrypted before they&apos;re stored — they&apos;re never shown again in plain text.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-3">
             <div className="space-y-1.5">
-              <Label htmlFor="dialog-api-key" className="text-xs font-bold text-foreground/80">API Key / Access Token</Label>
-              <Input 
-                id="dialog-api-key"
-                value={inputApiKey}
-                onChange={(e) => setInputApiKey(e.target.value)}
-                placeholder="Enter Exchange API Key"
-                className="h-10 rounded-xl"
-              />
+              <Label className="text-xs font-bold text-foreground/80">Exchange</Label>
+              <Select value={connectExchange} onValueChange={(v) => setConnectExchange(v as ExchangeValue)}>
+                <SelectTrigger className="h-10 rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {EXCHANGES.map((ex) => (
+                    <SelectItem key={ex.value} value={ex.value}>
+                      {ex.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            
+
             <div className="space-y-1.5">
-              <Label htmlFor="dialog-api-secret" className="text-xs font-bold text-foreground/80">API Secret Key / Passphrase</Label>
-              <Input 
-                id="dialog-api-secret"
-                type="password"
-                value={inputApiSecret}
-                onChange={(e) => setInputApiSecret(e.target.value)}
-                placeholder="••••••••••••••••••••"
+              <Label htmlFor="dialog-account-label" className="text-xs font-bold text-foreground/80">Account Label</Label>
+              <Input
+                id="dialog-account-label"
+                autoFocus
+                value={connectLabel}
+                onChange={(e) => setConnectLabel(e.target.value)}
+                placeholder="e.g. Main Trading Account"
                 className="h-10 rounded-xl"
               />
             </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="dialog-api-key" className="text-xs font-bold text-foreground/80">API Key</Label>
+                <Input
+                  id="dialog-api-key"
+                  value={connectKey}
+                  onChange={(e) => setConnectKey(e.target.value)}
+                  placeholder="Enter API Key"
+                  className="h-10 rounded-xl font-mono text-xs"
+                  autoComplete="off"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="dialog-api-secret" className="text-xs font-bold text-foreground/80">API Secret</Label>
+                <Input
+                  id="dialog-api-secret"
+                  type="password"
+                  value={connectSecret}
+                  onChange={(e) => setConnectSecret(e.target.value)}
+                  placeholder="••••••••••••••••"
+                  className="h-10 rounded-xl font-mono text-xs"
+                  autoComplete="off"
+                  onKeyDown={(e) => e.key === "Enter" && canSubmitConnect && handleConnectExchange()}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="dialog-passphrase" className="text-xs font-bold text-foreground/80">
+                Passphrase <span className="text-muted-foreground font-normal">(optional, OKX only)</span>
+              </Label>
+              <Input
+                id="dialog-passphrase"
+                type="password"
+                value={connectPassphrase}
+                onChange={(e) => setConnectPassphrase(e.target.value)}
+                className="h-10 rounded-xl font-mono text-xs"
+                autoComplete="off"
+              />
+            </div>
+
+            <div className="flex items-center justify-between bg-muted/40 border border-border/60 rounded-xl px-3 py-2.5">
+              <div>
+                <div className="text-xs font-semibold">Testnet / Sandbox</div>
+                <div className="text-[10px] text-muted-foreground">Turn off to connect a live account.</div>
+              </div>
+              <Switch checked={connectTestnet} onCheckedChange={setConnectTestnet} />
+            </div>
+
+            {(() => {
+              const note = verifyNote(verifyState, verifyMessage);
+              if (!note) return null;
+              const toneClasses = {
+                muted: "bg-muted/40 border-border/60 text-muted-foreground",
+                success: "bg-emerald-500/10 border-emerald-500/20 text-emerald-500",
+                warning: "bg-amber-500/10 border-amber-500/20 text-amber-500",
+                danger: "bg-destructive/10 border-destructive/20 text-destructive",
+              }[note.tone];
+              const Icon = { muted: Loader2, success: CheckCircle2, warning: AlertCircle, danger: XCircle }[note.tone];
+              return (
+                <div className={cn("flex items-start gap-2 rounded-xl border px-3 py-2.5 text-[11px] leading-relaxed", toneClasses)}>
+                  <Icon className={cn("size-3.5 shrink-0 mt-0.5", note.tone === "muted" && "animate-spin")} />
+                  <span>{note.text}</span>
+                </div>
+              );
+            })()}
           </div>
 
           <DialogFooter className="gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setSelectedExchange(null);
-                setInputApiKey("");
-                setInputApiSecret("");
-              }}
-              className="text-xs font-semibold rounded-xl cursor-pointer"
-            >
+            <Button variant="outline" onClick={() => setConnectOpen(false)} className="text-xs font-semibold rounded-xl cursor-pointer">
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleConnectExchange}
-              className="text-xs font-semibold bg-foreground text-background hover:bg-foreground/90 rounded-xl cursor-pointer"
+              disabled={!canSubmitConnect || verifyState === "verifying"}
+              className="text-xs font-semibold bg-foreground text-background hover:bg-foreground/90 rounded-xl cursor-pointer gap-1.5"
             >
-              Verify & Connect Exchange
+              {isSavingCredential || verifyState === "verifying" ? (
+                <>
+                  <Loader2 className="size-3.5 animate-spin" /> Connecting...
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="size-3.5" /> Verify &amp; Save
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ROTATE KEYS DIALOG */}
+      <Dialog open={!!rotateTarget} onOpenChange={(open) => !open && setRotateTarget(null)}>
+        <DialogContent className="max-w-md p-6 bg-card border border-border rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-foreground">Rotate Keys</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Enter new API credentials for &ldquo;{rotateTarget?.account_label}&rdquo;. The current key is never shown for security.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="rotate-key" className="text-xs font-bold text-foreground/80">New API Key</Label>
+              <Input
+                id="rotate-key"
+                autoFocus
+                value={rotateKey}
+                onChange={(e) => setRotateKey(e.target.value)}
+                className="h-10 rounded-xl font-mono text-xs"
+                autoComplete="off"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="rotate-secret" className="text-xs font-bold text-foreground/80">New API Secret</Label>
+              <Input
+                id="rotate-secret"
+                type="password"
+                value={rotateSecret}
+                onChange={(e) => setRotateSecret(e.target.value)}
+                className="h-10 rounded-xl font-mono text-xs"
+                autoComplete="off"
+                onKeyDown={(e) => e.key === "Enter" && rotateKey && rotateSecret && handleRotateExchange()}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="rotate-passphrase" className="text-xs font-bold text-foreground/80">
+                Passphrase <span className="text-muted-foreground font-normal">(optional)</span>
+              </Label>
+              <Input
+                id="rotate-passphrase"
+                type="password"
+                value={rotatePassphrase}
+                onChange={(e) => setRotatePassphrase(e.target.value)}
+                className="h-10 rounded-xl font-mono text-xs"
+                autoComplete="off"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setRotateTarget(null)} className="text-xs font-semibold rounded-xl cursor-pointer">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRotateExchange}
+              disabled={!rotateKey.trim() || !rotateSecret.trim() || isRotatingCredential}
+              className="text-xs font-semibold bg-foreground text-background hover:bg-foreground/90 rounded-xl cursor-pointer gap-1.5"
+            >
+              {isRotatingCredential ? (
+                <>
+                  <Loader2 className="size-3.5 animate-spin" /> Rotating...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="size-3.5" /> Rotate
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* DISCONNECT EXCHANGE CONFIRMATION */}
+      <AlertDialog open={!!deleteExchangeTarget} onOpenChange={(open) => !open && setDeleteExchangeTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Disconnect this exchange?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes &ldquo;{deleteExchangeTarget?.account_label}&rdquo; from your connected exchanges. Any strategies
+              currently live-trading through it will stop working.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDisconnectExchange} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Disconnect
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

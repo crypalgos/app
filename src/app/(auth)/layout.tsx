@@ -1,71 +1,91 @@
-import { ReactNode } from "react";
+"use client";
+
+import { ReactNode, useEffect, useState } from "react";
 import Link from "next/link";
-import { Cpu } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePosition({ x: e.clientX, y: e.clientY });
+    };
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
+
   return (
-    <div className="flex min-h-screen w-full flex-col md:flex-row bg-background">
-      {/* Left side: Premium Branding */}
-      <div className="hidden md:flex relative flex-col justify-between w-1/2 p-10 lg:p-16 border-r border-border bg-zinc-950 text-white overflow-hidden">
-        {/* Abstract structural background */}
-        <div className="absolute inset-0 z-0 opacity-20">
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
-          <div className="absolute left-0 right-0 top-0 -z-10 m-auto h-[310px] w-[310px] rounded-full bg-primary opacity-20 blur-[100px]" />
-        </div>
+    <div className="relative min-h-screen w-full flex flex-col items-center justify-center bg-[#fcfcfc] dark:bg-black overflow-hidden selection:bg-primary/20 text-foreground transition-colors duration-300">
+      
+      {/* Background Dots - Base Layer (Adapts to light/dark) */}
+      <div 
+        className="absolute inset-0 z-0 pointer-events-none opacity-[0.04] dark:opacity-[0.15] text-black dark:text-white"
+        style={{
+          backgroundImage: `radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)`,
+          backgroundSize: '32px 32px',
+        }}
+      />
 
-        <div className="relative z-10 flex items-center">
-          <Link href="/">
-            <img
-              src="/logo_dark.svg"
-              alt="CrypAlgos Logo"
-              width={190}
-              height={190}
-              className="w-[150px] lg:w-[190px] h-auto"
-              style={{ height: "auto" }}
-            />
-          </Link>
-        </div>
+      {/* Interactive Mouse Spotlight on Dots (Stronger in dark mode) */}
+      {isMounted && (
+        <div 
+          className="absolute inset-0 z-0 pointer-events-none opacity-[0.15] dark:opacity-100 text-black dark:text-white"
+          style={{
+            backgroundImage: `radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)`,
+            backgroundSize: '32px 32px',
+            maskImage: `radial-gradient(350px circle at ${mousePosition.x}px ${mousePosition.y}px, black, transparent 100%)`,
+            WebkitMaskImage: `radial-gradient(350px circle at ${mousePosition.x}px ${mousePosition.y}px, black, transparent 100%)`
+          }}
+        />
+      )}
 
-        <div className="relative z-10 max-w-md mt-auto">
-          <h2 className="text-3xl lg:text-5xl font-medium tracking-tight leading-tight mb-6">
-            Institutional quantitative infrastructure.
-          </h2>
-          <p className="text-zinc-400 text-lg leading-relaxed">
-            Build, test, and deploy high-frequency trading models with sub-millisecond execution. Join the forefront of algorithmic trading.
-          </p>
-        </div>
+      {/* Interactive Mouse Ambient Glow (Subtle in both modes) */}
+      {isMounted && (
+        <div 
+          className="absolute inset-0 z-0 pointer-events-none transition-opacity duration-300 hidden dark:block"
+          style={{
+            background: `radial-gradient(500px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(255,255,255,0.03), transparent 60%)`
+          }}
+        />
+      )}
+      {isMounted && (
+        <div 
+          className="absolute inset-0 z-0 pointer-events-none transition-opacity duration-300 block dark:hidden"
+          style={{
+            background: `radial-gradient(500px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(0,0,0,0.02), transparent 60%)`
+          }}
+        />
+      )}
+
+      {/* Header Logo */}
+      <div className="absolute top-0 left-0 w-full p-8 flex justify-between items-center z-50">
+        <Link href="/" className="hover:opacity-80 transition-opacity">
+          <img
+            src="/horizontal_light.svg"
+            alt="CrypAlgos Logo"
+            className="block dark:hidden h-6 w-auto"
+          />
+          <img
+            src="/horizontal_dark.svg"
+            alt="CrypAlgos Logo"
+            className="hidden dark:block h-6 w-auto"
+          />
+        </Link>
       </div>
 
-      {/* Right side: Auth Content */}
-      <div className="flex flex-1 flex-col items-center justify-center p-6 md:p-12 lg:p-16 bg-background relative overflow-hidden">
-         {/* Mobile Logo Header */}
-         <div className="absolute top-8 left-6 md:hidden z-20">
-           <Link href="/">
-             <img
-               src="/logo_light.svg"
-               alt="CrypAlgos Logo"
-               width={150}
-               height={150}
-               className="block dark:hidden w-[140px] h-auto"
-               style={{ height: "auto" }}
-             />
-             <img
-               src="/logo_dark.svg"
-               alt="CrypAlgos Logo"
-               width={150}
-               height={150}
-               className="hidden dark:block w-[140px] h-auto"
-               style={{ height: "auto" }}
-             />
-           </Link>
-         </div>
-
-         {/* Subtle ambient lighting for right side */}
-         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,var(--color-primary)_0,transparent_50%)] opacity-[0.03] pointer-events-none" />
-         
-         <div className="w-full max-w-[400px] mx-auto z-10 relative mt-12 md:mt-0">
-           {children}
-         </div>
+      {/* Main Content Area - Ultra Minimal Card (Adapts to light/dark) */}
+      <div className="relative z-30 w-full max-w-[420px] mx-4 my-16">
+        <motion.div 
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="w-full flex flex-col p-8 sm:p-10 bg-card border border-border shadow-[0_0_80px_-20px_rgba(0,0,0,0.06)] dark:shadow-[0_0_100px_-20px_rgba(255,255,255,0.03)] rounded-2xl"
+        >
+          {children}
+        </motion.div>
       </div>
     </div>
   );

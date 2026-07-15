@@ -2,220 +2,17 @@
 
 import Link from "next/link";
 import { motion } from "motion/react";
-import { ArrowRight, Terminal, BarChart2, Activity, Cpu, Zap, Split, Play } from "lucide-react";
-import { ReactFlow, Background, BackgroundVariant, Handle, Position, Edge, Node, getSmoothStepPath, EdgeLabelRenderer, BaseEdge } from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
-
-// --- Custom React Flow Nodes & Edges ---
-
-const CustomEdge = ({
-  id,
-  sourceX,
-  sourceY,
-  targetX,
-  targetY,
-  sourcePosition,
-  targetPosition,
-  style = {},
-  markerEnd,
-  data,
-}: any) => {
-  const [edgePath, labelX, labelY] = getSmoothStepPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
-  });
-
-  const isActive = data?.active !== false;
-
-  return (
-    <>
-      <BaseEdge id={id} path={edgePath} markerEnd={markerEnd} style={style} />
-      {data?.label && (
-        <EdgeLabelRenderer>
-          <div
-            style={{
-              position: 'absolute',
-              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-              pointerEvents: 'all',
-            }}
-            className={`nodrag nopan font-mono font-medium text-[11px] px-2.5 py-0.5 rounded-md border shadow-sm ${
-              isActive 
-                ? 'bg-background text-[#54D18F] border-[#54D18F]/50' 
-                : 'bg-background text-muted-foreground border-border/50'
-            }`}
-          >
-            {data.label}
-          </div>
-        </EdgeLabelRenderer>
-      )}
-    </>
-  );
-};
-
-const TriggerNode = ({ data }: any) => {
-  return (
-    <div className="relative bg-card border-[1.5px] border-[#54D18F] shadow-sm rounded-xl w-[250px]">
-      {/* Top pills */}
-      <div className="absolute -top-3.5 left-0 flex justify-between w-full px-3">
-        <div className="bg-background text-muted-foreground text-[10px] px-2.5 py-0.5 rounded-full border border-border flex items-center gap-1.5 shadow-sm">
-          <div className="w-1.5 h-1.5 rounded-full border border-current flex items-center justify-center">
-             <div className="w-0.5 h-0.5 bg-current rounded-full" />
-          </div>
-          Trigger
-        </div>
-        <div className="bg-background text-[#54D18F] text-[11px] font-medium px-2.5 py-0.5 rounded-full border border-[#54D18F]/30 flex items-center gap-1 shadow-sm">
-          ✓ Triggered
-        </div>
-      </div>
-      <div className="p-3 pt-5 border-b border-border/40 flex justify-between items-center">
-        <div className="flex items-center gap-2.5">
-          <div className="bg-blue-500/10 text-blue-500 p-1.5 rounded-md">
-            <Zap className="w-3.5 h-3.5" />
-          </div>
-          <span className="font-semibold text-sm text-foreground tracking-tight">{data.title}</span>
-        </div>
-        <span className="text-[10px] bg-muted/50 px-2 py-0.5 rounded text-muted-foreground border border-border/50">{data.tag}</span>
-      </div>
-      <div className="p-3 text-[11px] text-muted-foreground leading-relaxed">
-        {data.description}
-      </div>
-      <Handle type="source" position={Position.Bottom} className="w-2.5 h-2.5 bg-background border-[1.5px] border-[#54D18F] translate-y-1" />
-    </div>
-  );
-};
-
-const SwitchNode = ({ data }: any) => {
-  return (
-    <div className="relative bg-card border-[1.5px] border-[#54D18F] shadow-sm rounded-xl w-[250px]">
-      <div className="absolute -top-3.5 right-3">
-        <div className="bg-background text-[#54D18F] text-[11px] font-medium px-2.5 py-0.5 rounded-full border border-[#54D18F]/30 flex items-center gap-1 shadow-sm">
-          ✓ Completed
-        </div>
-      </div>
-      <div className="p-3 pt-5 border-b border-border/40 flex justify-between items-center">
-        <div className="flex items-center gap-2.5">
-          <div className="bg-indigo-500/10 text-indigo-500 p-1.5 rounded-md">
-            <Split className="w-3.5 h-3.5" />
-          </div>
-          <span className="font-semibold text-sm text-foreground tracking-tight">{data.title}</span>
-        </div>
-        <span className="text-[10px] bg-muted/50 px-2 py-0.5 rounded text-muted-foreground border border-border/50">{data.tag}</span>
-      </div>
-      <div className="p-3 pb-1.5 text-[11px] text-muted-foreground leading-relaxed">
-        {data.description}
-      </div>
-      {/* Boolean Handle Indicators */}
-      <div className="flex justify-between px-6 pb-2 text-[9px] font-mono font-bold text-muted-foreground uppercase tracking-widest">
-        <span>True</span>
-        <span>False</span>
-      </div>
-      <Handle type="target" position={Position.Top} className="w-2.5 h-2.5 bg-background border-[1.5px] border-[#54D18F] -translate-y-1" />
-      <Handle type="source" id="true" position={Position.Bottom} className="w-2.5 h-2.5 bg-background border-[1.5px] border-[#54D18F] translate-y-1" style={{ left: '25%' }} />
-      <Handle type="source" id="false" position={Position.Bottom} className="w-2.5 h-2.5 bg-background border-[1.5px] border-border/50 translate-y-1" style={{ left: '75%' }} />
-    </div>
-  );
-};
-
-const ActionNode = ({ data }: any) => {
-  const isActive = data.active !== false;
-  return (
-    <div className={`relative bg-card border-[1.5px] shadow-sm rounded-xl w-[250px] transition-colors ${isActive ? 'border-[#54D18F]' : 'border-border/50'}`}>
-      {isActive && (
-        <div className="absolute -top-3.5 right-3">
-          <div className="bg-background text-[#54D18F] text-[11px] font-medium px-2.5 py-0.5 rounded-full border border-[#54D18F]/30 flex items-center gap-1 shadow-sm">
-            ✓ Completed
-          </div>
-        </div>
-      )}
-      <div className="p-3 pt-5 border-b border-border/40 flex justify-between items-center">
-        <div className="flex items-center gap-2.5">
-          <div className={`p-1.5 rounded-md ${isActive ? 'bg-blue-500/10 text-blue-500' : 'bg-muted text-muted-foreground'}`}>
-            <Play className="w-3.5 h-3.5" />
-          </div>
-          <span className={`font-semibold text-sm tracking-tight ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>{data.title}</span>
-        </div>
-        <span className="text-[10px] bg-muted/50 px-2 py-0.5 rounded text-muted-foreground border border-border/50">{data.tag}</span>
-      </div>
-      <div className="p-3 text-[11px] text-muted-foreground leading-relaxed">
-        {data.description}
-      </div>
-      <Handle type="target" position={Position.Top} className={`w-2.5 h-2.5 bg-background border-[1.5px] -translate-y-1 ${isActive ? 'border-[#54D18F]' : 'border-border/50'}`} />
-      <Handle type="source" position={Position.Bottom} className={`w-2.5 h-2.5 bg-background border-[1.5px] translate-y-1 ${isActive ? 'border-[#54D18F]' : 'border-border/50'}`} />
-    </div>
-  );
-};
-
-const nodeTypes = {
-  triggerNode: TriggerNode,
-  switchNode: SwitchNode,
-  actionNode: ActionNode,
-};
-
-const edgeTypes = {
-  custom: CustomEdge,
-};
-
-const initialNodes: Node[] = [
-  {
-    id: '1',
-    type: 'triggerNode',
-    position: { x: 125, y: 50 },
-    data: { title: 'When Volume Spikes', tag: 'Market Data', description: 'Trigger when BTC/USDT 5m volume > 1000' }
-  },
-  {
-    id: '2',
-    type: 'switchNode',
-    position: { x: 125, y: 220 },
-    data: { title: 'Switch', tag: 'Condition', description: 'Route based on RSI indicator' }
-  },
-  {
-    id: '3',
-    type: 'actionNode',
-    position: { x: -30, y: 430 },
-    data: { title: 'Execute Buy', tag: 'Order', description: 'Buy 0.1 BTC at Market', active: true }
-  },
-  {
-    id: '4',
-    type: 'actionNode',
-    position: { x: 280, y: 430 },
-    data: { title: 'Execute Sell', tag: 'Order', description: 'Sell 0.1 BTC at Market', active: false }
-  }
-];
-
-const initialEdges: Edge[] = [
-  { 
-    id: 'e1-2', 
-    source: '1', 
-    target: '2', 
-    type: 'custom', 
-    animated: true, 
-    style: { stroke: '#54D18F', strokeWidth: 1.5 } 
-  },
-  { 
-    id: 'e2-3', 
-    source: '2', 
-    sourceHandle: 'true',
-    target: '3', 
-    type: 'custom', 
-    animated: true, 
-    data: { label: 'RSI < 30', active: true },
-    style: { stroke: '#54D18F', strokeWidth: 1.5 } 
-  },
-  { 
-    id: 'e2-4', 
-    source: '2', 
-    sourceHandle: 'false',
-    target: '4', 
-    type: 'custom', 
-    animated: false, 
-    data: { label: 'RSI > 70', active: false },
-    style: { stroke: '#71717a', strokeWidth: 1.5, strokeDasharray: '4 4' } 
-  }
-];
+import { ArrowRight, Terminal } from "lucide-react";
+import { ReactFlow } from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+import {
+  Background,
+  BackgroundVariant,
+  flowNodeTypes,
+  flowEdgeTypes,
+  STRATEGY_FLOW_NODES,
+  STRATEGY_FLOW_EDGES,
+} from "./flow-diagram";
 
 // --- Hero Component ---
 
@@ -225,8 +22,8 @@ export default function HeroSection() {
       
       {/* Architectural Grid Background (Theme Aware) */}
       <div className="absolute inset-0 pointer-events-none z-0">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border))_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border))_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-30" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border))_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border))_1px,transparent_1px)] bg-[size:16rem_16rem] opacity-60" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-30" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] bg-[size:16rem_16rem] opacity-60" />
         
         {/* Subtle fade out at the edges */}
         <div className="absolute inset-0 bg-background [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,transparent_20%,black_100%)]" />
@@ -294,11 +91,11 @@ export default function HeroSection() {
 
             {/* Boundless React Flow Canvas Container */}
             <div className="absolute inset-0 z-10 [mask-image:radial-gradient(ellipse_80%_80%_at_50%_50%,black_50%,transparent_100%)]">
-              <ReactFlow 
-                nodes={initialNodes} 
-                edges={initialEdges} 
-                nodeTypes={nodeTypes}
-                edgeTypes={edgeTypes}
+              <ReactFlow
+                nodes={STRATEGY_FLOW_NODES}
+                edges={STRATEGY_FLOW_EDGES}
+                nodeTypes={flowNodeTypes}
+                edgeTypes={flowEdgeTypes}
                 panOnDrag={false}
                 zoomOnScroll={false}
                 nodesDraggable={true}
@@ -307,12 +104,12 @@ export default function HeroSection() {
                 fitViewOptions={{ padding: 0.1, maxZoom: 1.1 }}
                 className="cursor-default"
               >
-                <Background 
-                  color="hsl(var(--foreground))" 
-                  style={{ opacity: 0.15 }} 
-                  variant={BackgroundVariant.Dots} 
-                  gap={20} 
-                  size={2} 
+                <Background
+                  color="var(--foreground)"
+                  style={{ opacity: 0.15 }}
+                  variant={BackgroundVariant.Dots}
+                  gap={20}
+                  size={2}
                 />
               </ReactFlow>
             </div>

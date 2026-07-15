@@ -5,10 +5,24 @@ import { IconBrandX, IconBrandGithub, IconBrandLinkedin, IconBrandDiscord, IconB
 import Link from "next/link";
 import Image from "next/image";
 import { useTheme } from "next-themes";
+import { motion, useScroll, useTransform } from "motion/react";
 
 const Footer: React.FC = () => {
   const { theme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start end", "end end"]
+  });
+
+  const scale = useTransform(scrollYProgress, [0, 1], [0.85, 1]);
+  const translateY = useTransform(scrollYProgress, [0, 1], [80, 0]);
+  const opacity = useTransform(scrollYProgress, [0, 1], [0, 0.95]);
+
+  const lineWidth = useTransform(scrollYProgress, [0, 0.75], ["0%", "100%"]);
+  const lineOpacity = useTransform(scrollYProgress, [0, 0.75], [0, 0.6]);
 
   React.useEffect(() => {
     setMounted(true);
@@ -63,16 +77,22 @@ const Footer: React.FC = () => {
 
   return (
     <footer className="relative bg-background border-t border-border/40 overflow-hidden pt-12 sm:pt-16 md:pt-24">
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <motion.div 
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.1 }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+        className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+      >
         <div className="flex flex-col lg:flex-row justify-between gap-8 sm:gap-10 lg:gap-20 mb-10 sm:mb-14 md:mb-20">
           {/* Brand Column */}
           <div className="lg:w-1/3 space-y-4 sm:space-y-6 md:space-y-8">
             <div className="flex items-center space-x-3">
               {mounted && (
                 <Image
-                  src={theme === "light" ? "/logo_light.svg" : "/logo_dark.svg"}
+                  src={theme === "light" ? "/horizontal_light.svg" : "/horizontal_dark.svg"}
                   alt="CrypAlgos Logo"
-                  width={40}
+                  width={150}
                   height={40}
                   className="h-10 w-auto"
                   style={{ width: "auto" }}
@@ -84,18 +104,6 @@ const Footer: React.FC = () => {
               markets. Execute strategies with institutional-grade
               infrastructure and real-time analytics.
             </p>
-            <div className="flex items-center gap-2 sm:gap-4">
-              {socialLinks.map(({ href, label, icon: IconComponent }) => (
-                <Link
-                  key={label}
-                  href={href}
-                  aria-label={label}
-                  className="group relative w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-border/50 bg-background/50 hover:bg-primary hover:border-primary flex items-center justify-center text-muted-foreground hover:text-primary-foreground transition-all duration-300"
-                >
-                  <IconComponent className="w-4 h-4" />
-                </Link>
-              ))}
-            </div>
           </div>
 
           {/* Links Grid */}
@@ -123,33 +131,45 @@ const Footer: React.FC = () => {
         </div>
 
         {/* Bottom Bar */}
-        <div className="flex flex-col md:flex-row justify-between items-center gap-3 sm:gap-4 py-6 sm:py-8 border-t border-border/40 text-xs text-muted-foreground/60">
-          <div className="flex items-center gap-2">
-            <p>© {new Date().getFullYear()} CrypAlgos.</p>
-            <span className="hidden md:inline">•</span>
-            <p>All rights reserved.</p>
-          </div>
-          <div className="flex gap-4 sm:gap-6">
-            <Link href="#" className="hover:text-foreground transition-colors">
-              Privacy
-            </Link>
-            <Link href="#" className="hover:text-foreground transition-colors">
-              Terms
-            </Link>
-            <Link href="#" className="hover:text-foreground transition-colors">
-              Cookies
-            </Link>
-          </div>
+        <div className="flex items-center justify-center gap-2 py-6 sm:py-8 border-t border-border/40 text-xs text-muted-foreground/60">
+          <p>© {new Date().getFullYear()} CrypAlgos.</p>
+          <span className="hidden md:inline">•</span>
+          <p>All rights reserved.</p>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Large Bottom Text */}
-      <div className="w-full flex justify-center overflow-hidden select-none pointer-events-none pb-2 sm:pb-4">
-        <p
-          className={`text-center text-4xl sm:text-5xl md:text-8xl lg:text-[10rem] xl:text-[12rem] 2xl:text-[14rem] font-bold bg-clip-text text-transparent bg-linear-to-b from-neutral-100 dark:from-neutral-800 to-neutral-300 dark:to-neutral-900/80 leading-none tracking-tight`}
-        >
-          CRYPALOGS
-        </p>
+      <div 
+        ref={containerRef}
+        className="w-full relative flex flex-col items-center overflow-hidden select-none pointer-events-none pb-4 px-6 md:px-16"
+      >
+        {/* Horizontal Border Line */}
+        {mounted && (
+          <motion.div 
+            style={{ width: lineWidth, opacity: lineOpacity }}
+            className="h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent origin-center mb-10"
+          />
+        )}
+
+        {/* Cinematic Parallax Reveal Logo */}
+        {mounted && (
+          <motion.div
+            style={{
+              scale,
+              y: translateY,
+              opacity,
+              transformOrigin: "bottom center"
+            }}
+            className="w-full max-w-[1200px] flex justify-center"
+          >
+            <Image
+              src={theme === "light" ? "/text_light.svg" : "/text_dark.svg"}
+              alt="CrypAlgos Text"
+              width={1200}
+              height={200}
+              className="w-full h-auto object-contain"
+            />
+          </motion.div>
+        )}
       </div>
     </footer>
   );

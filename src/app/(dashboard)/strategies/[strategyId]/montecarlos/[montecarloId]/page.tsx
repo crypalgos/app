@@ -7,11 +7,10 @@ import type { MonteCarloArtifact } from "@/types/strategy-actions";
 import type { SamplePathRow, PercentileBandRow, RealEquityRow, DistributionBinRow, DistributionMetric, SimulationSummaryRow } from "@/types/montecarlo";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { IconArrowLeft, IconCheck, IconX, IconClock } from "@tabler/icons-react";
-import { ReportSectionLabel } from "@/components/shared/report-primitives";
+import { IconArrowLeft } from "@tabler/icons-react";
+import { ReportSectionLabel, statusBadge } from "@/components/shared/report-primitives";
 import {
   MonteCarloKpiStrip,
   ReturnDrawdownPanels,
@@ -60,15 +59,6 @@ const DISTRIBUTION_TILES: DistributionTile[] = [
   { metric: "omega", title: "Omega", color: "#a78bfa", valueFormatter: (v) => v.toFixed(2) },
   { metric: "tail_ratio", title: "Tail Ratio", color: "#fb923c", valueFormatter: (v) => v.toFixed(2) },
 ];
-
-function statusBadge(status: string) {
-  switch (status) {
-    case "COMPLETED": return <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[10px] px-2"><IconCheck className="size-3 mr-1 inline" /> Completed</Badge>;
-    case "RUNNING": return <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[10px] px-2 animate-pulse"><IconClock className="size-3 mr-1 inline" /> Running</Badge>;
-    case "FAILED": return <Badge className="bg-red-500/10 text-red-400 border-red-500/20 text-[10px] px-2"><IconX className="size-3 mr-1 inline" /> Failed</Badge>;
-    default: return <Badge className="bg-muted/80 text-muted-foreground border-transparent px-2 text-[10px]">{status}</Badge>;
-  }
-}
 
 export default function MonteCarloDetailPage() {
   const params = useParams();

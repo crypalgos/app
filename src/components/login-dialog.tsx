@@ -30,13 +30,13 @@ export function LoginDialog({ isOpen, onOpenChange }: LoginDialogProps) {
           <DialogHeader className="space-y-2 flex flex-col items-center">
             <div className="mb-2 mt-1 select-none">
               <img
-                src="/logo_light.svg"
+                src="/horizontal_light.svg"
                 alt="CrypAlgos Logo"
                 className="block dark:hidden w-[160px] h-auto"
                 style={{ height: "auto" }}
               />
               <img
-                src="/logo_dark.svg"
+                src="/horizontal_dark.svg"
                 alt="CrypAlgos Logo"
                 className="hidden dark:block w-[160px] h-auto"
                 style={{ height: "auto" }}
@@ -68,11 +68,11 @@ export function LoginDialog({ isOpen, onOpenChange }: LoginDialogProps) {
             <Button
               onClick={handleManualLogin}
               variant="outline"
-              className="w-full h-11 border-border bg-background hover:bg-secondary text-foreground font-medium rounded-xl flex items-center justify-center gap-2 group transition-all duration-200 shadow-sm"
+              className="w-full h-11 border-border/60 hover:border-border bg-secondary/30 hover:bg-secondary text-foreground font-medium rounded-xl flex items-center justify-center gap-2 group transition-all duration-300 ease-out shadow-sm"
             >
-              <Mail className="size-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-              Sign in manually
-              <IconArrowRight className="size-4 ml-0.5 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
+              <Mail className="size-4 text-muted-foreground group-hover:text-foreground transition-colors duration-300" />
+              <span className="translate-x-2 group-hover:translate-x-0 transition-transform duration-300">Sign in manually</span>
+              <IconArrowRight className="size-4 opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 text-muted-foreground group-hover:text-foreground" />
             </Button>
           </div>
 

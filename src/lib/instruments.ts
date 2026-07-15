@@ -1,4 +1,4 @@
-const COIN_ID_MAP: Record<string, string> = {
+export const COIN_ID_MAP: Record<string, string> = {
   btc: "bitcoin",
   eth: "ethereum",
   sol: "solana",
@@ -11,6 +11,21 @@ const COIN_ID_MAP: Record<string, string> = {
   op: "optimism",
   doge: "dogecoin",
   ada: "cardano"
+};
+
+export const COIN_NAMES: Record<string, string> = {
+  btc: "Bitcoin",
+  eth: "Ethereum",
+  sol: "Solana",
+  xrp: "XRP",
+  bnb: "BNB",
+  link: "Chainlink",
+  matic: "Polygon",
+  avax: "Avalanche",
+  arb: "Arbitrum",
+  op: "Optimism",
+  doge: "Dogecoin",
+  ada: "Cardano"
 };
 
 export function getCoinLogoUrl(coinSymbol: string) {

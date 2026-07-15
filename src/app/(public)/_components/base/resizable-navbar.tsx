@@ -254,7 +254,7 @@ export const NavbarLogo = () => {
       className="relative z-20 mr-4 flex items-center space-x-2 px-2 py-1 text-sm font-normal"
     >
       <img
-        src="/logo_light.svg"
+        src="/horizontal_light.svg"
         alt="CrypAlgos Logo"
         width={190}
         height={190}
@@ -263,7 +263,7 @@ export const NavbarLogo = () => {
         loading="eager"
       />
       <img
-        src="/logo_dark.svg"
+        src="/horizontal_dark.svg"
         alt="CrypAlgos Logo"
         width={190}
         height={190}
@@ -301,7 +301,7 @@ export const NavbarButton = ({
     shimmer:
       "animate-shimmer bg-[linear-gradient(110deg,var(--color-primary),45%,color-mix(in_srgb,var(--color-primary),white_25%),55%,var(--color-primary))] bg-[length:200%_100%] text-primary-foreground transition-colors focus:outline-none hover:bg-[length:200%_100%] dark:bg-[linear-gradient(110deg,var(--color-primary),45%,color-mix(in_srgb,var(--color-primary),white_25%),55%,var(--color-primary))] dark:text-primary-foreground",
     gradient:
-      "bg-gradient-to-b from-blue-500 to-blue-700 text-white shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset]",
+      "bg-brand-gradient text-white shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset]",
   };
 
   return (

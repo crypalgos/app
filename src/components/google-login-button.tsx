@@ -8,7 +8,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { AuthActions } from "@/api-actions/auth-actions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { FaGoogle } from "react-icons/fa6";
+import { FcGoogle } from "react-icons/fc";
 
 declare global {
   interface Window {
@@ -72,7 +72,7 @@ export function GoogleLoginButton({ onSuccess }: { onSuccess?: () => void }) {
         if (onSuccess) {
           onSuccess();
         }
-        router.push("/dashboard");
+        router.push("/strategies");
       } catch (error: any) {
         toast.error(error?.response?.data?.message || "Google authentication failed.");
       }
@@ -114,10 +114,10 @@ export function GoogleLoginButton({ onSuccess }: { onSuccess?: () => void }) {
       {/* Visual Shadcn primary button representation */}
       <div className={`w-full ${initializing ? "absolute pointer-events-none opacity-0" : ""}`}>
         <Button
-          variant="default"
-          className="w-full h-10 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold rounded-xl flex items-center justify-center gap-2 group transition-all duration-200 shadow-md hover:shadow-lg"
+          variant="outline"
+          className="w-full h-10 bg-white text-black hover:bg-gray-50 border border-gray-200 dark:bg-white dark:text-black dark:hover:bg-gray-100 font-semibold rounded-xl flex items-center justify-center gap-2 group transition-all duration-200 shadow-sm hover:shadow-md"
         >
-          <FaGoogle className="size-4 text-primary-foreground shrink-0" />
+          <FcGoogle className="size-5 shrink-0" />
           <span>Continue with Google</span>
         </Button>
       </div>

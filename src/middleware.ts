@@ -13,7 +13,6 @@ const BLOCKED_ROUTES = [
   "/reset-password",
   "/verify",
   // Authenticated app
-  "/dashboard",
   "/profile",
   "/strategies",
   "/workflow",
@@ -75,8 +74,6 @@ export const config = {
     "/verify",
     "/verify/:path*",
     // Authenticated app routes
-    "/dashboard",
-    "/dashboard/:path*",
     "/profile",
     "/profile/:path*",
     "/strategies",

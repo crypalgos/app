@@ -3,12 +3,12 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import {
-  Settings,
   CreditCard,
   FileText,
   LogOut,
   User,
   Loader2,
+  ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -18,7 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useUser, useLogout } from "@/api-actions/hooks/user-hooks";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -54,8 +54,6 @@ export default function ProfileDropdown({
 
   if (!user) return null;
 
-  const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`;
-
   const menuItems: MenuItem[] = [
     {
       label: "Profile",
@@ -67,11 +65,6 @@ export default function ProfileDropdown({
       value: "PRO",
       href: "#",
       icon: <CreditCard className="size-4" />,
-    },
-    {
-      label: "Settings",
-      href: "/profile?tab=preferences",
-      icon: <Settings className="size-4" />,
     },
     {
       label: "Terms & Policies",
@@ -98,16 +91,11 @@ export default function ProfileDropdown({
               type="button"
               className="flex items-center gap-3 p-1.5 px-2 rounded-2xl bg-transparent hover:bg-accent/40 transition-all duration-200 focus:outline-none cursor-pointer"
             >
-              <div className="relative">
-                <div className="size-8 rounded-full bg-gradient-to-br from-primary via-primary/80 to-accent p-0.5 shadow-xs">
-                  <Avatar className="size-full border border-background">
-                    <AvatarImage src={avatarUrl} alt={user.name} />
-                    <AvatarFallback className="bg-muted text-muted-foreground font-semibold text-xs">
-                      {user.name.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
-              </div>
+              <Avatar className="size-8 border border-border/50 shadow-xs">
+                <AvatarFallback className="bg-gradient-to-br from-primary via-primary/90 to-accent text-white font-semibold text-sm">
+                  {user.name.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
               <div className="text-left hidden sm:block">
                 <div className="text-sm font-semibold text-foreground tracking-tight leading-tight">
                   {user.name}
@@ -116,38 +104,9 @@ export default function ProfileDropdown({
                   {user.email}
                 </div>
               </div>
+              <ChevronDown className={cn("size-4 text-muted-foreground/60 transition-transform duration-200 hidden sm:block", isOpen && "rotate-180")} />
             </button>
           </DropdownMenuTrigger>
-
-          {/* Bending line indicator on the right */}
-          <div
-            className={cn(
-              "absolute -right-2.5 top-1/2 -translate-y-1/2 transition-all duration-200",
-              isOpen ? "opacity-100" : "opacity-60 group-hover:opacity-100",
-            )}
-          >
-            <svg
-              width="10"
-              height="20"
-              viewBox="0 0 12 24"
-              fill="none"
-              className={cn(
-                "transition-all duration-200",
-                isOpen
-                  ? "text-primary scale-110"
-                  : "text-muted-foreground/60 group-hover:text-foreground",
-              )}
-              aria-hidden="true"
-            >
-              <path
-                d="M2 4C6 8 6 16 2 20"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                fill="none"
-              />
-            </svg>
-          </div>
 
           <DropdownMenuContent
             align="end"
