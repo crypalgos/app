@@ -2,8 +2,41 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { IconCheck, IconClock, IconX } from "@tabler/icons-react";
 
 export { CoinLogo, SymbolChip, baseAsset } from "@/components/shared/coin-logo";
+
+// ─── Run status badge (shared across all report pages) ───────────────────────
+
+export function statusBadge(status: string) {
+  switch (status) {
+    case "COMPLETED":
+      return (
+        <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[10px] px-2">
+          <IconCheck className="size-3 mr-1 inline" /> Completed
+        </Badge>
+      );
+    case "RUNNING":
+      return (
+        <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[10px] px-2 animate-pulse">
+          <IconClock className="size-3 mr-1 inline" /> Running
+        </Badge>
+      );
+    case "FAILED":
+      return (
+        <Badge className="bg-red-500/10 text-red-400 border-red-500/20 text-[10px] px-2">
+          <IconX className="size-3 mr-1 inline" /> Failed
+        </Badge>
+      );
+    default:
+      return (
+        <Badge className="bg-muted/80 text-muted-foreground border-transparent px-2 text-[10px]">
+          {status}
+        </Badge>
+      );
+  }
+}
 
 // ─── Formatting helpers ───────────────────────────────────────────────────────
 

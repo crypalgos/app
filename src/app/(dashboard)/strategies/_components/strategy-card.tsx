@@ -32,12 +32,15 @@ import {
   IconActivity,
   IconLoader2,
   IconEdit,
+  IconStarFilled,
+  IconStar,
+  IconTrendingUp,
+  IconTrendingDown,
   IconExternalLink,
+  IconArrowRight,
   IconCode,
   IconLayoutKanban,
   IconAlertTriangle,
-  IconStar,
-  IconStarFilled,
 } from "@tabler/icons-react";
 import { StatusBadge } from "./strategy-badges";
 import type { Strategy, StrategyActions } from "./types";
@@ -133,20 +136,27 @@ export function StrategyCard({
   const symbol = (dataNode?.data as any)?.symbol || "BTCUSD";
   const timeframe = (dataNode?.data as any)?.timeframe || "1H";
 
+  const isProfit = (strat.latest_metrics?.return_pct ?? 0) >= 0;
+  const accent = isProfit ? "#22C55E" : "#EF4444";
+
   return (
     <>
       {/* ─── Card ─────────────────────────────────────────────────────────── */}
       <div
         onClick={() => router.push(`/strategies/${strat.id}`)}
         className={cn(
-          "group relative flex flex-col rounded-2xl border bg-card/30 backdrop-blur-xs transition-all duration-300 cursor-pointer select-none overflow-hidden",
-          "hover:shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_8px_32px_rgba(0,0,0,0.4)] border-border/50 hover:border-primary/40",
-          getAccentClasses(strat.type)
+          "group relative flex flex-col rounded-[20px] border bg-card dark:bg-[#0a0a0a] backdrop-blur-xl transition-all duration-500 ease-out cursor-pointer overflow-hidden min-h-[220px]",
+          "border-black/5 dark:border-[#1e1e1e]",
+          "shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] dark:shadow-none",
+          "hover:-translate-y-1 hover:border-primary/20 hover:shadow-[0_12px_40px_-15px_rgba(14,70,255,0.2)] dark:hover:shadow-[0_12px_40px_-15px_rgba(14,70,255,0.5)]"
         )}
       >
-        {/* Top row: Favorite + Title + Menu */}
-        <div className="flex items-start justify-between px-4 pt-4">
-          <div className="flex items-center gap-2 min-w-0">
+        {/* Subtle hover gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 pointer-events-none" />
+
+        {/* Top row: Favorite + Title + Badges + Menu */}
+        <div className="flex items-start justify-between px-5 pt-5 gap-3">
+          <div className="flex items-start gap-2.5 min-w-0 flex-1">
             <button 
               onClick={async (e) => {
                 e.stopPropagation();
@@ -160,28 +170,22 @@ export function StrategyCard({
                   toast.error("Failed to update golden version.");
                 }
               }}
-              className="p-1 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-amber-500 cursor-pointer shrink-0"
+              className="text-muted-foreground hover:text-amber-500 transition-colors cursor-pointer shrink-0 pt-0.5"
             >
               {isFavorite ? (
-                <IconStarFilled className="w-3.5 h-3.5 text-amber-500" />
+                <IconStarFilled className="size-4 text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
               ) : (
-                <IconStar className="w-3.5 h-3.5" />
+                <IconStar className="size-4" />
               )}
             </button>
-            <h3 className="font-bold text-[15px] leading-snug text-foreground group-hover:text-primary transition-colors line-clamp-1 truncate">
-              {strat.name}
-            </h3>
-            <span className="text-[10px] font-mono text-muted-foreground/60 shrink-0">
-              v1.0
-            </span>
+            <div className="flex flex-col min-w-0 gap-1.5">
+              <h3 className="font-semibold text-[15px] leading-tight text-foreground transition-colors truncate">
+                {strat.name}
+              </h3>
+            </div>
           </div>
 
-          <div className="flex items-center gap-1 shrink-0">
-            {strat.is_golden && (
-              <span className="font-bold text-[9px] py-0.5 px-1.5 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-md shrink-0">
-                Golden
-              </span>
-            )}
+          <div className="flex items-center shrink-0 -mt-1 -mr-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                 <button className="size-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all opacity-0 group-hover:opacity-100 cursor-pointer">
@@ -199,7 +203,7 @@ export function StrategyCard({
                       onClick={() => { setEditName(strat.name); setEditDesc(strat.description); setEditOpen(true); }}
                       className="cursor-pointer"
                     >
-                      <IconEdit className="size-3.5 mr-2" /> Edit Name & Description
+                      <IconEdit className="size-3.5 mr-2" /> Edit Meta
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onEdit(strat.id)} className="cursor-pointer">
                       <IconExternalLink className="size-3.5 mr-2" /> Open Builder
@@ -221,58 +225,67 @@ export function StrategyCard({
 
         {/* Description */}
         {strat.description && (
-          <p className="px-4 pt-1 text-xs text-muted-foreground/85 line-clamp-2 leading-relaxed">
+          <p className="px-5 pt-3.5 text-[12px] text-muted-foreground/80 line-clamp-2 leading-relaxed break-words">
             {strat.description}
           </p>
         )}
 
-        {/* Subheader: Type • Symbol • Timeframe */}
-        <div className="flex items-center gap-1.5 px-4 pt-1.5 text-xs text-muted-foreground">
-          <span>{strat.type}</span>
-          <span>•</span>
-          <span>{symbol}</span>
-          <span>•</span>
-          <span>{timeframe}</span>
+        {/* Tags / Meta Info */}
+        <div className="flex flex-wrap items-center gap-1.5 px-5 pt-3">
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-primary/10 text-primary dark:bg-blue-500/15 dark:text-blue-400 text-[9px] font-bold tracking-wide font-mono">
+            v1.0
+          </span>
+          {strat.is_golden && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20 text-[9px] font-bold tracking-wider uppercase">
+              Golden
+            </span>
+          )}
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-muted/80 text-muted-foreground text-[9px] font-bold tracking-wider uppercase border border-border/40">
+            {symbol}
+          </span>
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-muted/80 text-muted-foreground text-[9px] font-bold tracking-wider uppercase border border-border/40">
+            {timeframe}
+          </span>
         </div>
 
         {/* Performance metrics row */}
-        <div className="grid grid-cols-3 gap-2 px-4 pt-4">
+        <div className="grid grid-cols-3 gap-2 px-5 pt-5">
           <div>
-            <div className="text-base font-bold text-emerald-500">
+            <div className="text-xl font-bold tracking-tight" style={{ color: strat.latest_metrics?.return_pct !== undefined ? accent : undefined }}>
               {strat.latest_metrics?.return_pct !== undefined ? `${strat.latest_metrics.return_pct > 0 ? "+" : ""}${strat.latest_metrics.return_pct.toFixed(1)}%` : "--"}
             </div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Return</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold mt-0.5">Return</div>
           </div>
           <div>
-            <div className="text-base font-bold text-foreground">
+            <div className="text-xl font-bold tracking-tight text-foreground">
               {strat.latest_metrics?.sharpe !== undefined && strat.latest_metrics.sharpe !== null ? strat.latest_metrics.sharpe.toFixed(2) : "--"}
             </div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Sharpe</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold mt-0.5">Sharpe</div>
           </div>
           <div>
-            <div className="text-base font-bold text-rose-500">
+            <div className="text-xl font-bold tracking-tight text-rose-500 dark:text-rose-400">
               {strat.latest_metrics?.drawdown !== undefined ? `${strat.latest_metrics.drawdown.toFixed(1)}%` : "--"}
             </div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Max DD</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold mt-0.5">Max DD</div>
           </div>
         </div>
 
         {/* Mini Equity Curve Graph */}
-        <div className="h-28 px-4 pt-4 relative">
+        <div className="h-24 px-5 pt-5 relative">
           {strat.equity_preview && strat.equity_preview.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={strat.equity_preview.map(([time, value]) => ({ value }))}>
                 <defs>
                   <linearGradient id={`colorPreview-${strat.id}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
+                    <stop offset="0%" stopColor={accent} stopOpacity={0.3} />
+                    <stop offset="100%" stopColor={accent} stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <Area
                   type="monotone"
                   dataKey="value"
-                  stroke="var(--primary)"
-                  strokeWidth={1.5}
+                  stroke={accent}
+                  strokeWidth={2}
                   fillOpacity={1}
                   fill={`url(#colorPreview-${strat.id})`}
                   dot={false}
@@ -286,45 +299,44 @@ export function StrategyCard({
           )}
         </div>
 
-        {/* Updated timestamp */}
-        <div className="px-4 pt-3 text-[10px] text-muted-foreground/40 font-medium">
-          Updated recently
-        </div>
+        {/* Sleek Footer Row */}
+        <div className="px-5 pt-4 pb-4 mt-auto flex items-center justify-between border-t border-border/40 dark:border-[#1e1e1e]/60">
+          <div className="text-[11px] text-muted-foreground/60 font-medium transition-colors group-hover:text-muted-foreground">
+            Updated recently
+          </div>
 
-        {/* Button to open or restore strategy */}
-        <div className="p-4 mt-auto flex gap-2">
           {strat.is_archived ? (
-            <>
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRestore?.(strat.id);
-                }}
-                className="flex-1 text-xs font-bold h-9 rounded-xl cursor-pointer"
-              >
-                Restore Strategy
-              </Button>
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
+                size="icon"
+                className="h-6 w-6 rounded-md cursor-pointer border-border dark:border-[#2e2e2e]"
                 onClick={(e) => {
                   e.stopPropagation();
                   router.push(`/strategies/${strat.id}`);
                 }}
-                className="text-xs font-bold h-9 px-3 rounded-xl cursor-pointer shrink-0"
               >
-                <IconExternalLink className="size-3.5" />
+                <IconExternalLink className="size-3 text-foreground" />
               </Button>
-            </>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRestore?.(strat.id);
+                }}
+                className="h-6 text-[10px] px-3 rounded-md font-bold bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer border-0"
+              >
+                Restore
+              </Button>
+            </div>
           ) : (
-            <Button
-              onClick={(e) => {
-                e.stopPropagation();
-                router.push(`/strategies/${strat.id}`);
-              }}
-              className="w-full text-xs font-bold h-9 rounded-xl cursor-pointer"
-            >
-              Open Strategy
-            </Button>
+            <div className="flex items-center text-[11px] font-bold text-muted-foreground/40 transition-colors duration-300 group-hover:text-primary">
+              <span className="w-0 overflow-hidden opacity-0 transition-all duration-300 group-hover:w-8 group-hover:opacity-100 whitespace-nowrap">
+                View
+              </span>
+              <IconArrowRight className="size-4 -translate-x-1 transition-all duration-300 group-hover:translate-x-0" />
+            </div>
           )}
         </div>
       </div>

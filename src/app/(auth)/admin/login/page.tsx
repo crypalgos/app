@@ -47,7 +47,7 @@ export default function AdminLoginPage() {
     try {
       const response = await AuthActions.LoginAction(data);
       setLogin(response);
-      router.push("/dashboard");
+      router.push("/strategies");
     } catch (error: any) {
       setGlobalError(error.message || "Invalid credentials. Please try again.");
     }

@@ -114,63 +114,13 @@ export default function StrategyOverviewPage() {
 
       {/* Page Content (Full Width) */}
       <div className="w-full">
-        <Tabs defaultValue="flow" className="w-full">
-          <Card className="border-border/50 bg-card/40 backdrop-blur-xs">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <div className="space-y-1">
-                <CardTitle className="text-base font-semibold">Strategy Logic & Flow</CardTitle>
-                <CardDescription>
-                  Trace the internal decision paths of this strategy.
-                </CardDescription>
-              </div>
-              <TabsList className="bg-muted/60 p-0.5 rounded-xl border border-border/50">
-                <TabsTrigger value="flow" className="text-xs font-bold rounded-lg px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm cursor-pointer">
-                  Logic Summary
-                </TabsTrigger>
-                <TabsTrigger value="code" className="text-xs font-bold rounded-lg px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm cursor-pointer">
-                  Python Code
-                </TabsTrigger>
-              </TabsList>
-            </CardHeader>
-            <CardContent className="pt-4">
-              <TabsContent value="flow" className="mt-0 outline-none">
-                <StrategyFlowMap canvasJson={strategy?.canvas_json} />
-              </TabsContent>
-              <TabsContent value="code" className="mt-0 outline-none">
-                {strategy?.compiled_code ? (
-                  <div className="h-[400px] border border-border/50 rounded-xl overflow-hidden mt-1">
-                    <Editor
-                      height="100%"
-                      defaultLanguage="python"
-                      theme={resolvedTheme === "dark" ? "vs-dark" : "light"}
-                      value={strategy.compiled_code}
-                      options={{
-                        readOnly: true,
-                        fontSize: 12.5,
-                        fontFamily: "var(--font-mono)",
-                        minimap: { enabled: false },
-                        automaticLayout: true,
-                        padding: { top: 12, bottom: 12 },
-                        scrollbar: { verticalScrollbarSize: 6, horizontalScrollbarSize: 6 },
-                      }}
-                      loading={
-                        <div className="absolute inset-0 flex items-center justify-center bg-background text-muted-foreground text-xs font-mono">
-                          Loading editor...
-                        </div>
-                      }
-                    />
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center p-8 text-center border border-dashed border-border/40 rounded-xl min-h-[200px]">
-                    <IconTerminal2 className="w-8 h-8 text-muted-foreground/60 mb-2" />
-                    <p className="text-sm font-medium text-muted-foreground">No compiled code available.</p>
-                    <p className="text-xs text-muted-foreground/80 mt-1">Open the builder to configure and compile your strategy nodes.</p>
-                  </div>
-                )}
-              </TabsContent>
-            </CardContent>
-          </Card>
-        </Tabs>
+        <div className="mb-4">
+          <h2 className="text-base font-semibold">Strategy Logic & Flow</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Trace the internal decision paths of this strategy.
+          </p>
+        </div>
+        <StrategyFlowMap canvasJson={strategy?.canvas_json} />
       </div>
     </div>
   );

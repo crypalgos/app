@@ -11,6 +11,9 @@ import {
 } from "@tabler/icons-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { getCoinLogoUrl } from "@/lib/instruments";
+import { cn } from "@/lib/utils";
+import React from "react";
 
 interface StrategyFlowMapProps {
   canvasJson?: any;
@@ -89,35 +92,75 @@ function renderAST(node: any, nodes: any[] = []): string {
 function highlightCondition(text: string) {
   if (!text) return <span className="text-muted-foreground/60 italic font-sans">Always True (Pass Through)</span>;
   
-  const tokens = text.split(/(\s+)/);
+  // Normalize string to fix missing spaces around operators from DB
+  let normalized = text
+    .replace(/\.valueAND/g, ".value AND ")
+    .replace(/\.valueOR/g, ".value OR ")
+    .replace(/([0-9])AND/g, "$1 AND ")
+    .replace(/([0-9])OR/g, "$1 OR ")
+    .replace(/AND([A-Z])/g, "AND $1")
+    .replace(/OR([A-Z])/g, "OR $1");
+
+  const tokens = normalized.split(/(\s+)/);
   return tokens.map((token, i) => {
     const trimmed = token.trim();
     if (!trimmed) return token; // Keep original whitespace spacing
     
-    if (trimmed === "IF" || trimmed === "AND" || trimmed === "OR") {
-      return <span key={i} className="text-primary font-extrabold tracking-wide dark:text-sky-400">{trimmed}</span>;
+    // Logic Operators
+    if (["AND", "OR", "NOT"].includes(trimmed)) {
+      return <span key={i} className="text-indigo-600 font-extrabold tracking-wide dark:text-indigo-400">{trimmed}</span>;
     }
+
+    // Math / Comparison Operators
     if (["===", "==", "!=", ">=", "<=", ">", "<", "="].includes(trimmed)) {
-      return <span key={i} className="text-amber-500 font-mono font-bold mx-1">{trimmed}</span>;
+      return <span key={i} className="text-amber-500 font-bold mx-1">{trimmed}</span>;
     }
-    if (/^\d+(\.\d+)?$/.test(trimmed)) {
-      return <span key={i} className="text-emerald-500 font-mono dark:text-emerald-400">{trimmed}</span>;
-    }
-    if (trimmed.includes("(")) {
-      const parts = trimmed.split("(", 2);
-      const name = parts[0];
-      const rest = parts[1];
+
+    // Special Strategy Operators (CROSSES_ABOVE, CROSSES_BELOW, etc)
+    if (trimmed.includes("CROSSES_ABOVE") || trimmed.includes("CROSSES_BELOW")) {
       return (
-        <span key={i}>
-          <span className="text-indigo-600 font-bold dark:text-indigo-400">{name}</span>
-          <span className="text-muted-foreground">({rest}</span>
+        <span key={i} className="text-fuchsia-600 dark:text-fuchsia-400 font-bold text-[10.5px] uppercase tracking-wider mx-1.5 bg-fuchsia-500/10 px-1.5 py-0.5 rounded border border-fuchsia-500/20 shadow-sm">
+          {trimmed.replace(/_/g, " ")}
         </span>
       );
     }
-    if (trimmed.startsWith("Feed.") || trimmed.includes(".Close") || trimmed.includes(".value")) {
-      return <span key={i} className="text-teal-600 font-mono dark:text-teal-400">{trimmed}</span>;
+
+    // Numbers
+    if (/^\d+(\.\d+)?$/.test(trimmed)) {
+      return <span key={i} className="text-emerald-600 font-mono font-semibold dark:text-emerald-400">{trimmed}</span>;
     }
-    return <span key={i} className="text-foreground">{trimmed}</span>;
+
+    // Function calls with arguments e.g. EMA(30).value
+    const funcMatch = trimmed.match(/^([A-Za-z0-9_]+)\(([^)]+)\)(\.[a-zA-Z0-9_]+)?$/);
+    if (funcMatch) {
+      const fnName = funcMatch[1];
+      const arg = funcMatch[2];
+      const property = funcMatch[3] || "";
+      return (
+        <span key={i} className="inline-flex items-baseline">
+          <span className="text-blue-600 font-bold dark:text-blue-400">{fnName}</span>
+          <span className="text-muted-foreground/60">(</span>
+          <span className="text-emerald-600 font-semibold dark:text-emerald-400">{arg}</span>
+          <span className="text-muted-foreground/60">)</span>
+          {property && <span className="text-muted-foreground font-medium">{property}</span>}
+        </span>
+      );
+    }
+
+    // Dot notation generic (Feed.Close)
+    if (trimmed.includes(".")) {
+      const parts = trimmed.split(".");
+      return (
+        <span key={i}>
+          <span className="text-slate-700 dark:text-slate-300 font-semibold">{parts[0]}</span>
+          <span className="text-muted-foreground">.</span>
+          <span className="text-teal-600 dark:text-teal-400 font-medium">{parts.slice(1).join(".")}</span>
+        </span>
+      );
+    }
+    
+    // Fallback variable names
+    return <span key={i} className="text-foreground font-medium">{trimmed}</span>;
   });
 }
 
@@ -205,15 +248,6 @@ export function StrategyFlowMap({ canvasJson }: StrategyFlowMapProps) {
 
   return (
     <div className="flex flex-col gap-6 w-full py-2">
-      {/* Page Header Accent */}
-      <div className="flex items-center gap-3 text-primary font-bold font-mono text-xs tracking-[0.25em] pl-1 select-none">
-        <div className="relative flex size-5 items-center justify-center bg-primary/10 rounded border border-primary/20">
-          <IconCpu className="size-3.5 text-primary animate-pulse" />
-          <span className="absolute -inset-0.5 rounded bg-primary/20 blur opacity-45"></span>
-        </div>
-        <span>STRATEGY BLUEPRINTS & LOGIC</span>
-      </div>
-
       <div className="flex flex-col gap-8">
         {pipelines.map((pipeline: any, idx: number) => {
           const { dataNode, indicators, conditions, actions, policies } = pipeline;
@@ -232,53 +266,55 @@ export function StrategyFlowMap({ canvasJson }: StrategyFlowMapProps) {
               key={idx}
               className="group relative rounded-2xl border border-border/60 bg-card/30 backdrop-blur-xl transition-all duration-300 hover:border-border hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:hover:shadow-[0_8px_30px_rgb(0,0,0,0.3)] hover:-translate-y-[2px]"
             >
-              {/* Top Accent Gradient Line */}
-              <div className="absolute top-0 left-0 right-0 h-[2px] rounded-t-2xl bg-gradient-to-r from-primary/50 via-indigo-500/40 to-emerald-500/50 opacity-70 group-hover:opacity-100 transition-opacity"></div>
-
               {/* Pipeline Header */}
-              <div className="bg-muted/30 px-6 py-4 rounded-t-2xl border-b border-border flex flex-wrap items-center justify-between gap-4">
+              <div className="px-6 py-5 rounded-t-2xl border-b border-border/50 flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <span className="relative flex h-2.5 w-2.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-success shadow-[0_0_10px_rgba(16,185,129,0.5)]"></span>
-                  </span>
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-mono font-bold text-muted-foreground tracking-wider">PIPELINE {idx + 1}</span>
-                      <span className="text-border font-mono text-[9px]">•</span>
-                      <span className="text-xs font-semibold text-success font-mono">ACTIVE</span>
-                    </div>
-                    <span className="text-base font-extrabold text-foreground tracking-tight">
+                  <div className="flex items-center gap-2.5">
+                    <img 
+                      src={getCoinLogoUrl(symbol.replace(/USD[T]?|PERP/i, ''))} 
+                      alt={symbol}
+                      className="w-7 h-7 rounded-full shadow-sm"
+                      onError={(e) => {
+                         (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${symbol}&background=random`;
+                      }}
+                    />
+                    <span className="text-lg font-extrabold text-foreground tracking-tight">
                       {symbol}
+                    </span>
+                    <div className="h-4 w-px bg-border/60 mx-2" />
+                    <span className="text-[10px] font-mono font-bold text-muted-foreground/70 uppercase tracking-widest">
+                      Pipeline {idx + 1}
                     </span>
                   </div>
                 </div>
 
                 {/* Pipeline Configurations */}
-                <div className="flex items-center gap-3 flex-wrap">
-                  <div className="flex items-center bg-muted/80 border border-border/80 rounded-lg p-1 pr-2">
-                    <div className="flex gap-1 items-center bg-primary/10 border border-primary/20 text-primary text-[10px] font-bold font-mono px-2 py-0.5 rounded">
-                      <IconCalendarTime className="size-3" />
-                      {primaryTimeframe}
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  {/* Timeframe Tag */}
+                  <div className="flex items-center border border-border/60 rounded-md bg-muted/10 shadow-sm overflow-hidden">
+                    <div className="flex items-center gap-1.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2.5 py-1 border-r border-border/50">
+                      <IconCalendarTime className="size-3.5" />
+                      <span className="text-[10.5px] font-mono font-extrabold tracking-wide">{primaryTimeframe}</span>
                     </div>
                     {secondaryTimeframes.length > 0 && (
-                      <div className="flex items-center gap-1 pl-1.5">
-                        <span className="text-muted-foreground/60 font-mono text-[10px]">/</span>
+                      <div className="flex items-center gap-1 px-2">
                         {secondaryTimeframes.map((tf: string, i: number) => (
-                          <span key={i} className="text-muted-foreground font-mono text-[10px] font-medium">
-                            {tf}
-                          </span>
+                          <React.Fragment key={i}>
+                            {i > 0 && <span className="text-muted-foreground/40 font-mono text-[10px]">/</span>}
+                            <span className="text-muted-foreground/80 font-mono text-[10px] font-semibold">{tf}</span>
+                          </React.Fragment>
                         ))}
                       </div>
                     )}
                   </div>
 
-                  <Badge
-                    variant="outline"
-                    className="text-[10px] font-bold font-mono text-foreground border-border bg-muted/85 py-1 px-3 rounded-lg shadow-sm"
-                  >
-                    ⚡ {leverage}X Leverage
-                  </Badge>
+                  {/* Leverage Tag */}
+                  <div className="flex items-center border border-border/60 rounded-md bg-muted/10 shadow-sm overflow-hidden">
+                    <div className="flex items-center gap-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-500 px-2.5 py-1">
+                      <span className="text-xs">⚡</span>
+                      <span className="text-[10.5px] font-mono font-extrabold tracking-wide">{leverage}X Leverage</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -290,19 +326,20 @@ export function StrategyFlowMap({ canvasJson }: StrategyFlowMapProps) {
                   
                   {/* Left Column: Indicators Configured */}
                   <div className="flex flex-col gap-3">
-                    <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.15em] flex items-center gap-2">
-                      <IconChartBar className="size-4 text-primary" />
+                    <span className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider flex items-center gap-2 mb-2">
+                      <IconChartBar className="size-4 text-muted-foreground/70" />
                       Indicators Configured
                     </span>
-                    <div className="flex flex-wrap gap-2 mt-1">
+                    <div className="flex flex-wrap gap-2.5 mt-1">
                       {indicators.length > 0 ? (
                         indicators.flatMap((n: any) => n.data?.indicators || []).map((ind: any, i: number) => (
                           <Badge
                             key={i}
                             variant="outline"
-                            className="text-[10px] font-mono font-bold py-1.5 px-3 bg-muted/40 border border-border/50 text-primary rounded-md shadow-inner"
+                            className="font-mono text-[11px] font-bold py-1 px-3.5 rounded-full border shadow-sm border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-500"
                           >
-                            {ind.indicator || ind.name || "Indicator"} ({ind.period || 14})
+                            {ind.indicator || ind.name || "Indicator"} 
+                            <span className="text-cyan-700/70 dark:text-cyan-500/70 font-medium ml-1.5">({ind.period || 14})</span>
                           </Badge>
                         ))
                       ) : (
@@ -313,11 +350,11 @@ export function StrategyFlowMap({ canvasJson }: StrategyFlowMapProps) {
 
                   {/* Right Column: Exit Safeguards */}
                   <div className="flex flex-col gap-3">
-                    <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.15em] flex items-center gap-2">
-                      <IconShield className="size-4 text-destructive" />
+                    <span className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider flex items-center gap-2 mb-2">
+                      <IconShield className="size-4 text-muted-foreground/70" />
                       Exit Safeguards
                     </span>
-                    <div className="flex flex-wrap gap-2 mt-1">
+                    <div className="flex flex-wrap gap-2.5 mt-1">
                       {(() => {
                         const allPolicies = policies.flatMap((n: any) => n.data?.policies || []);
                         return allPolicies.length > 0 ? (
@@ -348,10 +385,10 @@ export function StrategyFlowMap({ canvasJson }: StrategyFlowMapProps) {
                               <Badge
                                 key={i}
                                 variant="outline"
-                                className={`font-mono text-[10px] font-bold py-1.5 px-3 rounded-md border shadow-inner ${
+                                className={`font-mono text-[11px] font-bold py-1 px-3.5 rounded-full border shadow-sm ${
                                   isStopLoss
-                                    ? "border-destructive/20 bg-destructive/5 text-destructive"
-                                    : "border-amber-500/20 bg-amber-500/5 text-amber-600 dark:text-amber-400"
+                                    ? "border-destructive/30 bg-destructive/10 text-destructive"
+                                    : "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-500"
                                 }`}
                               >
                                 {typeLabelStr}: {detail}
@@ -368,88 +405,113 @@ export function StrategyFlowMap({ canvasJson }: StrategyFlowMapProps) {
                 </div>
 
                 {/* Row 2: Logic Rules & Dispatch Actions */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  
-                  {/* Left Column: Execution Rules */}
-                  <div className="flex flex-col gap-3">
-                    <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.15em] flex items-center gap-2">
-                      <IconGitBranch className="size-4 text-indigo-500" />
+                <div className="flex flex-col gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <span className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider flex items-center gap-2">
+                      <IconGitBranch className="size-4 text-muted-foreground/70" />
                       Execution Rules
                     </span>
-                    <div className="flex flex-col gap-3">
-                      {conditions.length > 0 ? (
-                        conditions.map((node: any) => {
-                          let cond = node.data?.condition;
-                          if (!cond && node.data?.ast_root) {
-                            cond = renderAST(node.data.ast_root, canvasJson?.nodes || []);
-                          }
-                          return (
-                            <div
-                              key={node.id}
-                              className="relative bg-muted/30 border border-border border-l-2 border-l-primary/80 rounded-r-xl rounded-l-md p-5 font-mono text-xs text-foreground shadow-sm"
-                            >
-                              <div className="flex items-center justify-between mb-2 text-[9px] text-muted-foreground font-bold tracking-wider uppercase">
-                                <span>Rule Evaluator</span>
-                                <span className="size-1.5 rounded-full bg-primary" />
-                              </div>
-                              <span className="text-primary font-bold dark:text-sky-400">IF</span> {highlightCondition(cond)}
-                            </div>
-                          );
-                        })
-                      ) : (
-                        <div className="bg-muted/10 border border-dashed border-border rounded-lg p-5 font-mono text-xs text-muted-foreground text-center">
-                          Always True (Pass Through)
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Right Column: Dispatch Actions */}
-                  <div className="flex flex-col gap-3">
-                    <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.15em] flex items-center gap-2">
-                      <IconBolt className="size-4 text-emerald-500" />
+                    <span className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider flex items-center gap-2 hidden md:flex">
+                      <IconBolt className="size-4 text-muted-foreground/70" />
                       Dispatch Actions
                     </span>
-                    <div className="flex flex-col gap-3">
-                      {actions.length > 0 ? (
-                        actions.map((act: any) => {
-                          const { actionType = "buy", sizing } = act.data || {};
-                          const sizeVal = sizing?.value !== undefined ? sizing.value : "Market";
-                          const sizeMode = sizing?.mode === "PERCENT_OF_EQUITY" ? "% Eq" : sizing?.mode === "FIXED_USD" ? " USD" : " Qty";
-                          const sizeStr = sizing ? `${sizeVal}${sizeMode}` : "Market Sizing";
-                          const isBuy = actionType.toLowerCase() === "buy";
-
-                          return (
-                            <div
-                              key={act.id}
-                              className="relative bg-muted/30 border border-border border-l-2 border-l-success/80 rounded-r-xl rounded-l-md p-5 font-mono text-xs text-foreground shadow-sm"
-                            >
-                              <div className="flex items-center justify-between mb-2 text-[9px] text-muted-foreground font-bold tracking-wider uppercase">
-                                <span>Order Dispatcher</span>
-                                <span className="size-1.5 rounded-full bg-success" />
-                              </div>
-                              <div>
-                                <span className="text-success font-bold">THEN</span> Execute order:{" "}
-                                <Badge
-                                  className={`text-[9px] font-extrabold uppercase py-0 px-2 rounded font-mono ${
-                                    isBuy
-                                      ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 dark:text-emerald-400"
-                                      : "bg-amber-500/10 text-amber-600 border border-amber-500/20 dark:text-amber-400"
-                                  }`}
-                                >
-                                  {actionType}
-                                </Badge>{" "}
-                                <span className="text-muted-foreground text-[11px]">({sizeStr} sizing)</span>
-                              </div>
-                            </div>
-                          );
-                        })
-                      ) : (
-                        <span className="text-xs text-muted-foreground italic pl-1">No dispatch actions mapped.</span>
-                      )}
-                    </div>
                   </div>
 
+                  <div className="flex flex-col gap-4">
+                    {Array.from({ length: Math.max(conditions.length || 1, actions.length || 1) }).map((_, i) => {
+                      const node = conditions[i];
+                      const act = actions[i];
+
+                      return (
+                        <div key={i} className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
+                          {/* Left Column: Rule */}
+                          <div className="h-full">
+                            {node ? (() => {
+                              let cond = node.data?.condition;
+                              if (!cond && node.data?.ast_root) {
+                                cond = renderAST(node.data.ast_root, canvasJson?.nodes || []);
+                              }
+                              return (
+                                <div className={cn(
+                                  "group h-full relative bg-card dark:bg-[#0a0a0a] border border-black/5 dark:border-[#1e1e1e] rounded-[16px] p-5 font-mono text-xs text-foreground shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] dark:shadow-none flex flex-col justify-start transition-all duration-300 ease-out cursor-default",
+                                  "hover:-translate-y-0.5 hover:border-indigo-500/30 hover:shadow-[0_8px_30px_-10px_rgba(99,102,241,0.15)] dark:hover:shadow-[0_8px_30px_-10px_rgba(99,102,241,0.2)]"
+                                )}>
+                                  <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 rounded-[16px] pointer-events-none" />
+                                  <div className="flex items-center justify-between mb-4 relative z-10">
+                                    <span className="text-[9.5px] font-bold tracking-[0.15em] uppercase px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shadow-sm">
+                                      Rule Evaluator
+                                    </span>
+                                  </div>
+                                  <div className="relative z-10 text-[13px] leading-relaxed flex items-center flex-wrap gap-y-2">
+                                    <span className="font-extrabold text-indigo-600 dark:text-indigo-400 mr-2 tracking-wide">IF</span>
+                                    {highlightCondition(cond)}
+                                  </div>
+                                </div>
+                              );
+                            })() : (
+                              <div className="h-full bg-black/5 dark:bg-white/5 border border-dashed border-black/10 dark:border-white/10 rounded-[16px] p-6 font-mono text-[13px] text-muted-foreground text-center flex flex-col justify-center shadow-inner">
+                                Always True (Pass Through)
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Right Column: Action */}
+                          <div className="h-full">
+                            <span className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider flex items-center gap-2 md:hidden mb-2">
+                              <IconBolt className="size-4 text-muted-foreground/70" />
+                              Dispatch Actions
+                            </span>
+                            {act ? (() => {
+                              const { actionType = "buy", sizing } = act.data || {};
+                              const sizeVal = sizing?.value !== undefined ? sizing.value : "Market";
+                              const sizeMode = sizing?.mode === "PERCENT_OF_EQUITY" ? "% Eq" : sizing?.mode === "FIXED_USD" ? " USD" : " Qty";
+                              const sizeStr = sizing ? `${sizeVal}${sizeMode}` : "Market Sizing";
+                              const isBuy = actionType.toLowerCase() === "buy";
+
+                              return (
+                                <div className={cn(
+                                  "group h-full relative bg-card dark:bg-[#0a0a0a] border border-black/5 dark:border-[#1e1e1e] rounded-[16px] p-5 font-mono text-xs text-foreground shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] dark:shadow-none flex flex-col justify-start transition-all duration-300 ease-out cursor-default",
+                                  isBuy 
+                                    ? "hover:-translate-y-0.5 hover:border-emerald-500/30 hover:shadow-[0_8px_30px_-10px_rgba(16,185,129,0.15)] dark:hover:shadow-[0_8px_30px_-10px_rgba(16,185,129,0.2)]"
+                                    : "hover:-translate-y-0.5 hover:border-amber-500/30 hover:shadow-[0_8px_30px_-10px_rgba(245,158,11,0.15)] dark:hover:shadow-[0_8px_30px_-10px_rgba(245,158,11,0.2)]"
+                                )}>
+                                  <div className={cn(
+                                    "absolute inset-0 bg-gradient-to-br via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 rounded-[16px] pointer-events-none",
+                                    isBuy ? "from-emerald-500/5" : "from-amber-500/5"
+                                  )} />
+                                  <div className="flex items-center justify-between mb-4 relative z-10">
+                                    <span className={`text-[9.5px] font-bold tracking-[0.15em] uppercase px-2 py-0.5 rounded border shadow-sm ${isBuy ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 dark:text-amber-500 border-amber-500/20'}`}>
+                                      Order Dispatcher
+                                    </span>
+                                  </div>
+                                  <div className="relative z-10 text-[13px] leading-relaxed flex items-center flex-wrap gap-y-2">
+                                    <span className={`font-extrabold mr-2 tracking-wide ${isBuy ? 'text-emerald-600 dark:text-emerald-500' : 'text-amber-600 dark:text-amber-500'}`}>THEN</span>
+                                    <span className="text-foreground/80 font-medium mr-1.5">Execute order:</span>
+                                    <Badge
+                                      className={`text-[10px] font-extrabold uppercase py-0.5 px-2.5 rounded shadow-sm font-mono ${
+                                        isBuy
+                                          ? "bg-emerald-500 text-white hover:bg-emerald-600"
+                                          : "bg-amber-500 text-white hover:bg-amber-600"
+                                      }`}
+                                    >
+                                      {actionType}
+                                    </Badge>
+                                    <span className="text-muted-foreground/80 text-[11px] ml-2 font-medium border border-border/50 bg-background/50 px-2 py-0.5 rounded shadow-sm">
+                                      {sizeStr} sizing
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })() : (
+                              <div className="h-full bg-black/5 dark:bg-white/5 border border-dashed border-black/10 dark:border-white/10 rounded-[16px] p-6 font-mono text-[13px] text-muted-foreground text-center flex flex-col justify-center shadow-inner">
+                                No Dispatch Action Configured
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
               </CardContent>

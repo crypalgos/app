@@ -41,8 +41,8 @@ export function NavbarWrapper() {
       link: "#features",
     },
     {
-      name: "Dashboard",
-      link: "/dashboard",
+      name: "Strategies",
+      link: "/strategies",
     },
     {
       name: "Pricing",

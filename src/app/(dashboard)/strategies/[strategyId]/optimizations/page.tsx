@@ -43,8 +43,8 @@ export default function StrategyOptimizationsPage() {
 
   if (isLoading) {
     return (
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-        {Array.from({ length: 4 }).map((_, i) => (
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, i) => (
           <Skeleton key={i} className="h-[250px] rounded-[18px]" />
         ))}
       </div>
@@ -82,7 +82,7 @@ export default function StrategyOptimizationsPage() {
         <OptimizationTriggerDialog strategyId={strategyId} />
       </div>
 
-      <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
         {runs.map((run: ResearchRun) => (
           <ResearchRunCard
             key={run.id}

@@ -17,18 +17,19 @@ import {
   Lock, 
   KeyRound, 
   ShieldCheck,
-  Mail
 } from "lucide-react";
 import { toast } from "sonner";
+import { AnimatePresence, motion } from "framer-motion";
 
 import { cn } from "@/lib/utils";
 import { AuthActions } from "@/api-actions/auth-actions";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { FieldGroup, Field, FieldLabel, FieldDescription, FieldError } from "@/components/ui/field";
+import { FieldGroup, Field, FieldLabel, FieldError } from "@/components/ui/field";
 import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from "@/components/ui/input-otp";
 import { Badge } from "@/components/ui/badge";
+import { BlurFade } from "@/components/ui/auth-animations";
 
 // Premium form schema with password match validation on the frontend
 const ForgotPasswordFormSchema = z.object({
@@ -76,7 +77,6 @@ export default function ForgotPasswordPage() {
     handleSubmit,
     trigger,
     watch,
-    setError,
     formState: { errors, isSubmitting },
   } = useForm<IForgotPasswordForm>({
     resolver: zodResolver(ForgotPasswordFormSchema),
@@ -95,7 +95,6 @@ export default function ForgotPasswordPage() {
   const confirmPasswordVal = watch("confirm_password") || "";
   const strength = getPasswordStrength(passwordVal);
 
-  // Step 1: Request reset code
   const handleRequestCode = async () => {
     const isIdentifierValid = await trigger("identifier");
     if (!isIdentifierValid) return;
@@ -113,7 +112,6 @@ export default function ForgotPasswordPage() {
     }
   };
 
-  // Step 2: Validate code on backend before advancing
   const handleVerifyCode = async () => {
     const isOtpValid = await trigger("verification_code");
     if (!isOtpValid) return;
@@ -140,7 +138,6 @@ export default function ForgotPasswordPage() {
     }
   };
 
-  // Step 3: Complete Password Reset
   const onSubmit = async (data: IForgotPasswordForm) => {
     setGlobalError(null);
     try {
@@ -156,366 +153,281 @@ export default function ForgotPasswordPage() {
     }
   };
 
-  // Password strength checklist flags
   const hasMinLength = passwordVal?.length >= 8;
-  const hasNumber = /\d/.test(passwordVal || "");
-  const hasSpecial = /[^A-Za-z0-9]/.test(passwordVal || "");
   const isMatch = passwordVal && passwordVal === confirmPasswordVal;
 
   return (
-    <div className="flex flex-col gap-6 mt-8 md:mt-0 max-w-md mx-auto w-full">
-      <div className="flex flex-col space-y-2 text-center md:text-left mb-2">
-        <h1 className="text-3xl font-semibold tracking-tight">
-          {step === 1 && "Forgot password?"}
-          {step === 2 && "Verification Code"}
-          {step === 3 && "Choose New Password"}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {step === 1 && "Enter your email or username to receive a reset code."}
-          {step === 2 && "Please enter the 6-digit confirmation code sent to your email."}
-          {step === 3 && "Set a strong and secure password for your CrypAlgos account."}
-        </p>
-      </div>
+    <fieldset disabled={isSubmitting} className="flex flex-col gap-6 w-full max-w-[380px] mx-auto">
+      <BlurFade delay={0.1} yOffset={4}>
+        <div className="flex flex-col space-y-1.5 text-center md:text-left mb-2">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            {step === 1 && "Forgot password?"}
+            {step === 2 && "Verification Code"}
+            {step === 3 && "Choose New Password"}
+          </h1>
+          <p className="text-sm text-muted-foreground font-medium">
+            {step === 1 && "Enter your email or username to receive a reset code."}
+            {step === 2 && "Please enter the 6-digit confirmation code sent to your email."}
+            {step === 3 && "Set a strong and secure password for your CrypAlgos account."}
+          </p>
+        </div>
+      </BlurFade>
 
       {globalError && (
-        <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive rounded-xl animate-in fade-in duration-300">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="ml-2 font-medium text-xs leading-normal">{globalError}</AlertDescription>
-        </Alert>
+        <BlurFade delay={0.2} yOffset={4}>
+          <Alert variant="destructive" className="bg-destructive/5 border-destructive/20 text-destructive rounded-lg shadow-sm">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="ml-2 font-medium text-xs leading-normal">{globalError}</AlertDescription>
+          </Alert>
+        </BlurFade>
       )}
 
       {/* Segmented Progress Stepper */}
-      <div className="flex flex-col gap-2 bg-secondary/20 p-4 rounded-2xl border border-border/50">
-        <div className="flex items-center justify-between text-[11px] text-muted-foreground font-bold px-0.5">
-          <span className="text-primary tracking-wide">STEP {step} OF 3</span>
-          <span className="uppercase tracking-widest text-[10px]">
-            {step === 1 && "Request code"}
-            {step === 2 && "Verify identity"}
-            {step === 3 && "Reset password"}
-          </span>
-        </div>
-        <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden mt-1.5">
-          <div 
-            className="h-full bg-gradient-to-r from-primary to-blue-500 rounded-full transition-all duration-500 ease-out"
-            style={{ width: `${(step / 3) * 100}%` }}
-          />
-        </div>
-        
-        {/* Step Bubble Dots */}
-        <div className="flex justify-between items-center mt-3.5 px-1">
-          {/* Step 1 */}
-          <div className="flex items-center gap-2">
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-extrabold transition-all duration-300 border ${
-              step > 1 
-                ? "bg-emerald-500/10 border-emerald-500 text-emerald-500" 
-                : step === 1 
-                ? "bg-primary border-primary text-primary-foreground shadow-sm" 
-                : "bg-muted border-border text-muted-foreground"
-            }`}>
-              {step > 1 ? "✓" : "1"}
-            </div>
-            <span className={`text-[11px] font-bold transition-colors duration-300 ${
-              step === 1 ? "text-foreground" : "text-muted-foreground/60"
-            }`}>Request</span>
+      <BlurFade delay={0.3} yOffset={4}>
+        <div className="flex flex-col gap-2 bg-secondary/10 p-3 rounded-xl border border-border/30">
+          <div className="flex items-center justify-between text-[10px] text-muted-foreground font-bold px-0.5">
+            <span className="text-foreground tracking-wide">STEP {step} OF 3</span>
+            <span className="uppercase tracking-widest opacity-70">
+              {step === 1 && "Request code"}
+              {step === 2 && "Verify identity"}
+              {step === 3 && "Reset password"}
+            </span>
           </div>
-
-          <div className="flex-1 h-[1px] bg-border/60 mx-2" />
-
-          {/* Step 2 */}
-          <div className="flex items-center gap-2">
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-extrabold transition-all duration-300 border ${
-              step > 2 
-                ? "bg-emerald-500/10 border-emerald-500 text-emerald-500" 
-                : step === 2 
-                ? "bg-primary border-primary text-primary-foreground shadow-sm" 
-                : "bg-muted border-border text-muted-foreground"
-            }`}>
-              {step > 2 ? "✓" : "2"}
-            </div>
-            <span className={`text-[11px] font-bold transition-colors duration-300 ${
-              step === 2 ? "text-foreground" : "text-muted-foreground/60"
-            }`}>Verify</span>
-          </div>
-
-          <div className="flex-1 h-[1px] bg-border/60 mx-2" />
-
-          {/* Step 3 */}
-          <div className="flex items-center gap-2">
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-extrabold transition-all duration-300 border ${
-              step === 3 
-                ? "bg-primary border-primary text-primary-foreground shadow-sm" 
-                : "bg-muted border-border text-muted-foreground"
-            }`}>
-              3
-            </div>
-            <span className={`text-[11px] font-bold transition-colors duration-300 ${
-              step === 3 ? "text-foreground" : "text-muted-foreground/60"
-            }`}>Reset</span>
+          <div className="h-1 w-full bg-secondary rounded-full overflow-hidden mt-1">
+            <div 
+              className="h-full bg-foreground rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${(step / 3) * 100}%` }}
+            />
           </div>
         </div>
-      </div>
+      </BlurFade>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* STEP 1: Request Reset Code */}
-        {step === 1 && (
-          <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
-            <Field data-invalid={!!errors.identifier}>
-              <FieldLabel htmlFor="identifier" className="text-foreground/80">Email or Username</FieldLabel>
-              <Input
-                id="identifier"
-                placeholder="name@example.com or username"
-                className="h-11 bg-background dark:bg-white/5 border-zinc-200 dark:border-border/50 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all"
-                {...register("identifier")}
-                aria-invalid={!!errors.identifier}
+        <AnimatePresence mode="wait">
+          {/* STEP 1: Request Reset Code */}
+          {step === 1 && (
+            <motion.div key="step-1" initial={{ x: 10, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -10, opacity: 0 }} transition={{ duration: 0.2 }} className="space-y-5">
+              <Field data-invalid={!!errors.identifier}>
+                <FieldLabel htmlFor="identifier" className="text-foreground/90 font-medium">Email or Username</FieldLabel>
+                <Input
+                  id="identifier"
+                  placeholder="name@example.com or username"
+                  className="h-10 bg-background dark:bg-white/[0.03] border-zinc-200 dark:border-border/50 focus-visible:ring-1 focus-visible:ring-primary transition-all rounded-md shadow-sm"
+                  {...register("identifier")}
+                  aria-invalid={!!errors.identifier}
+                  disabled={requestingCode}
+                />
+                <FieldError errors={[errors.identifier]} />
+              </Field>
+
+              <Button
+                type="button"
+                onClick={handleRequestCode}
                 disabled={requestingCode}
-              />
-              <FieldError errors={[errors.identifier]} />
-            </Field>
-
-            <Button
-              type="button"
-              onClick={handleRequestCode}
-              disabled={requestingCode}
-              className="w-full h-11 font-medium bg-foreground text-background hover:bg-foreground/90 transition-all rounded-lg mt-4 flex items-center justify-center gap-2 group"
-            >
-              {requestingCode ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Sending code...
-                </>
-              ) : (
-                <>
-                  Send reset code
-                  <ArrowRight className="size-4 group-hover:translate-x-0.5 transition-transform" />
-                </>
-              )}
-            </Button>
-          </div>
-        )}
-
-        {/* STEP 2: Verify Code */}
-        {step === 2 && (
-          <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
-            <Field data-invalid={!!errors.verification_code}>
-              <FieldLabel htmlFor="verification_code" className="text-xs font-semibold text-foreground/80 flex items-center justify-center sm:justify-start gap-1.5">
-                <ShieldCheck className="size-3.5 text-muted-foreground" />
-                6-Digit Verification Code
-              </FieldLabel>
-              <div className="flex justify-center mt-3 w-full">
-                <Controller
-                  control={control}
-                  name="verification_code"
-                  render={({ field }) => (
-                    <InputOTP
-                      id="verification_code"
-                      maxLength={6}
-                      value={field.value}
-                      onChange={field.onChange}
-                      disabled={checkingCode}
-                    >
-                      <InputOTPGroup>
-                        <InputOTPSlot index={0} className="size-11 text-base md:text-lg font-bold bg-black/[0.02] dark:bg-white/[0.02] border-border/80" />
-                        <InputOTPSlot index={1} className="size-11 text-base md:text-lg font-bold bg-black/[0.02] dark:bg-white/[0.02] border-border/80" />
-                        <InputOTPSlot index={2} className="size-11 text-base md:text-lg font-bold bg-black/[0.02] dark:bg-white/[0.02] border-border/80" />
-                      </InputOTPGroup>
-                      <InputOTPSeparator className="mx-1 text-muted-foreground/60 scale-125" />
-                      <InputOTPGroup>
-                        <InputOTPSlot index={3} className="size-11 text-base md:text-lg font-bold bg-black/[0.02] dark:bg-white/[0.02] border-border/80" />
-                        <InputOTPSlot index={4} className="size-11 text-base md:text-lg font-bold bg-black/[0.02] dark:bg-white/[0.02] border-border/80" />
-                        <InputOTPSlot index={5} className="size-11 text-base md:text-lg font-bold bg-black/[0.02] dark:bg-white/[0.02] border-border/80" />
-                      </InputOTPGroup>
-                    </InputOTP>
-                  )}
-                />
-              </div>
-              <FieldError errors={[errors.verification_code]} />
-            </Field>
-
-            <div className="flex gap-3 mt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handlePrevStep}
-                disabled={checkingCode}
-                className="w-1/3 h-11 font-medium border-border/60 hover:bg-secondary transition-all rounded-lg flex items-center justify-center gap-1.5"
+                className="w-full h-10 font-medium bg-foreground text-background hover:bg-foreground/90 transition-all rounded-md shadow-sm mt-4 flex items-center justify-center gap-2 group"
               >
-                <ArrowLeft className="size-4" />
-                Back
-              </Button>
-              <Button
-                type="button"
-                onClick={handleVerifyCode}
-                disabled={checkingCode || otpVal?.length !== 6}
-                className="flex-1 h-11 font-medium bg-foreground text-background hover:bg-foreground/90 transition-all rounded-lg flex items-center justify-center gap-2 group"
-              >
-                {checkingCode ? (
+                {requestingCode ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Verifying...
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending code...
                   </>
                 ) : (
                   <>
-                    Verify Code
-                    <ArrowRight className="size-4 group-hover:translate-x-0.5 transition-transform" />
+                    Send reset code
+                    <ArrowRight className="h-4 w-4 opacity-70 group-hover:translate-x-0.5 transition-transform" />
                   </>
                 )}
               </Button>
-            </div>
-          </div>
-        )}
+            </motion.div>
+          )}
 
-        {/* STEP 3: Setup Password */}
-        {step === 3 && (
-          <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
-            <Field data-invalid={!!errors.new_password}>
-              <FieldLabel htmlFor="new_password" className="text-xs font-semibold text-foreground/80 flex items-center gap-1.5">
-                <Lock className="size-3.5 text-muted-foreground" />
-                New Password
-              </FieldLabel>
-              <div className="relative mt-1.5">
-                <Input
-                  id="new_password"
-                  type={showNewPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  className="pr-10 h-11 bg-background dark:bg-white/5 border-zinc-200 dark:border-border/50 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all rounded-xl"
-                  {...register("new_password")}
-                  aria-invalid={!!errors.new_password}
-                  disabled={isSubmitting}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  tabIndex={-1}
-                >
-                  {showNewPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                </button>
-              </div>
-              <FieldError errors={[errors.new_password]} />
-
-              {/* Real-time interactive strength meter */}
-              {passwordVal ? (
-                <div className="space-y-2 mt-2.5 p-3 rounded-xl bg-black/[0.02] dark:bg-white/[0.02] border border-border/20">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground font-medium">Strength:</span>
-                    <Badge variant={strength.variant} className="font-semibold text-[10px] py-0.5 px-2">
-                      {strength.text}
-                    </Badge>
-                  </div>
-                  <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className={cn("h-full transition-all duration-500 ease-out", strength.color)} 
-                      style={{ width: `${(strength.score / 4) * 100}%` }}
-                    />
-                  </div>
-                  
-                  {/* Visual checklist */}
-                  <div className="grid grid-cols-2 gap-1.5 mt-2">
-                    <div className="flex items-center gap-1.5 text-[10px]">
-                      <Check className={cn("size-3", passwordVal.length >= 8 ? "text-primary" : "text-muted-foreground")} />
-                      <span className={cn(passwordVal.length >= 8 ? "text-foreground font-medium" : "text-muted-foreground")}>8+ characters</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-[10px]">
-                      <Check className={cn("size-3", /[A-Z]/.test(passwordVal) && /[a-z]/.test(passwordVal) ? "text-primary" : "text-muted-foreground")} />
-                      <span className={cn(/[A-Z]/.test(passwordVal) && /[a-z]/.test(passwordVal) ? "text-foreground font-medium" : "text-muted-foreground")}>Case mixed</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-[10px]">
-                      <Check className={cn("size-3", /[0-9]/.test(passwordVal) ? "text-primary" : "text-muted-foreground")} />
-                      <span className={cn(/[0-9]/.test(passwordVal) ? "text-foreground font-medium" : "text-muted-foreground")}>At least 1 number</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-[10px]">
-                      <Check className={cn("size-3", /[^A-Za-z0-9]/.test(passwordVal) ? "text-primary" : "text-muted-foreground")} />
-                      <span className={cn(/[^A-Za-z0-9]/.test(passwordVal) ? "text-foreground font-medium" : "text-muted-foreground")}>Special character</span>
-                    </div>
-                  </div>
+          {/* STEP 2: Verify Code */}
+          {step === 2 && (
+            <motion.div key="step-2" initial={{ x: 10, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -10, opacity: 0 }} transition={{ duration: 0.2 }} className="space-y-5">
+              <Field data-invalid={!!errors.verification_code}>
+                <FieldLabel htmlFor="verification_code" className="text-xs font-semibold text-foreground/80 flex items-center gap-1.5">
+                  <ShieldCheck className="size-3.5 text-muted-foreground" />
+                  6-Digit Verification Code
+                </FieldLabel>
+                <div className="flex justify-start mt-2 w-full">
+                  <Controller
+                    control={control}
+                    name="verification_code"
+                    render={({ field }) => (
+                      <InputOTP
+                        id="verification_code"
+                        maxLength={6}
+                        value={field.value}
+                        onChange={field.onChange}
+                        disabled={checkingCode}
+                      >
+                        <InputOTPGroup>
+                          <InputOTPSlot index={0} className="size-10 text-base font-bold bg-background dark:bg-white/[0.03] border-zinc-200 dark:border-border/50" />
+                          <InputOTPSlot index={1} className="size-10 text-base font-bold bg-background dark:bg-white/[0.03] border-zinc-200 dark:border-border/50" />
+                          <InputOTPSlot index={2} className="size-10 text-base font-bold bg-background dark:bg-white/[0.03] border-zinc-200 dark:border-border/50" />
+                        </InputOTPGroup>
+                        <InputOTPSeparator className="mx-1 text-muted-foreground/60 scale-125" />
+                        <InputOTPGroup>
+                          <InputOTPSlot index={3} className="size-10 text-base font-bold bg-background dark:bg-white/[0.03] border-zinc-200 dark:border-border/50" />
+                          <InputOTPSlot index={4} className="size-10 text-base font-bold bg-background dark:bg-white/[0.03] border-zinc-200 dark:border-border/50" />
+                          <InputOTPSlot index={5} className="size-10 text-base font-bold bg-background dark:bg-white/[0.03] border-zinc-200 dark:border-border/50" />
+                        </InputOTPGroup>
+                      </InputOTP>
+                    )}
+                  />
                 </div>
-              ) : null}
-            </Field>
+                <FieldError errors={[errors.verification_code]} />
+              </Field>
 
-            {/* Confirm Password Field */}
-            <Field data-invalid={!!errors.confirm_password}>
-              <FieldLabel htmlFor="confirm_password" className="text-xs font-semibold text-foreground/80 flex items-center gap-1.5">
-                <KeyRound className="size-3.5 text-muted-foreground" />
-                Confirm New Password
-              </FieldLabel>
-              <div className="relative mt-1.5">
-                <Input
-                  id="confirm_password"
-                  type={showConfirmPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  className="pr-10 h-11 bg-background dark:bg-white/5 border-zinc-200 dark:border-border/50 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all rounded-xl"
-                  {...register("confirm_password")}
-                  aria-invalid={!!errors.confirm_password}
-                  disabled={isSubmitting}
-                />
-                <button
+              <div className="flex gap-2 mt-4">
+                <Button
                   type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  tabIndex={-1}
+                  variant="outline"
+                  onClick={handlePrevStep}
+                  disabled={checkingCode}
+                  className="w-12 h-10 px-0 flex items-center justify-center border-border/60 hover:bg-secondary transition-all rounded-md"
                 >
-                  {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                </button>
-              </div>
-
-              {/* Match Feedback Badge */}
-              {confirmPasswordVal ? (
-                <div className="flex items-center gap-1.5 mt-2 animate-in fade-in duration-200">
-                  {passwordVal === confirmPasswordVal ? (
-                    <Badge variant="secondary" className="flex items-center gap-1 bg-emerald-500/10 text-emerald-500 dark:bg-emerald-500/20 border-none px-2 py-0.5 rounded-md text-[10px] font-semibold">
-                      <Check className="size-3 stroke-[2.5px]" />
-                      Passwords match
-                    </Badge>
+                  <ArrowLeft className="size-4" />
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleVerifyCode}
+                  disabled={checkingCode || otpVal?.length !== 6}
+                  className="flex-1 h-10 font-medium bg-foreground text-background hover:bg-foreground/90 transition-all rounded-md shadow-sm flex items-center justify-center gap-2 group"
+                >
+                  {checkingCode ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Verifying...
+                    </>
                   ) : (
-                    <Badge variant="destructive" className="flex items-center gap-1 bg-destructive/10 text-destructive border-none px-2 py-0.5 rounded-md text-[10px] font-semibold">
-                      <AlertCircle className="size-3" />
-                      Passwords do not match
-                    </Badge>
+                    <>
+                      Verify Code
+                      <ArrowRight className="h-4 w-4 opacity-70 group-hover:translate-x-0.5 transition-transform" />
+                    </>
                   )}
-                </div>
-              ) : null}
-              <FieldError errors={[errors.confirm_password]} />
-            </Field>
+                </Button>
+              </div>
+            </motion.div>
+          )}
 
-            <div className="flex gap-3 mt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handlePrevStep}
-                disabled={isSubmitting}
-                className="w-1/3 h-11 font-medium border-border/60 hover:bg-secondary transition-all rounded-lg flex items-center justify-center gap-1.5"
-              >
-                <ArrowLeft className="size-4" />
-                Back
-              </Button>
-              <Button
-                type="submit"
-                disabled={isSubmitting || !hasMinLength || !isMatch}
-                className="flex-1 h-11 font-medium bg-foreground text-background hover:bg-foreground/90 transition-all rounded-lg flex items-center justify-center gap-2"
-              >
-                {isSubmitting ? (
-                  <>
+          {/* STEP 3: Setup Password */}
+          {step === 3 && (
+            <motion.div key="step-3" initial={{ x: 10, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -10, opacity: 0 }} transition={{ duration: 0.2 }} className="space-y-5">
+              <Field data-invalid={!!errors.new_password}>
+                <FieldLabel htmlFor="new_password" className="text-foreground/90 font-medium flex items-center gap-1.5">
+                  <Lock className="size-3.5 text-muted-foreground" />
+                  New Password
+                </FieldLabel>
+                <div className="relative">
+                  <Input
+                    id="new_password"
+                    type={showNewPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    className="h-10 bg-background dark:bg-white/[0.03] border-zinc-200 dark:border-border/50 focus-visible:ring-1 focus-visible:ring-primary transition-all rounded-md shadow-sm pr-10"
+                    {...register("new_password")}
+                    aria-invalid={!!errors.new_password}
+                    disabled={isSubmitting}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showNewPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
+                <FieldError errors={[errors.new_password]} />
+
+                {/* Real-time interactive strength meter */}
+                {passwordVal ? (
+                  <div className="space-y-2 mt-2 p-3 rounded-lg border border-border/30 bg-secondary/10">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground font-medium">Strength:</span>
+                      <Badge variant={strength.variant} className="font-semibold text-[10px] py-0 px-2 rounded-sm">
+                        {strength.text}
+                      </Badge>
+                    </div>
+                    <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className={cn("h-full transition-all duration-500 ease-out", strength.color)} 
+                        style={{ width: `${(strength.score / 4) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                ) : null}
+              </Field>
+
+              {/* Confirm Password Field */}
+              <Field data-invalid={!!errors.confirm_password}>
+                <FieldLabel htmlFor="confirm_password" className="text-foreground/90 font-medium flex items-center gap-1.5">
+                  <KeyRound className="size-3.5 text-muted-foreground" />
+                  Confirm New Password
+                </FieldLabel>
+                <div className="relative">
+                  <Input
+                    id="confirm_password"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    className="h-10 bg-background dark:bg-white/[0.03] border-zinc-200 dark:border-border/50 focus-visible:ring-1 focus-visible:ring-primary transition-all rounded-md shadow-sm pr-10"
+                    {...register("confirm_password")}
+                    aria-invalid={!!errors.confirm_password}
+                    disabled={isSubmitting}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
+                <FieldError errors={[errors.confirm_password]} />
+              </Field>
+
+              <div className="flex gap-2 mt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handlePrevStep}
+                  disabled={isSubmitting}
+                  className="w-12 h-10 px-0 flex items-center justify-center border-border/60 hover:bg-secondary transition-all rounded-md"
+                >
+                  <ArrowLeft className="size-4" />
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSubmitting || !hasMinLength || !isMatch}
+                  className="flex-1 h-10 font-medium bg-foreground text-background hover:bg-foreground/90 transition-all rounded-md shadow-sm flex items-center justify-center gap-2 group"
+                >
+                  {isSubmitting ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Resetting...
-                  </>
-                ) : (
-                  "Reset Password"
-                )}
-              </Button>
-            </div>
-          </div>
-        )}
+                  ) : (
+                    <>
+                      Reset Password
+                      <ArrowRight className="h-4 w-4 opacity-70 group-hover:translate-x-0.5 transition-transform" />
+                    </>
+                  )}
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </form>
 
-      <div className="text-center mt-2">
-        <Link
-          href="/login"
-          className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors group"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-          Back to login
-        </Link>
-      </div>
-    </div>
+      <BlurFade delay={0.4} yOffset={4}>
+        <div className="text-center mt-2">
+          <Link
+            href="/login"
+            className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors group"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+            Back to login
+          </Link>
+        </div>
+      </BlurFade>
+    </fieldset>
   );
 }

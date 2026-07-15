@@ -42,6 +42,8 @@ export interface WalkForwardRunSummary {
 
 // ─── WalkForward Report (S3 artifact) ────────────────────────────────────────
 
+export type Regime = "Strong Bull" | "Weak Bull" | "Strong Bear" | "Weak Bear" | "Sideways" | "High Volatility";
+
 export interface WalkForwardWindowReport {
   window_id: number;
   train_start: string;
@@ -54,6 +56,8 @@ export interface WalkForwardWindowReport {
   delta: { net_profit: number; sharpe: number; drawdown: number };
   evaluation: RecommendationEvaluation;
   charts: Record<string, ChartReference>;
+  /** Classified from this window's own validation-period candles. */
+  regime: Regime;
 }
 
 export interface WalkForwardReport {
@@ -100,6 +104,11 @@ export interface WalkForwardReport {
   };
   asset_reports: Record<string, string>;
   completed_at: number;
+  /** Per-regime pass rate + window count. Window counts are typically very
+   * small (n=1-2 with today's ~2 years of real market history) — always show
+   * the count alongside the pass rate rather than implying statistical
+   * weight that isn't there. */
+  regime_summary: Partial<Record<Regime, { pass_rate: number; window_count: number }>>;
 }
 
 // ─── S3 artifact wrapper ─────────────────────────────────────────────────────
@@ -107,6 +116,8 @@ export interface WalkForwardReport {
 export interface WalkForwardArtifact {
   report: WalkForwardReport;
   windows_count: number;
+  /** % return of simply holding the primary symbol over the same date range — null if it couldn't be computed. */
+  benchmark_return_pct: number | null;
 }
 
 // ─── Card-level summary ──────────────────────────────────────────────────────

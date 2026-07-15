@@ -1,5 +1,4 @@
 import HeroSection from "./_components/home/hero-section";
-import TestimonialsSection from "./_components/home/testimonials-section";
 import StartBuilding from "./_components/home/cta";
 import { GridView } from "./_components/home/grid-view";
 import FAQsThree from "./_components/home/faq-section";
@@ -22,8 +21,6 @@ export default function page() {
       <GridView />
       <SectionDivider />
       <IntegrationsSection />
-      <SectionDivider />
-      {/* <TestimonialsSection /> */}
       <SectionDivider />
       <FAQsThree />
       <StartBuilding />
