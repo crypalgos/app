@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import {
   useStrategyBacktests,
   useDeleteBacktest,
+  useVersionNumberMap,
 } from "@/api-actions/hooks/strategy-hooks";
 import type { ResearchRun } from "@/types/strategy-actions";
 import { BacktestCard } from "@/components/backtest/BacktestCard";
@@ -55,6 +56,7 @@ export default function StrategyBacktestsPage() {
   );
 
   const { mutate: deleteBacktest } = useDeleteBacktest(strategyId);
+  const versionNumberMap = useVersionNumberMap(strategyId);
 
   const handleDeleteBacktest = (backtestId: string) => {
     deleteBacktest(backtestId, {
@@ -105,11 +107,12 @@ export default function StrategyBacktestsPage() {
         </h2>
       </div>
 
-      <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
         {runs.map((run: ResearchRun) => (
           <BacktestCard
             key={run.id}
             run={run}
+            versionNumber={run.strategy_version_id ? versionNumberMap.get(run.strategy_version_id) : undefined}
             onDelete={() => handleDeleteBacktest(run.id)}
             onClick={() => router.push(`/strategies/${strategyId}/backtests/${run.id}`)}
           />

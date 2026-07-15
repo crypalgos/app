@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { CanvasPayload } from "@/types/strategy-builder";
+import type { ResearchRun, RunDetail } from "@/types/strategy-actions";
+import { useMemo } from "react";
 import {
   StrategyActions,
   type CreateStrategyRequest,
@@ -17,6 +19,31 @@ export const STRATEGY_KEYS = {
   list: () => [...STRATEGY_KEYS.all, "list"] as const,
   detail: (id: string) => [...STRATEGY_KEYS.all, "detail", id] as const,
 };
+
+// ─── Live polling for research runs (backtest/optimization/walkforward/montecarlo) ──
+
+const RUN_POLL_INTERVAL = 4000;
+const isTerminalRunStatus = (status?: string) =>
+  status === "COMPLETED" || status === "FAILED" || status === "CANCELLED";
+
+/**
+ * Polls while a run (or any run in a list) is still PENDING/RUNNING/RETRYING,
+ * and stops automatically once it reaches a terminal status.
+ */
+function pollWhileActive<T>(getStatus: (data: T) => string | undefined) {
+  return {
+    refetchInterval: (query: { state: { data?: T; status: string } }) => {
+      // A hard failure (404 deleted run, etc.) is not something that will
+      // resolve on its own — stop hammering the endpoint.
+      if (query.state.status === "error") return false;
+      const data = query.state.data;
+      return data && isTerminalRunStatus(getStatus(data)) ? false : RUN_POLL_INTERVAL;
+    },
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+    retry: 1,
+  };
+}
 
 // ─── Queries ─────────────────────────────────────────────────────────────────
 
@@ -50,6 +77,51 @@ export const useSetGoldenVersion = () => {
       queryClient.invalidateQueries({ queryKey: STRATEGY_KEYS.detail(strategyId) });
     },
   });
+};
+
+// ─── Version history hooks ───────────────────────────────────────────────────
+
+/** Fetch the full version history (newest first) for a strategy. */
+export const useStrategyVersions = (strategyId: string | null) =>
+  useQuery({
+    queryKey: [...STRATEGY_KEYS.detail(strategyId ?? ""), "versions"],
+    queryFn: () => StrategyActions.listVersions(strategyId!),
+    enabled: !!strategyId,
+    staleTime: 1000 * 30,
+  });
+
+/** Restore a historical version snapshot into the current draft. */
+export const useRestoreVersion = (strategyId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (version: number) =>
+      StrategyActions.restoreVersion(strategyId, version),
+    onSuccess: (updatedStrategy) => {
+      queryClient.setQueryData(STRATEGY_KEYS.detail(strategyId), updatedStrategy);
+      queryClient.invalidateQueries({
+        queryKey: [...STRATEGY_KEYS.detail(strategyId), "versions"],
+      });
+    },
+  });
+};
+
+/** Diff a historical version's compiled code against the current draft. Fetched on demand once a version is selected. */
+export const useVersionDiff = (strategyId: string | null, version: number | null) =>
+  useQuery({
+    queryKey: [...STRATEGY_KEYS.detail(strategyId ?? ""), "versions", version ?? 0, "diff"],
+    queryFn: () => StrategyActions.diffVersion(strategyId!, version!),
+    enabled: !!strategyId && version != null,
+    staleTime: 1000 * 30,
+  });
+
+/** Maps strategy_version_id -> human-readable version number, for resolving run cards. */
+export const useVersionNumberMap = (strategyId: string | null) => {
+  const { data: versions } = useStrategyVersions(strategyId);
+  return useMemo(() => {
+    const map = new Map<string, number>();
+    versions?.forEach((v) => map.set(v.id, v.version));
+    return map;
+  }, [versions]);
 };
 
 /** Create a new strategy canvas. Invalidates the list on success. */
@@ -191,7 +263,65 @@ export const useStrategyBacktests = (
       StrategyActions.listBacktests(strategyId!, page, limit, exchange, symbol),
     enabled: !!strategyId,
     staleTime: 1000 * 30,
+    ...pollWhileActive((res: { runs: ResearchRun[] }) =>
+      res.runs.some((r) => !isTerminalRunStatus(r.status)) ? "RUNNING" : "COMPLETED"
+    ),
   });
+
+/** Fetch temporary (Analyse-tab) backtest runs for a strategy — never bumps versions until saved. */
+export const useTemporaryBacktests = (
+  strategyId: string | null,
+  page = 1,
+  limit = 8
+) =>
+  useQuery({
+    queryKey: [
+      ...STRATEGY_KEYS.detail(strategyId ?? ""),
+      "backtests",
+      "temporary",
+      page,
+      limit,
+    ],
+    queryFn: () =>
+      StrategyActions.listBacktests(strategyId!, page, limit, undefined, undefined, true),
+    enabled: !!strategyId,
+    staleTime: 1000 * 15,
+    ...pollWhileActive((res: { runs: ResearchRun[] }) =>
+      res.runs.some((r) => !isTerminalRunStatus(r.status)) ? "RUNNING" : "COMPLETED"
+    ),
+  });
+
+/** Promote a temporary Analyse-tab run into a permanent, saved backtest. */
+export const useSaveBacktest = (strategyId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ runId, commitMessage }: { runId: string; commitMessage?: string }) =>
+      StrategyActions.saveBacktest(runId, commitMessage),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [...STRATEGY_KEYS.detail(strategyId), "backtests"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [...STRATEGY_KEYS.detail(strategyId), "versions"],
+      });
+      queryClient.invalidateQueries({ queryKey: STRATEGY_KEYS.detail(strategyId) });
+    },
+  });
+};
+
+/** Toggle favorite/pin status of a run. */
+export const useToggleRunFavorite = (strategyId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ runId, isFavorite }: { runId: string; isFavorite: boolean }) =>
+      StrategyActions.toggleRunFavorite(runId, isFavorite),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [...STRATEGY_KEYS.detail(strategyId), "backtests"],
+      });
+    },
+  });
+};
 
 /** Fetch a specific backtest run with curves intact. */
 export const useStrategyBacktest = (
@@ -208,6 +338,7 @@ export const useStrategyBacktest = (
     queryFn: () => StrategyActions.getBacktest(strategyId!, backtestId!),
     enabled: !!strategyId && !!backtestId,
     staleTime: 1000 * 60 * 5, // 5 minutes cache
+    ...pollWhileActive((run: RunDetail) => run.status),
   });
 
 /** Delete a specific backtest run. */
@@ -241,6 +372,14 @@ export const useMonteCarloDataset = (runId: string | null, datasetName: string |
     staleTime: Infinity,
   });
 
+export const useWalkforwardDataset = (runId: string | null, datasetName: string | null) =>
+  useQuery({
+    queryKey: ["runs", runId, "walkforward-datasets", datasetName],
+    queryFn: () => StrategyActions.getWalkforwardDataset(runId!, datasetName!),
+    enabled: !!runId && !!datasetName,
+    staleTime: Infinity,
+  });
+
 export const useRunArtifact = (runId: string | null, artifactType: string | null) =>
   useQuery({
     queryKey: ["runs", runId, "artifacts", artifactType],
@@ -269,6 +408,9 @@ export const useStrategyOptimizations = (
       StrategyActions.listOptimizationRuns(strategyId!, page, limit, search),
     enabled: !!strategyId,
     staleTime: 1000 * 30,
+    ...pollWhileActive((res: { runs: ResearchRun[] }) =>
+      res.runs.some((r) => !isTerminalRunStatus(r.status)) ? "RUNNING" : "COMPLETED"
+    ),
   });
 
 export const useStrategyOptimization = (
@@ -285,6 +427,7 @@ export const useStrategyOptimization = (
     queryFn: () => StrategyActions.getOptimizationRun(strategyId!, runId!),
     enabled: !!strategyId && !!runId,
     staleTime: 1000 * 60 * 5,
+    ...pollWhileActive((run: ResearchRun) => run.status),
   });
 
 export const useTriggerOptimization = (strategyId: string) => {
@@ -333,6 +476,9 @@ export const useStrategyWalkforwards = (
       StrategyActions.listWalkForwardRuns(strategyId!, page, limit, search),
     enabled: !!strategyId,
     staleTime: 1000 * 30,
+    ...pollWhileActive((res: { runs: ResearchRun[] }) =>
+      res.runs.some((r) => !isTerminalRunStatus(r.status)) ? "RUNNING" : "COMPLETED"
+    ),
   });
 
 export const useStrategyWalkforward = (
@@ -349,6 +495,7 @@ export const useStrategyWalkforward = (
     queryFn: () => StrategyActions.getWalkForwardRun(strategyId!, runId!),
     enabled: !!strategyId && !!runId,
     staleTime: 1000 * 60 * 5,
+    ...pollWhileActive((run: ResearchRun) => run.status),
   });
 
 export const useTriggerWalkForward = (strategyId: string) => {
@@ -397,6 +544,9 @@ export const useStrategyMonteCarlos = (
       StrategyActions.listMonteCarloRuns(strategyId!, page, limit, search),
     enabled: !!strategyId,
     staleTime: 1000 * 30,
+    ...pollWhileActive((res: { runs: ResearchRun[] }) =>
+      res.runs.some((r) => !isTerminalRunStatus(r.status)) ? "RUNNING" : "COMPLETED"
+    ),
   });
 
 export const useStrategyMonteCarlo = (
@@ -413,6 +563,7 @@ export const useStrategyMonteCarlo = (
     queryFn: () => StrategyActions.getMonteCarloRun(strategyId!, runId!),
     enabled: !!strategyId && !!runId,
     staleTime: 1000 * 60 * 5,
+    ...pollWhileActive((run: ResearchRun) => run.status),
   });
 
 export const useTriggerMonteCarlo = (strategyId: string) => {
