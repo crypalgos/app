@@ -31,7 +31,7 @@ import { useNodesStore } from "../store/nodes-store";
 import { useSaveCode, useStrategy, useUpdateCanvas } from "@/api-actions/hooks/strategy-hooks";
 import { QuantumOrbitLoader } from "@/components/orbit-loader/QuantumOrbitLoader";
 import Editor from "@monaco-editor/react";
-import { IconCode, IconX, IconLayout, IconColumns, IconAlertTriangle } from "@tabler/icons-react";
+import { IconCode, IconX, IconAlertTriangle } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -334,65 +334,12 @@ export default function Canvas({ strategyId }: CanvasProps) {
       {/* Main workspace: canvas + optional code panel side-by-side */}
       <div ref={containerRef} className="fixed inset-0 top-[68px] overflow-hidden flex">
 
-        {/* ─── Canvas / Both / Code view-mode control — floats above both
-             panes so it stays reachable even when the canvas is fully
-             collapsed in "code" view (relocated from the old toolbar). ─── */}
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30">
-          <div className="flex p-0.5 bg-card/95 backdrop-blur-sm border border-border/80 rounded-full shadow-lg">
-            <button
-              onClick={() => {
-                if (isCodeModified && activeView === "code") {
-                  setPendingView("canvas");
-                  setViewConfirmOpen(true);
-                } else {
-                  setActiveView("canvas");
-                }
-              }}
-              className={cn(
-                "flex items-center gap-1.5 h-8 px-4 rounded-full text-xs font-semibold transition-all duration-200 cursor-pointer select-none border border-transparent",
-                activeView === "canvas"
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <IconLayout className="size-3.5" />
-              <span>Canvas</span>
-            </button>
-
-            <button
-              onClick={() => {
-                if (isCodeModified && activeView === "code") {
-                  setPendingView("both");
-                  setViewConfirmOpen(true);
-                } else {
-                  setActiveView("both");
-                }
-              }}
-              className={cn(
-                "flex items-center gap-1.5 h-8 px-4 rounded-full text-xs font-semibold transition-all duration-200 cursor-pointer select-none border border-transparent",
-                activeView === "both"
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <IconColumns className="size-3.5" />
-              <span>Both</span>
-            </button>
-
-            <button
-              onClick={() => setActiveView("code")}
-              className={cn(
-                "flex items-center gap-1.5 h-8 px-4 rounded-full text-xs font-semibold transition-all duration-200 cursor-pointer select-none border border-transparent",
-                activeView === "code"
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <IconCode className="size-3.5" />
-              <span>Code</span>
-            </button>
-          </div>
-        </div>
+        {/* ─── Canvas / Both / Code view-mode control — DISABLED. Hand code
+             editing isn't supported yet; the toggle, Monaco panel, and
+             drag-resize logic below are kept in place (not deleted) for
+             when it ships. activeView defaults to "canvas" and nothing
+             currently calls setActiveView("both"/"code"), so the code
+             panel branches below are unreachable dead code for now. ─── */}
 
         {/* ─── Canvas area ─── */}
         <motion.div

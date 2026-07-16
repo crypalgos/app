@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { cn } from "@/lib/utils";
 import {
   IconPlayerPlay,
   IconPlayerPause,
@@ -19,6 +20,11 @@ interface ReplayPlaybackControlsProps {
   firstCandleIndex: number;
   lastCandleIndex: number;
   onSeek: (candleIndex: number) => void;
+  /** "card" (default) renders its own bordered box; "toolbar" is a bare, compact
+   * row meant to sit inline inside another container (the replay top toolbar). */
+  variant?: "card" | "toolbar";
+  isPlaying?: boolean;
+  onPlayingChange?: (isPlaying: boolean) => void;
 }
 
 export function ReplayPlaybackControls({
@@ -26,8 +32,17 @@ export function ReplayPlaybackControls({
   firstCandleIndex,
   lastCandleIndex,
   onSeek,
+  variant = "card",
+  isPlaying: isPlayingProp,
+  onPlayingChange,
 }: ReplayPlaybackControlsProps) {
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlayingState, setIsPlayingState] = useState(false);
+  const isPlaying = isPlayingProp ?? isPlayingState;
+  const setIsPlaying = (v: boolean | ((p: boolean) => boolean)) => {
+    const next = typeof v === "function" ? v(isPlaying) : v;
+    setIsPlayingState(next);
+    onPlayingChange?.(next);
+  };
   const [speedIdx, setSpeedIdx] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const currentRef = useRef(currentCandleIndex);
@@ -62,7 +77,12 @@ export function ReplayPlaybackControls({
   };
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-border/60 bg-card px-4 py-3">
+    <div
+      className={cn(
+        "flex flex-col gap-2",
+        variant === "card" && "rounded-xl border border-border/60 bg-card px-4 py-3"
+      )}
+    >
       <div className="flex items-center gap-2">
         <Button size="icon" variant="outline" className="size-7 cursor-pointer" onClick={() => onSeek(firstCandleIndex)} title="Jump to start">
           <IconPlayerSkipBack className="size-3.5" />

@@ -17,6 +17,10 @@ import {
   IconDownload,
   IconArrowUpRight,
   IconArrowDownRight,
+  IconStar,
+  IconStarFilled,
+  IconDeviceFloppy,
+  IconLoader2,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { getCoinLogoUrl } from "@/lib/instruments";
@@ -43,6 +47,12 @@ interface BacktestCardProps {
   versionNumber?: number;
   onDelete: () => void;
   onClick?: () => void;
+  /** Analyse-tab only: promotes a temporary run into a saved, versioned backtest. */
+  onSave?: () => void;
+  isSaving?: boolean;
+  /** Analyse-tab only: pins a temporary run so retention cleanup skips it. */
+  onTogglePin?: () => void;
+  isFavorite?: boolean;
 }
 
 function Metric({
@@ -66,10 +76,20 @@ function Metric({
   );
 }
 
-export function BacktestCard({ run, versionNumber, onDelete, onClick }: BacktestCardProps) {
+export function BacktestCard({
+  run,
+  versionNumber,
+  onDelete,
+  onClick,
+  onSave,
+  isSaving,
+  onTogglePin,
+  isFavorite,
+}: BacktestCardProps) {
   const s: BacktestSummary = (run.summary_json ?? {}) as BacktestSummary;
   const status = run.status;
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [showSaveAlert, setShowSaveAlert] = useState(false);
 
   const profitPct = s.total_return_pct ?? 0;
   const isProfit = profitPct >= 0;
@@ -126,6 +146,19 @@ export function BacktestCard({ run, versionNumber, onDelete, onClick }: Backtest
               <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-400 animate-pulse">
                 <IconClock className="size-3" /> {status === "RUNNING" ? "Running" : "Pending"}
               </span>
+              {onTogglePin && (
+                <button
+                  onClick={onTogglePin}
+                  title={isFavorite ? "Unpin (eligible for cleanup)" : "Pin (exempt from retention cleanup)"}
+                  className="size-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10 transition-colors cursor-pointer"
+                >
+                  {isFavorite ? (
+                    <IconStarFilled className="size-3.5 text-amber-500" />
+                  ) : (
+                    <IconStar className="size-3.5" />
+                  )}
+                </button>
+              )}
               <Button
                 variant="ghost"
                 size="icon"
@@ -234,7 +267,41 @@ export function BacktestCard({ run, versionNumber, onDelete, onClick }: Backtest
           </div>
 
           <div className="flex items-center shrink-0 -mt-1 -mr-2">
-            {status === "COMPLETED" ? (
+            {onTogglePin && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTogglePin();
+                }}
+                title={isFavorite ? "Unpin (eligible for cleanup)" : "Pin (exempt from retention cleanup)"}
+                className="size-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10 transition-colors cursor-pointer mr-1"
+              >
+                {isFavorite ? (
+                  <IconStarFilled className="size-3.5 text-amber-500" />
+                ) : (
+                  <IconStar className="size-3.5" />
+                )}
+              </button>
+            )}
+            {onSave && status === "COMPLETED" ? (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={isSaving}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowSaveAlert(true);
+                }}
+                className="h-6 mr-2 text-[10px] gap-1 cursor-pointer"
+              >
+                {isSaving ? (
+                  <IconLoader2 className="size-3 animate-spin" />
+                ) : (
+                  <IconDeviceFloppy className="size-3" />
+                )}
+                Save
+              </Button>
+            ) : status === "COMPLETED" ? (
               <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-500 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 mr-2">
                 <IconCheck className="size-3" /> Done
               </span>
@@ -383,6 +450,35 @@ export function BacktestCard({ run, versionNumber, onDelete, onClick }: Backtest
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {onSave && (
+        <AlertDialog open={showSaveAlert} onOpenChange={setShowSaveAlert}>
+          <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Save this run?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This promotes the run into a permanent, saved backtest. If your strategy
+                has changed since this ran, a new version will be created — otherwise
+                it&apos;s linked to your current version with no changes.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={(e) => { e.stopPropagation(); setShowSaveAlert(false); }}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSave();
+                  setShowSaveAlert(false);
+                }}
+              >
+                Save
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </>
   );
 }

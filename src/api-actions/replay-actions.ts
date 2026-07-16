@@ -35,4 +35,18 @@ export const ReplayActions = {
     );
     return response.data.data;
   },
+
+  /** Windowed slice of a single allowlisted replay dataset — powers the console tabs. */
+  getDataset: async (
+    runId: string,
+    datasetName: string,
+    startBar: number,
+    endBar: number
+  ): Promise<Record<string, unknown>[]> => {
+    const response = await axiosInstance.get<ApiResponse<Record<string, unknown>[]>>(
+      `/research-runs/${runId}/replay/datasets/${datasetName}`,
+      { params: { start_bar: startBar, end_bar: endBar } }
+    );
+    return response.data.data;
+  },
 };
