@@ -8,6 +8,8 @@ export const REPLAY_KEYS = {
     [...REPLAY_KEYS.all, runId, "window", from, to] as const,
   trade: (runId: string, tradeId: string) =>
     [...REPLAY_KEYS.all, runId, "trade", tradeId] as const,
+  dataset: (runId: string, name: string, from: number, to: number) =>
+    [...REPLAY_KEYS.all, runId, "dataset", name, from, to] as const,
 };
 
 /** Replay session bootstrap — bar range, symbols, markers. Fetched once per run. */
@@ -38,5 +40,22 @@ export const useReplayTrade = (runId: string | null, tradeId: string | null) =>
     queryKey: REPLAY_KEYS.trade(runId ?? "", tradeId ?? ""),
     queryFn: () => ReplayActions.getTrade(runId!, tradeId!),
     enabled: !!runId && !!tradeId,
+    staleTime: Infinity,
+  });
+
+/** Windowed slice of a single allowlisted dataset (trades/orders/execution_logs/...) —
+ * reused by every bottom-console tab. Cached per (dataset, range) page so scrubbing
+ * within an already-fetched page never refetches. */
+export const useReplayDataset = (
+  runId: string | null,
+  datasetName: string,
+  startBar: number,
+  endBar: number,
+  enabled = true
+) =>
+  useQuery({
+    queryKey: REPLAY_KEYS.dataset(runId ?? "", datasetName, startBar, endBar),
+    queryFn: () => ReplayActions.getDataset(runId!, datasetName, startBar, endBar),
+    enabled: !!runId && enabled,
     staleTime: Infinity,
   });

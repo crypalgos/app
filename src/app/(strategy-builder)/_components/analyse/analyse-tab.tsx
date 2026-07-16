@@ -10,9 +10,10 @@ import {
   useTriggerBacktest,
   useSaveBacktest,
   useToggleRunFavorite,
+  useDeleteBacktest,
 } from "@/api-actions/hooks/strategy-hooks";
 import { BacktestConfigDialog, type BacktestConfigParams } from "../shared/backtest-config-dialog";
-import { TempRunCard } from "./temp-run-card";
+import { BacktestCard } from "@/components/backtest/BacktestCard";
 import { ReplayViewer } from "./replay-viewer";
 
 interface AnalyseTabProps {
@@ -28,6 +29,7 @@ export default function AnalyseTab({ strategyId }: AnalyseTabProps) {
   const { mutateAsync: triggerBacktest, isPending: isEnqueuing } = useTriggerBacktest(strategyId);
   const { mutateAsync: saveBacktest } = useSaveBacktest(strategyId);
   const { mutate: toggleFavorite } = useToggleRunFavorite(strategyId);
+  const { mutate: deleteBacktest } = useDeleteBacktest(strategyId);
 
   const runs = data?.runs ?? [];
 
@@ -61,11 +63,16 @@ export default function AnalyseTab({ strategyId }: AnalyseTabProps) {
     }
   };
 
+  const selectedRun = selectedRunId ? runs.find((r) => r.id === selectedRunId) : undefined;
+
   if (selectedRunId) {
     return (
-      <div className="fixed inset-0 top-[68px] overflow-hidden">
-        <ReplayViewer runId={selectedRunId} onBack={() => setSelectedRunId(null)} />
-      </div>
+      <ReplayViewer
+        runId={selectedRunId}
+        strategyId={strategyId}
+        run={selectedRun}
+        onBack={() => setSelectedRunId(null)}
+      />
     );
   }
 
@@ -111,17 +118,19 @@ export default function AnalyseTab({ strategyId }: AnalyseTabProps) {
             </p>
           </div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
             {runs.map((run) => (
-              <TempRunCard
+              <BacktestCard
                 key={run.id}
                 run={run}
                 isSaving={savingRunId === run.id}
+                isFavorite={run.is_favorite}
                 onClick={() => setSelectedRunId(run.id)}
                 onSave={() => handleSave(run.id)}
                 onTogglePin={() =>
                   toggleFavorite({ runId: run.id, isFavorite: !run.is_favorite })
                 }
+                onDelete={() => deleteBacktest(run.id)}
               />
             ))}
           </div>

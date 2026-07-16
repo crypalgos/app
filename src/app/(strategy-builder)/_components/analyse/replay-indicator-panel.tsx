@@ -1,6 +1,6 @@
 "use client";
 
-import type { IndicatorSnapshotRecord } from "@/types/replay";
+import { formatIndicatorLabel, type IndicatorSnapshotRecord } from "@/types/replay";
 import { IconGauge } from "@tabler/icons-react";
 
 interface ReplayIndicatorPanelProps {
@@ -42,11 +42,11 @@ export function ReplayIndicatorPanel({ snapshots, currentCandleIndex }: ReplayIn
                 )}
               </div>
               <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                {Object.entries(row.values ?? {}).map(([key, value]) => (
+                {Object.entries(row.values ?? {}).map(([key, entry]) => (
                   <div key={key} className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] text-muted-foreground truncate">{key}</span>
+                    <span className="text-[10px] text-muted-foreground truncate">{formatIndicatorLabel(entry)}</span>
                     <span className="text-[10px] font-mono font-semibold text-foreground tabular-nums">
-                      {typeof value === "number" ? value.toFixed(4) : String(value)}
+                      {entry.value.toFixed(4)}
                     </span>
                   </div>
                 ))}

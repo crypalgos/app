@@ -93,14 +93,74 @@ export interface OrderEvent extends EngineEventBase {
   };
 }
 
-// Position/portfolio/policy events and anything else in the stream — kept
-// generic since the UI mostly just needs `type` + a pretty-printed payload.
+export interface PositionOpenedPayload {
+  position_id: string;
+  side: string;
+  quantity: number;
+  entry_price: number;
+}
+
+export interface PositionEvent extends EngineEventBase {
+  type: "POSITION_OPENED" | "POSITION_REDUCED" | "POSITION_CLOSED";
+  payload: Partial<PositionOpenedPayload> & {
+    order_id?: string | null;
+    fill_price?: number;
+    realized_pnl?: number;
+    quantity_reduced?: number;
+    remaining_quantity?: number;
+  };
+}
+
+export interface PolicyArmedPayload {
+  policy_id: string;
+  policy_type: string;
+  trigger_price: number;
+}
+
+export interface PolicyEvent extends EngineEventBase {
+  type: "POLICY_ARMED" | "POLICY_TRIGGERED";
+  payload: PolicyArmedPayload;
+}
+
+export interface PortfolioSnapshotPayload {
+  cash: number;
+  equity: number;
+  gross_exposure: number;
+  drawdown: number;
+}
+
+export interface PortfolioSnapshotEventType extends EngineEventBase {
+  type: "PORTFOLIO_SNAPSHOT";
+  payload: PortfolioSnapshotPayload;
+}
+
+export interface MarginCallPayload {
+  position_id: string;
+  liquidation_price: number;
+  margin_used: number;
+}
+
+export interface MarginCallEventType extends EngineEventBase {
+  type: "MARGIN_CALL";
+  payload: MarginCallPayload;
+}
+
+// Anything else in the stream — kept generic since the UI mostly just needs
+// `type` + a pretty-printed payload.
 export interface GenericEngineEvent extends EngineEventBase {
   type: string;
   payload: Record<string, unknown>;
 }
 
-export type RuntimeEvent = ConditionEvent | ActionEvent | OrderEvent | GenericEngineEvent;
+export type RuntimeEvent =
+  | ConditionEvent
+  | ActionEvent
+  | OrderEvent
+  | PositionEvent
+  | PolicyEvent
+  | PortfolioSnapshotEventType
+  | MarginCallEventType
+  | GenericEngineEvent;
 
 export interface ReplayManifest {
   workspace_version: number;
@@ -109,13 +169,26 @@ export interface ReplayManifest {
   bar_count: number;
 }
 
+export interface IndicatorValueRecord {
+  node_id: string;
+  type: string;
+  period?: number;
+  timeframe?: string;
+  source?: string;
+  value: number;
+}
+
+export function formatIndicatorLabel(entry: IndicatorValueRecord): string {
+  return entry.period != null ? `${entry.type} ${entry.period}` : entry.type;
+}
+
 export interface IndicatorSnapshotRecord {
   timestamp: number;
   symbol: string;
   timeframe: string;
   bar_index: number;
   datasource: string;
-  values: Record<string, number>;
+  values: Record<string, IndicatorValueRecord>;
 }
 
 // ─── Replay session / window API (crypalgos_core.pipeline.replay_tree +
