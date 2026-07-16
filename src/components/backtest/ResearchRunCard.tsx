@@ -175,7 +175,7 @@ export function ResearchRunCard({ run, onDelete, onClick }: ResearchRunCardProps
 
   // ─── COMPLETED — per-type metrics ───────────────────────────────────────────
 
-  const profitPct = s.total_return_pct ?? 0;
+  const profitPct = (s as any).total_return_pct ?? 0;
   const isProfit = profitPct >= 0;
   const accent = isProfit ? "#22C55E" : "#F43F5E";
 
