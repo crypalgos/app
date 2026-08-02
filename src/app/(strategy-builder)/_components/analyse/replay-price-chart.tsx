@@ -33,6 +33,15 @@ function timeOf(c: ReplayCandle): Time {
   return (c.timestamp != null ? Math.floor(c.timestamp / 1000) : c.candle_index) as UTCTimestamp;
 }
 
+/** True when only the already-rendered forming candle has changed. */
+function hasOnlyMutableTailChanged(previous: ReplayCandle[], next: ReplayCandle[]): boolean {
+  if (previous.length === 0 || previous.length !== next.length) return false;
+  for (let index = 0; index < next.length - 1; index += 1) {
+    if (previous[index] !== next[index]) return false;
+  }
+  return previous.at(-1)?.timestamp === next.at(-1)?.timestamp;
+}
+
 interface ReplayPriceChartProps {
   candles: ReplayCandle[];
   indicatorSnapshots: IndicatorSnapshotRecord[];
@@ -54,6 +63,9 @@ interface ReplayPriceChartProps {
   /** Set while hovering a Timeline row in the Analysis Console — pins the
    * crosshair there as a preview without committing `currentCandleIndex`. */
   previewCandleIndex?: number | null;
+  /** Stable bounds of the replay window. Used to retain the user's viewport
+   * while chunks for the same window finish decoding. */
+  dataWindowKey?: string | null;
 }
 
 export function ReplayPriceChart({
@@ -67,6 +79,7 @@ export function ReplayPriceChart({
   hiddenIndicators,
   periodOverrides,
   previewCandleIndex,
+  dataWindowKey,
 }: ReplayPriceChartProps) {
   // lightweight-charts' internal color parser only understands hex/rgb(a)/hsl(a)
   // and named colors — it can't resolve CSS custom properties or oklch(), so the
@@ -76,7 +89,9 @@ export function ReplayPriceChart({
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
   const textColor = isDark ? "#9CA3AF" : "#6B7280";
-  const gridColor = isDark ? "rgba(255,255,255,0.04)" : "rgba(15,23,42,0.06)";
+  // The dark canvas needs a higher-contrast neutral than the light canvas;
+  // 4% white was imperceptible against the replay chart's near-black panel.
+  const gridColor = isDark ? "rgba(148,163,184,0.18)" : "rgba(15,23,42,0.06)";
   const crosshairColor = isDark ? "#758696" : "#9598A1";
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -86,6 +101,10 @@ export function ReplayPriceChart({
   const markersPluginRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
   const overlaySeriesRef = useRef<Map<string, ISeriesApi<"Line">>>(new Map());
   const candleIndexByTimeRef = useRef<Map<Time, number>>(new Map());
+  const renderedCandlesRef = useRef<ReplayCandle[]>([]);
+  const renderedDataWindowRef = useRef<string | null>(null);
+  const overlayCandlesRef = useRef<ReplayCandle[]>([]);
+  const fittedDataWindowRef = useRef<string | null>(null);
   const onSeekRef = useRef(onSeek);
   useEffect(() => {
     onSeekRef.current = onSeek;
@@ -200,36 +219,145 @@ export function ReplayPriceChart({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Sync layout text color when the theme changes, without recreating the chart.
+  // Sync all canvas-owned theme values when the theme changes. The chart is
+  // created once, so only updating layout text here would leave dark-mode
+  // grid/crosshair options stuck on their initial (often light) values.
   useEffect(() => {
-    chartRef.current?.applyOptions({ layout: { textColor } });
-  }, [textColor]);
+    chartRef.current?.applyOptions({
+      layout: { textColor },
+      grid: { horzLines: { color: gridColor } },
+      crosshair: {
+        vertLine: { color: crosshairColor, labelBackgroundColor: crosshairColor },
+        horzLine: { color: crosshairColor, labelBackgroundColor: crosshairColor },
+      },
+    });
+  }, [textColor, gridColor, crosshairColor]);
 
   // Candles + volume + candle_index/time lookup.
   useEffect(() => {
+    const chart = chartRef.current;
     const candleSeries = candleSeriesRef.current;
     const volumeSeries = volumeSeriesRef.current;
-    if (!candleSeries || !volumeSeries) return;
+    if (!chart || !candleSeries || !volumeSeries) return;
 
-    const valid = candles.filter((c) => c.open != null && c.high != null && c.low != null && c.close != null);
+    const canUpdateMutableTail =
+      renderedDataWindowRef.current === dataWindowKey &&
+      hasOnlyMutableTailChanged(renderedCandlesRef.current, candles);
+    const mutableTail = candles.at(-1);
+    if (
+      canUpdateMutableTail &&
+      mutableTail &&
+      Number.isFinite(mutableTail.open) &&
+      Number.isFinite(mutableTail.high) &&
+      Number.isFinite(mutableTail.low) &&
+      Number.isFinite(mutableTail.close)
+    ) {
+      const time = timeOf(mutableTail);
+      try {
+        candleSeries.update({
+          time,
+          open: mutableTail.open as number,
+          high: mutableTail.high as number,
+          low: mutableTail.low as number,
+          close: mutableTail.close as number,
+        });
+        if (Number.isFinite(mutableTail.volume)) {
+          volumeSeries.update({
+            time,
+            value: mutableTail.volume as number,
+            color:
+              (mutableTail.close as number) >= (mutableTail.open as number)
+                ? "rgba(38,166,154,0.4)"
+                : "rgba(239,83,80,0.4)",
+          });
+        }
+        candleIndexByTimeRef.current.set(time, mutableTail.candle_index);
+        renderedCandlesRef.current = candles;
+        return;
+      } catch (err) {
+        console.error("ReplayPriceChart: mutable candle update failed; rebuilding series", { error: err });
+        // Force the rebuild path below to run from a clean slate rather than
+        // comparing against the pre-failure state on this same render.
+        renderedCandlesRef.current = [];
+        renderedDataWindowRef.current = null;
+      }
+    }
+
+    // lightweight-charts' setData() hard-requires a strictly ascending,
+    // unique-by-time array — any violation throws a generic (unhelpful)
+    // "Value is null" from deep inside its own scale code. `candles` is
+    // built by merging independently-decoded chunk tables (see
+    // selectCandlesInRange) and sorted by candle_index, which should imply
+    // ascending time — but a duplicate/out-of-order/non-finite value
+    // anywhere in a merged range would otherwise crash the whole chart with
+    // no diagnostic. Sort by the actual time value, dedupe, and drop
+    // non-finite OHLC defensively rather than trust that invariant blindly.
+    const valid = candles.filter(
+      (c) =>
+        c.timestamp != null &&
+        Number.isFinite(c.open) &&
+        Number.isFinite(c.high) &&
+        Number.isFinite(c.low) &&
+        Number.isFinite(c.close)
+    );
+
+    const byTimeRaw = new Map<Time, ReplayCandle>();
+    for (const c of valid) {
+      byTimeRaw.set(timeOf(c), c); // later duplicates win — most recently decoded chunk wins
+    }
+    const sortedTimes = Array.from(byTimeRaw.keys()).sort((a, b) => (a as number) - (b as number));
+
     const byTime = new Map<Time, number>();
-    const candleData = valid.map((c) => {
-      const t = timeOf(c);
+    const candleData = sortedTimes.map((t) => {
+      const c = byTimeRaw.get(t)!;
       byTime.set(t, c.candle_index);
       return { time: t, open: c.open as number, high: c.high as number, low: c.low as number, close: c.close as number };
     });
     candleIndexByTimeRef.current = byTime;
-    candleSeries.setData(candleData);
 
-    const volumeData = valid
-      .filter((c) => c.volume != null)
+    try {
+      candleSeries.setData(candleData);
+      // `setData()` should not reset the user's viewport when another chunk
+      // fills the same replay window. Fit only on the first populated render
+      // and when the dead-zone window recentres to new bounds.
+      const currentWindowKey =
+        dataWindowKey ?? `${candleData[0]?.time ?? "empty"}:${candleData[candleData.length - 1]?.time ?? "empty"}`;
+      if (candleData.length > 0 && fittedDataWindowRef.current !== currentWindowKey) {
+        chart.timeScale().fitContent();
+        fittedDataWindowRef.current = currentWindowKey;
+      }
+    } catch (err) {
+      console.error("ReplayPriceChart: candleSeries.setData() rejected the merged candle set", {
+        error: err,
+        count: candleData.length,
+        firstTime: candleData[0]?.time,
+        lastTime: candleData[candleData.length - 1]?.time,
+      });
+      // Without this, renderedCandlesRef/renderedDataWindowRef stay pinned
+      // to the pre-failure state forever -- every subsequent render re-hits
+      // the same rejected merge and the chart never updates again short of
+      // a full remount. Reset so the next render retries from scratch.
+      renderedCandlesRef.current = [];
+      renderedDataWindowRef.current = null;
+      return;
+    }
+
+    const volumeData = sortedTimes
+      .map((t) => byTimeRaw.get(t)!)
+      .filter((c) => Number.isFinite(c.volume))
       .map((c) => ({
         time: timeOf(c),
         value: c.volume as number,
         color: (c.close as number) >= (c.open as number) ? "rgba(38,166,154,0.4)" : "rgba(239,83,80,0.4)",
       }));
-    volumeSeries.setData(volumeData);
-  }, [candles]);
+    try {
+      volumeSeries.setData(volumeData);
+    } catch (err) {
+      console.error("ReplayPriceChart: volumeSeries.setData() rejected the merged volume set", { error: err });
+    }
+    renderedCandlesRef.current = candles;
+    renderedDataWindowRef.current = dataWindowKey ?? null;
+  }, [candles, dataWindowKey]);
 
   // Price-scale indicator overlays — one line series per indicator key present
   // in the window (excluding anything the user toggled off), grouped across
@@ -238,6 +366,16 @@ export function ReplayPriceChart({
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart) return;
+
+    // Indicator snapshots are finalized-bar data. A mutable display candle
+    // cannot change them, so skip rebuilding every overlay on each live tick.
+    if (
+      Object.keys(periodOverrides).length === 0 &&
+      hasOnlyMutableTailChanged(overlayCandlesRef.current, candles)
+    ) {
+      overlayCandlesRef.current = candles;
+      return;
+    }
 
     const seriesByKey: Map<string, { time: Time; value: number }[]> = new Map();
     const labelByKey = new Map<string, string>();
@@ -273,8 +411,17 @@ export function ReplayPriceChart({
         existing.delete(key);
       }
     }
-    for (const [key, points] of seriesByKey) {
-      points.sort((a, b) => (a.time as number) - (b.time as number));
+    for (const [key, rawPoints] of seriesByKey) {
+      // Same dedupe-by-time + finite-value guard as the candle series above
+      // — these points are merged across independently-decoded chunks too.
+      const byTime = new Map<Time, number>();
+      for (const p of rawPoints) {
+        if (Number.isFinite(p.value)) byTime.set(p.time, p.value);
+      }
+      const points = Array.from(byTime.entries())
+        .sort((a, b) => (a[0] as number) - (b[0] as number))
+        .map(([time, value]) => ({ time, value }));
+
       let series = existing.get(key);
       if (!series) {
         series = chart.addSeries(LineSeries, {
@@ -286,8 +433,13 @@ export function ReplayPriceChart({
         });
         existing.set(key, series);
       }
-      series.setData(points);
+      try {
+        series.setData(points);
+      } catch (err) {
+        console.error(`ReplayPriceChart: overlay series "${key}" setData() rejected the merged point set`, { error: err });
+      }
     }
+    overlayCandlesRef.current = candles;
     // indicatorColors intentionally excluded — the effect below re-colors
     // existing series in place without rebuilding their data.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -354,8 +506,28 @@ export function ReplayPriceChart({
       return;
     }
     const bar = candles.find((c) => c.candle_index === pinIndex);
-    if (bar && bar.close != null) {
-      chart.setCrosshairPosition(bar.close, timeOf(bar), candleSeries);
+    // Guard against pinning a time the series doesn't actually have data
+    // for — e.g. a bar missing open/high/low (so it was excluded from the
+    // `valid` set setData() was last called with, see the candles+volume
+    // effect above), or a chunk boundary where `candles` briefly includes an
+    // index whose chunk hasn't finished decoding into the series yet.
+    // lightweight-charts throws a generic "Value is null" internally when
+    // asked to position the crosshair at a time with no matching data point.
+    const barTime = bar?.close != null ? timeOf(bar) : null;
+    if (barTime != null && candleIndexByTimeRef.current.has(barTime)) {
+      // Even with the guard above, lightweight-charts can still throw a
+      // generic "Value is null" internally if its own time/price-scale
+      // state hasn't caught up yet (e.g. mid-resize or mid-update during
+      // fast replay scrubbing) — a known library race, not something our
+      // React-side bookkeeping can observe. Swallow it and just clear the
+      // crosshair rather than crashing the whole chart.
+      try {
+        chart.setCrosshairPosition(bar!.close as number, barTime, candleSeries);
+      } catch {
+        chart.clearCrosshairPosition();
+      }
+    } else {
+      chart.clearCrosshairPosition();
     }
   }, [currentCandleIndex, previewCandleIndex, candles]);
 

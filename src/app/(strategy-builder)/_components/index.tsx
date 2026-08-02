@@ -5,7 +5,6 @@ import {
   ReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import SubNav from "./sub-nav/sub-nav";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 import type { ReactFlowInstance } from "@xyflow/react";
@@ -28,8 +27,7 @@ import CustomEdge from "./builder/custom-edge/custom-edge";
 import CustomConnectionLine from "./builder/custom-connection-line/custom-connection-line";
 import { useTheme } from "next-themes";
 import { useNodesStore } from "../store/nodes-store";
-import { useSaveCode, useStrategy, useUpdateCanvas } from "@/api-actions/hooks/strategy-hooks";
-import { QuantumOrbitLoader } from "@/components/orbit-loader/QuantumOrbitLoader";
+import { useSaveCode, useUpdateCanvas } from "@/api-actions/hooks/strategy-hooks";
 import Editor from "@monaco-editor/react";
 import { IconCode, IconX, IconAlertTriangle } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
@@ -44,8 +42,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import AnalyseTab from "./analyse/analyse-tab";
-import LiveTab from "./live/live-tab";
 
 // Define custom node types
 const nodeTypes = {
@@ -78,16 +74,15 @@ export default function Canvas({ strategyId }: CanvasProps) {
     reactFlowInstance,
     activeView,
     setActiveView,
-    builderTab,
     codeContent,
     setCodeContent,
     isCodeModified,
     setIsCodeModified,
-    initializeFromStrategy,
     isSynced,
     setIsSynced,
     isSaving,
     setIsSaving,
+    strategyId: storeStrategyId,
     strategyName,
     strategyDescription,
     selectedNodeId,
@@ -196,26 +191,6 @@ export default function Canvas({ strategyId }: CanvasProps) {
   const { mutateAsync: updateCanvas } = useUpdateCanvas(strategyId);
   const { mutateAsync: saveCode } = useSaveCode(strategyId);
 
-  // Fetch strategy from backend
-  const { data: strategy, isLoading: isLoadingStrategy } = useStrategy(strategyId);
-
-  // Hydrate the store on first load only — subsequent refetches (after save) 
-  // update the cache but don't re-init so user edits aren't wiped.
-  const hasInitialized = React.useRef(false);
-  useEffect(() => {
-    if (strategy && !hasInitialized.current) {
-      initializeFromStrategy(strategy);
-      hasInitialized.current = true;
-    }
-  }, [strategy, initializeFromStrategy]);
-
-  // When compiled_code refreshes (e.g. after canvas save), sync into Monaco
-  useEffect(() => {
-    if (strategy && hasInitialized.current) {
-      setCodeContent(strategy.compiled_code);
-    }
-  }, [strategy?.compiled_code, setCodeContent]);
-
   const nodesStateStr = JSON.stringify(
     nodes.map((n) => ({ id: n.id, type: n.type, position: n.position, data: n.data }))
   );
@@ -228,8 +203,10 @@ export default function Canvas({ strategyId }: CanvasProps) {
   isSavingRef.current = isSaving;
 
   useEffect(() => {
-    // Only trigger if there are actual unsaved changes and the strategy is loaded
-    if (isSynced || !strategyId || !hasInitialized.current) return;
+    // Only trigger once the shared layout has hydrated the store for THIS
+    // strategy (storeStrategyId matches the route's strategyId) and there
+    // are actual unsaved changes.
+    if (isSynced || storeStrategyId !== strategyId) return;
 
     if (autoSaveRef.current) clearTimeout(autoSaveRef.current);
 
@@ -304,33 +281,8 @@ export default function Canvas({ strategyId }: CanvasProps) {
 
   if (!mounted) return null;
 
-  // Full-screen loading while fetching strategy from API
-  if (isLoadingStrategy) {
-    return (
-      <>
-        <SubNav strategyId={strategyId} />
-
-        <div className="fixed inset-0 top-[68px] flex items-center justify-center bg-background">
-          <QuantumOrbitLoader
-            variant="default"
-            size="lg"
-            text="Loading strategy workspace..."
-          />
-        </div>
-      </>
-    );
-  }
-
   return (
     <>
-      <SubNav strategyId={strategyId} />
-
-      {builderTab === "analyse" ? (
-        <AnalyseTab strategyId={strategyId} />
-      ) : builderTab === "live" ? (
-        <LiveTab />
-      ) : (
-      <>
       {/* Main workspace: canvas + optional code panel side-by-side */}
       <div ref={containerRef} className="fixed inset-0 top-[68px] overflow-hidden flex">
 
@@ -521,8 +473,6 @@ export default function Canvas({ strategyId }: CanvasProps) {
       <PolicyGroupDrawer />
 
       <NodeCreationDialog />
-      </>
-      )}
     </>
   );
 }

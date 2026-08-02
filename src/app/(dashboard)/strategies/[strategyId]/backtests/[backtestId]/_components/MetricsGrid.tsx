@@ -27,31 +27,28 @@ export function MetricsGrid({
   distMetrics,
   metricsJson,
 }: MetricsGridProps) {
-  const accent = isProfit ? "text-success" : "text-destructive";
+  const pnlColor = isProfit ? "text-emerald-500" : "text-rose-500";
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 w-full">
       <MetricCard
         title="Net Profit"
         value={`$${profitVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-        color={accent}
-        icon={isProfit ? IconTrendingUp : IconTrendingDown}
+        color={pnlColor}
       />
       <MetricCard
         title="Return"
         value={`${(globalMetrics.total_return_pct ?? metricsJson?.profit_pct ?? 0).toFixed(2)}%`}
-        color={accent}
-        icon={IconChartBar}
+        color={pnlColor}
       />
       <MetricCard
-        title="Sharpe"
+        title="Sharpe Ratio"
         value={(globalMetrics.sharpe_ratio ?? metricsJson?.sharpe_ratio ?? 0).toFixed(2)}
-        icon={IconActivity}
       />
       <MetricCard
         title="Max Drawdown"
         value={`${(globalMetrics.max_drawdown_pct ?? metricsJson?.max_drawdown ?? 0).toFixed(2)}%`}
-        color="text-destructive"
+        color="text-rose-500"
       />
       <MetricCard
         title="Win Rate"
@@ -62,15 +59,13 @@ export function MetricsGrid({
         }
         subValue={
           distMetrics.payoff_ratio !== undefined && distMetrics.payoff_ratio !== null
-            ? `${distMetrics.payoff_ratio.toFixed(2)}x`
+            ? `Payoff: ${distMetrics.payoff_ratio.toFixed(2)}x`
             : undefined
         }
-        icon={IconCoins}
       />
       <MetricCard
         title="Profit Factor"
         value={globalMetrics.profit_factor ? globalMetrics.profit_factor.toFixed(2) : "—"}
-        icon={IconFileSpreadsheet}
       />
     </div>
   );

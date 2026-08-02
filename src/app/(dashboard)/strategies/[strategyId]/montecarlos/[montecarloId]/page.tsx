@@ -1,15 +1,16 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { useStrategyMonteCarlo, useRunArtifact, useMonteCarloDataset } from "@/api-actions/hooks/strategy-hooks";
+import { useStrategyMonteCarlo, useMonteCarloDataset, useRunArtifact } from "@/api-actions/hooks/strategy-hooks";
 import type { MonteCarloArtifact } from "@/types/strategy-actions";
 import type { SamplePathRow, PercentileBandRow, RealEquityRow, DistributionBinRow, DistributionMetric, SimulationSummaryRow } from "@/types/montecarlo";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { IconArrowLeft } from "@tabler/icons-react";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { ReportTabsList } from "@/components/shared/report-tabs";
+import { IconArrowLeft, IconLayoutDashboard, IconChartAreaLine, IconTrendingDown, IconChartHistogram, IconPercentage, IconListNumbers } from "@tabler/icons-react";
 import { ReportSectionLabel, statusBadge } from "@/components/shared/report-primitives";
 import {
   MonteCarloKpiStrip,
@@ -64,6 +65,7 @@ export default function MonteCarloDetailPage() {
   const params = useParams();
   const strategyId = params?.strategyId as string;
   const runId = params?.montecarloId as string;
+  const [activeTab, setActiveTab] = useState("overview");
 
   const { data: run, isLoading: runLoading } = useStrategyMonteCarlo(strategyId, runId);
   const { data: reportData, isLoading: reportLoading } = useRunArtifact(runId, "report");
@@ -129,7 +131,7 @@ export default function MonteCarloDetailPage() {
 
   if (runLoading || reportLoading) {
     return (
-      <div className="max-w-[1400px] mx-auto w-full px-4 md:px-6 py-6 space-y-5">
+      <div className="w-full max-w-full min-w-0 px-4 md:px-6 py-6 space-y-5">
         <Skeleton className="h-8 w-64" />
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -144,7 +146,7 @@ export default function MonteCarloDetailPage() {
 
   if (run?.status === "FAILED") {
     return (
-      <div className="max-w-[1400px] mx-auto w-full px-4 md:px-6 py-6">
+      <div className="w-full max-w-full min-w-0 px-4 md:px-6 py-6">
         <Card className="border-destructive/30 p-6 text-center">
           <h2 className="text-lg font-bold text-destructive">Run Failed</h2>
           <p className="text-sm text-muted-foreground mt-1">The Monte Carlo simulation could not complete.</p>
@@ -155,14 +157,14 @@ export default function MonteCarloDetailPage() {
 
   if (!report) {
     return (
-      <div className="max-w-[1400px] mx-auto w-full px-4 md:px-6 py-6">
+      <div className="w-full max-w-full min-w-0 px-4 md:px-6 py-6">
         <Card className="p-6 text-center text-muted-foreground text-sm">Report not available yet.</Card>
       </div>
     );
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full px-4 md:px-6 py-6 flex flex-col gap-5 animate-in fade-in duration-300">
+    <div className="w-full max-w-full min-w-0 px-4 md:px-6 py-6 flex flex-col gap-5 animate-in fade-in duration-300">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -171,7 +173,7 @@ export default function MonteCarloDetailPage() {
           </Button>
           <div>
             <h1 className="text-xl font-bold text-foreground">{run?.name || "Monte Carlo Run"}</h1>
-            <p className="text-xs text-muted-foreground font-mono">
+            <p className="text-[13px] text-muted-foreground font-mono">
               {report.configuration.scenario_type} · {report.summary.simulation_count} simulations
               {report.timestamp ? ` · Generated ${new Date(report.timestamp * 1000).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}` : ""}
             </p>
@@ -180,15 +182,19 @@ export default function MonteCarloDetailPage() {
         {statusBadge(run?.status ?? "")}
       </div>
 
-      <Tabs defaultValue="overview" className="flex flex-col gap-5">
-        <TabsList className="w-full justify-start overflow-x-auto">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="equity">Equity</TabsTrigger>
-          <TabsTrigger value="drawdown">Drawdown</TabsTrigger>
-          <TabsTrigger value="distributions">Distributions</TabsTrigger>
-          <TabsTrigger value="probability">Probability</TabsTrigger>
-          <TabsTrigger value="simulations">Simulations</TabsTrigger>
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col gap-5">
+        <ReportTabsList
+          layoutId="montecarloReportTab"
+          activeValue={activeTab}
+          tabs={[
+            { value: "overview", label: "Overview", icon: IconLayoutDashboard },
+            { value: "equity", label: "Equity", icon: IconChartAreaLine },
+            { value: "drawdown", label: "Drawdown", icon: IconTrendingDown },
+            { value: "distributions", label: "Distributions", icon: IconChartHistogram },
+            { value: "probability", label: "Probability", icon: IconPercentage },
+            { value: "simulations", label: "Simulations", icon: IconListNumbers },
+          ]}
+        />
 
         <TabsContent value="overview" className="flex flex-col gap-5">
           <ReportSectionLabel>Overview</ReportSectionLabel>

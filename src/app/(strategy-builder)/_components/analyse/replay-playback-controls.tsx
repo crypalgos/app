@@ -76,6 +76,44 @@ export function ReplayPlaybackControls({
     onSeek(next);
   };
 
+  // Dragging the slider fires onValueChange on every pointer-move — for an
+  // 18k-candle range that's easily hundreds of onSeek calls/sec, each one
+  // triggering a store update and (on a window shift) a full chart redraw.
+  // Keep the thumb itself perfectly responsive via local state, but batch
+  // the actual onSeek call to at most once per animation frame; the final
+  // value is always committed exactly on release via onValueCommit so nothing
+  // gets dropped.
+  const [dragValue, setDragValue] = useState<number | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const pendingSeekRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
+
+  const handleSliderChange = ([v]: number[]) => {
+    setIsPlaying(false);
+    setDragValue(v);
+    pendingSeekRef.current = v;
+    if (rafRef.current == null) {
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = null;
+        if (pendingSeekRef.current != null) onSeek(pendingSeekRef.current);
+      });
+    }
+  };
+
+  const handleSliderCommit = ([v]: number[]) => {
+    if (rafRef.current != null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    onSeek(v);
+    setDragValue(null);
+  };
+
   return (
     <div
       className={cn(
@@ -122,11 +160,9 @@ export function ReplayPlaybackControls({
         min={firstCandleIndex}
         max={lastCandleIndex}
         step={1}
-        value={[currentCandleIndex]}
-        onValueChange={([v]) => {
-          setIsPlaying(false);
-          onSeek(v);
-        }}
+        value={[dragValue ?? currentCandleIndex]}
+        onValueChange={handleSliderChange}
+        onValueCommit={handleSliderCommit}
       />
     </div>
   );

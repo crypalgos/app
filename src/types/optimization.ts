@@ -56,6 +56,16 @@ export interface OptimizationRunSummary {
   max_drawdown_pct: number;
   trade_count: number;
   total_results: number;
+  win_rate?: number | null;
+  profit_factor?: number | null;
+  expectancy?: number | null;
+  best_parameters?: Record<string, number | string>;
+  parameter_count?: number;
+  objective?: string;
+  objective_value?: number | null;
+  /** 0-1 stability-region confidence, null when unavailable (random search, or too few grid points). */
+  robustness_pct?: number | null;
+  search_type?: "grid" | "random";
 }
 
 // ─── Optimization Report (S3 artifact: report.msgpack.zstd) ──────────────────
@@ -160,15 +170,6 @@ export interface OptimizationBestResult {
 // calls build_leaderboard() + raw OptimizationResult directly instead, see
 // OptimizationLeaderboardEntry/OptimizationBestResult above). Removed rather
 // than left around as a plausible-looking type nothing produces.
-
-// ─── Card-level summary ──────────────────────────────────────────────────────
-
-export interface OptimizationCardSummary {
-  best_parameters: Record<string, number | string>;
-  total_combinations: number;
-  completed_combinations: number;
-  objective_value: number;
-}
 
 // ─── S3 artifact wrapper (what the API returns for artifact type "report") ───
 

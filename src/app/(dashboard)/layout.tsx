@@ -3,11 +3,13 @@ import Link from "next/link";
 import {
   SidebarProvider,
   SidebarInset,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { DashboardHeaderActions } from "@/components/dashboard-header-actions";
 import { AuthGuard } from "@/components/auth-guard";
 import { GlobalSearch } from "@/components/global-search";
+import { HiOutlineBars3 } from "react-icons/hi2";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
@@ -15,19 +17,24 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <SidebarProvider className="flex-col">
         {/* Full width Top Navigation */}
         <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center gap-2 border-b bg-background/80 backdrop-blur-md px-4 justify-between w-full">
-          {/* Left section: Logo */}
-          <div className="flex items-center gap-3 flex-1 overflow-hidden">
-            <div className="flex items-center gap-3">
+          {/* Left section: Mobile Hamburger & Logo */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* 3-Line Menu Trigger - VISIBLE ONLY ON MOBILE (md:hidden) */}
+            <SidebarTrigger className="md:hidden text-muted-foreground hover:text-foreground hover:bg-accent/80 border border-border/40 rounded-lg p-1.5 transition-all duration-200 active:scale-95 cursor-pointer shrink-0">
+              <HiOutlineBars3 className="w-5 h-5" strokeWidth={2} />
+            </SidebarTrigger>
+
+            <div className="flex items-center gap-3 shrink-0">
               <Link
                 href="/"
-                className="relative z-20 flex items-center space-x-2 px-2 py-1 text-sm font-normal"
+                className="relative z-20 flex items-center py-1 text-sm font-normal shrink-0"
               >
                 <img
                   src="/horizontal_light.svg"
                   alt="CrypAlgos Logo"
                   width={220}
                   height={220}
-                  className="block dark:hidden w-[150px] lg:w-[150px] h-auto"
+                  className="block dark:hidden w-[135px] sm:w-[165px] md:w-[185px] h-auto shrink-0"
                   style={{ height: "auto" }}
                   loading="eager"
                 />
@@ -36,7 +43,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   alt="CrypAlgos Logo"
                   width={220}
                   height={220}
-                  className="hidden dark:block w-[150px] lg:w-[150px] h-auto"
+                  className="hidden dark:block w-[135px] sm:w-[165px] md:w-[185px] h-auto shrink-0"
                   style={{ height: "auto" }}
                   loading="eager"
                 />
@@ -50,7 +57,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
 
           {/* Right section: Theme Toggle & User Auth Action Controls */}
-          <div className="flex-1 flex justify-end items-center">
+          <div className="flex items-center justify-end shrink-0">
             <DashboardHeaderActions />
           </div>
         </header>
@@ -58,7 +65,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <div className="flex flex-1 overflow-hidden">
           <AppSidebar />
           <SidebarInset>
-            <main className="flex-1 p-4 md:p-6 bg-background">{children}</main>
+            <div className="flex-1 p-4 md:p-6 bg-background min-h-0 overflow-y-auto">{children}</div>
           </SidebarInset>
         </div>
       </SidebarProvider>

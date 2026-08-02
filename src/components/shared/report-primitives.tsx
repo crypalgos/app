@@ -68,16 +68,16 @@ export function fmtDuration(ms: number): string {
 
 export function StatCell({ label, value, valueClass }: { label: string; value: React.ReactNode; valueClass?: string }) {
   return (
-    <div className="flex flex-col gap-1">
-      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">{label}</span>
-      <span className={cn("text-sm font-bold font-mono tabular-nums", valueClass ?? "text-foreground")}>{value}</span>
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[11.5px] text-muted-foreground font-medium">{label}</span>
+      <span className={cn("text-base font-bold font-mono tabular-nums", valueClass ?? "text-foreground")}>{value}</span>
     </div>
   );
 }
 
 export function ReportSectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground/70 mt-2">
+    <div className="text-xs font-semibold text-muted-foreground/80 mt-2">
       {children}
     </div>
   );
@@ -98,7 +98,7 @@ export function ReportCard({
   return (
     <div className={cn("rounded-xl border border-border/60 bg-card p-5", className)}>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-[13px] font-semibold text-foreground/80 tracking-wide">{title}</h3>
+        <h3 className="text-[15px] font-semibold text-foreground/80 tracking-wide">{title}</h3>
         {badge}
       </div>
       {children}

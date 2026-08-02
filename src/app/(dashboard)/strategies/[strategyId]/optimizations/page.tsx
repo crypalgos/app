@@ -5,9 +5,10 @@ import { useParams, useRouter } from "next/navigation";
 import {
   useStrategyOptimizations,
   useDeleteOptimization,
+  useVersionNumberMap,
 } from "@/api-actions/hooks/strategy-hooks";
 import type { ResearchRun } from "@/types/strategy-actions";
-import { ResearchRunCard } from "@/components/backtest/ResearchRunCard";
+import { OptimizationCard } from "@/components/backtest/OptimizationCard";
 
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,6 +34,7 @@ export default function StrategyOptimizationsPage() {
 
   const { data, isLoading } = useStrategyOptimizations(strategyId, page, limit);
   const { mutate: deleteRun } = useDeleteOptimization(strategyId);
+  const versionNumberMap = useVersionNumberMap(strategyId);
 
   const handleDelete = (runId: string) => {
     deleteRun(runId, {
@@ -84,9 +86,10 @@ export default function StrategyOptimizationsPage() {
 
       <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
         {runs.map((run: ResearchRun) => (
-          <ResearchRunCard
+          <OptimizationCard
             key={run.id}
             run={run}
+            versionNumber={run.strategy_version_id ? versionNumberMap.get(run.strategy_version_id) : undefined}
             onDelete={() => handleDelete(run.id)}
             onClick={() => router.push(`/strategies/${strategyId}/optimizations/${run.id}`)}
           />

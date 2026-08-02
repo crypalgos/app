@@ -67,7 +67,6 @@ export type {
   OptimizationBestResult,
   OptimizationBestResultMetrics,
   OptimizationArtifact,
-  OptimizationCardSummary,
 } from "./optimization";
 export type {
   // Shared
@@ -77,7 +76,6 @@ export type {
   WalkForwardReport,
   WalkForwardWindowReport,
   WalkForwardArtifact,
-  WalkForwardCardSummary,
 } from "./walkforward";
 export type {
   // Monte Carlo
@@ -227,3 +225,4 @@ export type PaginatedMonteCarloRunsResponse = PaginatedBacktestsResponse;
 export interface ApiRunReport {
   report?: AnalyticsReport;
 }
+

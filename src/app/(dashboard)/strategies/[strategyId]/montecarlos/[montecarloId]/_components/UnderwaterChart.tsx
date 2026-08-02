@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useId } from "react";
 import {
   AreaChart,
   Area,
@@ -25,10 +25,10 @@ function UnderwaterTooltip({ active, payload, label }: { active?: boolean; paylo
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-popover/95 backdrop-blur-xl border border-border px-4 py-3 rounded-lg shadow-2xl min-w-[150px]">
-      <p className="text-[10px] font-medium text-muted-foreground mb-1.5 tracking-wide">Step {label}</p>
+      <p className="text-[11px] font-medium text-muted-foreground mb-1.5 tracking-wide">Step {label}</p>
       <div className="flex items-center gap-2">
         <span className="size-1.5 rounded-full shrink-0" style={{ backgroundColor: DD_COLOR }} />
-        <span className="text-[11px] text-muted-foreground">Underwater</span>
+        <span className="text-[12px] text-muted-foreground">Underwater</span>
         <span className="text-[13px] font-semibold font-mono text-destructive ml-auto tabular-nums">
           {payload[0].value.toFixed(1)}%
         </span>
@@ -41,8 +41,13 @@ function UnderwaterTooltip({ active, payload, label }: { active?: boolean; paylo
  * single series, filled from 0 downward. Distinct from the percentile/
  * spaghetti drawdown charts: one line, not a distribution. */
 export function UnderwaterChart({ rows, isLoading }: UnderwaterChartProps) {
+  const gradientId = useId().replace(/:/g, "_");
   const data = useMemo(
-    () => [...rows].sort((a, b) => a.step - b.step).map((r) => ({ step: r.step, underwater: -r.drawdown })),
+    () =>
+      [...rows].sort((a, b) => a.step - b.step).map((r) => ({
+        step: r.step,
+        underwater: -Math.abs(r.drawdown),
+      })),
     [rows]
   );
 
@@ -51,12 +56,12 @@ export function UnderwaterChart({ rows, isLoading }: UnderwaterChartProps) {
       <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/40">
         <div className="flex items-center gap-2">
           <div className="size-2 rounded-full" style={{ backgroundColor: DD_COLOR }} />
-          <h3 className="text-[13px] font-semibold text-foreground/80 tracking-wide">Underwater Chart</h3>
+          <h3 className="text-[15px] font-semibold text-foreground/80 tracking-wide">Underwater Chart</h3>
         </div>
-        <span className="text-[10px] text-muted-foreground/70 font-mono">Real Strategy</span>
+        <span className="text-[11px] text-muted-foreground/70 font-mono">Real Strategy</span>
       </div>
 
-      <div className="h-[220px] px-2 pb-2 pt-2">
+      <div className="h-[300px] px-2 pb-2 pt-2">
         {isLoading ? (
           <div className="flex h-full items-end px-4 pb-4">
             <Skeleton className="h-full w-full rounded-lg" />
@@ -67,7 +72,7 @@ export function UnderwaterChart({ rows, isLoading }: UnderwaterChartProps) {
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data} margin={{ top: 8, right: 16, left: 8, bottom: 4 }}>
               <defs>
-                <linearGradient id="underwaterFill" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={`uwGrad_${gradientId}`} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={DD_COLOR} stopOpacity={0.05} />
                   <stop offset="100%" stopColor={DD_COLOR} stopOpacity={0.35} />
                 </linearGradient>
@@ -95,8 +100,9 @@ export function UnderwaterChart({ rows, isLoading }: UnderwaterChartProps) {
                 dataKey="underwater"
                 stroke={DD_COLOR}
                 strokeWidth={1.5}
-                fill="url(#underwaterFill)"
+                fill={`url(#uwGrad_${gradientId})`}
                 isAnimationActive={false}
+                activeDot={{ r: 3.5, strokeWidth: 1.5, stroke: "var(--background)", fill: DD_COLOR }}
               />
             </AreaChart>
           </ResponsiveContainer>

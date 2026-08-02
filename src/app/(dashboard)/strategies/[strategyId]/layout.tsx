@@ -11,7 +11,6 @@ import {
   IconChevronRight,
   IconCpu,
   IconClock,
-  IconChartBar,
   IconScale,
   IconGitBranch,
   IconRocket,
@@ -52,7 +51,6 @@ export default function StrategyDetailLayout({ children }: StrategyLayoutProps) 
     { label: "Backtests", path: `/strategies/${strategyId}/backtests`, icon: IconClock },
     { label: "Optimization", path: `/strategies/${strategyId}/optimizations`, icon: IconSettings },
     { label: "Walkforward", path: `/strategies/[strategyId]/walkforwards`.replace("[strategyId]", strategyId), icon: IconScale },
-    { label: "Monte Carlo", path: `/strategies/${strategyId}/montecarlos`, icon: IconChartBar },
     { label: "Versions", path: `/strategies/${strategyId}/versions`, icon: IconGitBranch },
     { label: "Deployments", path: `/strategies/${strategyId}/deployments`, icon: IconRocket },
   ];

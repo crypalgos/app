@@ -408,15 +408,27 @@ const MC_METHODS: MonteCarloRequest["method"][] = [
   "BLOCK_BOOTSTRAP",
 ];
 
-export function MonteCarloTriggerDialog({ strategyId, onTriggered }: { strategyId: string; onTriggered?: () => void }) {
+interface MonteCarloTriggerDialogProps {
+  strategyId: string;
+  onTriggered?: () => void;
+  /** When set, the dialog is launched from inside that backtest's own report
+   * page — the source is already known, so the picker is hidden entirely
+   * instead of asking the user to re-select the backtest they're already on. */
+  lockedBacktestId?: string;
+  /** Optional custom trigger button (defaults to the "New Monte Carlo" button). */
+  trigger?: React.ReactNode;
+}
+
+export function MonteCarloTriggerDialog({ strategyId, onTriggered, lockedBacktestId, trigger: triggerButton }: MonteCarloTriggerDialogProps) {
   const [open, setOpen] = useState(false);
-  const [sourceBacktestId, setSourceBacktestId] = useState("");
+  const [sourceBacktestId, setSourceBacktestId] = useState(lockedBacktestId ?? "");
   const [simulationCount, setSimulationCount] = useState(1000);
   const [method, setMethod] = useState<MonteCarloRequest["method"]>("BOOTSTRAP");
   const [seed, setSeed] = useState<string>("42");
 
   // Monte Carlo perturbs a completed backtest's trades — needs a source run.
-  const { data: backtests } = useStrategyBacktests(open ? strategyId : null, 1, 50);
+  // Skip the backtest list fetch entirely when the source is already locked.
+  const { data: backtests } = useStrategyBacktests(open && !lockedBacktestId ? strategyId : null, 1, 50);
   const completed = (backtests?.runs ?? []).filter((r) => r.status === "COMPLETED");
 
   const { mutateAsync: trigger, isPending } = useTriggerMonteCarlo(strategyId);
@@ -445,10 +457,12 @@ export function MonteCarloTriggerDialog({ strategyId, onTriggered }: { strategyI
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" className="gap-2 font-semibold cursor-pointer">
-          <IconFlask className="size-4" />
-          New Monte Carlo
-        </Button>
+        {triggerButton ?? (
+          <Button size="sm" className="gap-2 font-semibold cursor-pointer">
+            <IconFlask className="size-4" />
+            New Monte Carlo
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
@@ -459,29 +473,31 @@ export function MonteCarloTriggerDialog({ strategyId, onTriggered }: { strategyI
         </DialogHeader>
 
         <div className="flex flex-col gap-4 py-1">
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">Source backtest</Label>
-            <Select value={sourceBacktestId} onValueChange={setSourceBacktestId}>
-              <SelectTrigger className="h-9 w-full">
-                <SelectValue placeholder="Select a completed backtest…" />
-              </SelectTrigger>
-              <SelectContent>
-                {completed.length === 0 && (
-                  <div className="px-3 py-2 text-xs text-muted-foreground">No completed backtests yet.</div>
-                )}
-                {completed.map((r) => (
-                  <SelectItem key={r.id} value={r.id}>
-                    <span className="flex items-center gap-2">
-                      {r.name}
-                      <Badge variant="outline" className="text-[9px] font-mono">
-                        {(r.summary_json as { trade_count?: number } | null)?.trade_count ?? "?"} trades
-                      </Badge>
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {!lockedBacktestId && (
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs">Source backtest</Label>
+              <Select value={sourceBacktestId} onValueChange={setSourceBacktestId}>
+                <SelectTrigger className="h-9 w-full">
+                  <SelectValue placeholder="Select a completed backtest…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {completed.length === 0 && (
+                    <div className="px-3 py-2 text-xs text-muted-foreground">No completed backtests yet.</div>
+                  )}
+                  {completed.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      <span className="flex items-center gap-2">
+                        {r.name}
+                        <Badge variant="outline" className="text-[9px] font-mono">
+                          {(r.summary_json as { trade_count?: number } | null)?.trade_count ?? "?"} trades
+                        </Badge>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="grid grid-cols-3 gap-3">
             <div className="flex flex-col gap-1.5 col-span-1">

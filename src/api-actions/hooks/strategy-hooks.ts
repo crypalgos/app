@@ -114,6 +114,51 @@ export const useVersionDiff = (strategyId: string | null, version: number | null
     staleTime: 1000 * 30,
   });
 
+/** Manually save a snapshot version of the strategy draft. */
+export const useSaveVersion = (strategyId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (commitMessage?: string) =>
+      StrategyActions.saveVersion(strategyId, commitMessage),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [...STRATEGY_KEYS.detail(strategyId), "versions"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: STRATEGY_KEYS.detail(strategyId),
+      });
+    },
+  });
+};
+
+/** Update label/tag of a specific strategy version snapshot. */
+export const useUpdateVersionLabel = (strategyId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ version, label }: { version: number; label: string }) =>
+      StrategyActions.updateVersionLabel(strategyId, version, label),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [...STRATEGY_KEYS.detail(strategyId), "versions"],
+      });
+    },
+  });
+};
+
+/** Update approval status of a specific strategy version snapshot. */
+export const useUpdateVersionApproval = (strategyId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ version, approvalStatus }: { version: number; approvalStatus: string }) =>
+      StrategyActions.updateVersionApproval(strategyId, version, approvalStatus),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [...STRATEGY_KEYS.detail(strategyId), "versions"],
+      });
+    },
+  });
+};
+
 /** Maps strategy_version_id -> human-readable version number, for resolving run cards. */
 export const useVersionNumberMap = (strategyId: string | null) => {
   const { data: versions } = useStrategyVersions(strategyId);
@@ -211,11 +256,22 @@ export const useResetBuilder = (strategyId: string) => {
 };
 
 /** Enqueue an async Celery backtest. */
-export const useTriggerBacktest = (strategyId: string) =>
-  useMutation({
+export const useTriggerBacktest = (strategyId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
     mutationFn: (params: TriggerBacktestRequest) =>
       StrategyActions.triggerBacktest(strategyId, params),
+    onSuccess: () => {
+      // Without this, the new run only shows up once pollWhileActive's
+      // refetchInterval happens to fire again -- which it won't if the list
+      // had already stopped polling (no other run was active), leaving the
+      // Analyse tab looking unchanged until a manual page refresh.
+      queryClient.invalidateQueries({
+        queryKey: [...STRATEGY_KEYS.detail(strategyId), "backtests"],
+      });
+    },
   });
+};
 
 /** Permanently delete a strategy. Invalidates the list. */
 export const useDeleteStrategy = () => {
@@ -530,7 +586,8 @@ export const useStrategyMonteCarlos = (
   strategyId: string | null,
   page = 1,
   limit = 8,
-  search = ""
+  search = "",
+  parentRunId?: string
 ) =>
   useQuery({
     queryKey: [
@@ -539,15 +596,32 @@ export const useStrategyMonteCarlos = (
       page,
       limit,
       search,
+      parentRunId ?? "",
     ],
     queryFn: () =>
-      StrategyActions.listMonteCarloRuns(strategyId!, page, limit, search),
+      StrategyActions.listMonteCarloRuns(strategyId!, page, limit, search, parentRunId),
     enabled: !!strategyId,
     staleTime: 1000 * 30,
     ...pollWhileActive((res: { runs: ResearchRun[] }) =>
       res.runs.some((r) => !isTerminalRunStatus(r.status)) ? "RUNNING" : "COMPLETED"
     ),
   });
+
+/** Monte Carlo runs scoped to a single source backtest — used inside that
+ * backtest's own report page instead of the strategy-wide list. */
+export const useMonteCarlosForBacktest = (
+  strategyId: string | null,
+  backtestId: string | null,
+  page = 1,
+  limit = 20
+) =>
+  useStrategyMonteCarlos(
+    backtestId ? strategyId : null,
+    page,
+    limit,
+    "",
+    backtestId ?? undefined
+  );
 
 export const useStrategyMonteCarlo = (
   strategyId: string | null,

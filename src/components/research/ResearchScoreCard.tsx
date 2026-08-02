@@ -42,28 +42,28 @@ export function ResearchScoreCard({ score, subScores }: ResearchScoreCardProps) 
   return (
     <div className="rounded-xl border border-border/60 bg-card p-5">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-[13px] font-semibold text-foreground/80 tracking-wide">
+        <h3 className="text-[15px] font-semibold text-foreground/80 tracking-wide">
           Research Score <span className="text-muted-foreground/50 font-normal">(this run)</span>
         </h3>
         <div className="flex items-baseline gap-2">
-          <span className={cn("text-2xl font-bold tabular-nums", scoreColor(score))}>
+          <span className={cn("text-[26px] font-bold tabular-nums", scoreColor(score))}>
             {score.toFixed(0)}
           </span>
-          <span className="text-xs text-muted-foreground">/100</span>
-          <span className={cn("text-sm font-bold ml-1", scoreColor(score))}>{grade(score)}</span>
+          <span className="text-[13px] text-muted-foreground">/100</span>
+          <span className={cn("text-base font-bold ml-1", scoreColor(score))}>{grade(score)}</span>
         </div>
       </div>
-      <div className="space-y-2.5">
+      <div className="space-y-3">
         {subScores.map((s) => (
           <div key={s.label} className="flex items-center gap-3">
-            <span className="text-[11px] text-muted-foreground w-28 shrink-0">{s.label}</span>
-            <div className="flex-1 h-1.5 rounded-full bg-muted/30 overflow-hidden">
+            <span className="text-[12.5px] text-muted-foreground w-28 shrink-0">{s.label}</span>
+            <div className="flex-1 h-2 rounded-full bg-muted/30 overflow-hidden">
               <div
                 className={cn("h-full rounded-full", barColor(s.value))}
                 style={{ width: `${Math.max(0, Math.min(100, s.value))}%` }}
               />
             </div>
-            <span className="text-[11px] font-mono font-semibold text-foreground w-9 text-right shrink-0">
+            <span className="text-[12.5px] font-mono font-semibold text-foreground w-9 text-right shrink-0">
               {s.value.toFixed(0)}
             </span>
           </div>

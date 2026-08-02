@@ -23,37 +23,37 @@ interface MetricCardProps {
   description?: string;
 }
 
-export function MetricCard({ title, value, color, subValue, icon: Icon, description }: MetricCardProps) {
+export function MetricCard({ title, value, color, subValue, description }: MetricCardProps) {
   return (
-    <div className="relative flex flex-col gap-3 rounded-xl bg-card border border-border/60 px-5 py-4 overflow-hidden group hover:border-border transition-colors duration-200">
-      {/* Faint watermark icon */}
-      {Icon && (
-        <div className="absolute -right-2 -bottom-2 pointer-events-none">
-          <Icon className="size-14 text-muted-foreground/[0.06]" />
-        </div>
-      )}
+    <div className="flex flex-col justify-between rounded-xl bg-card border border-border/50 p-4 transition-all duration-200 hover:border-border/80 min-w-0">
+      {/* Title */}
+      <span className="text-[12px] font-medium text-muted-foreground tracking-wide mb-2">
+        {title}
+      </span>
 
-      <div className="flex items-center justify-between">
-        <span className="text-[11px] font-medium text-muted-foreground tracking-wide leading-none">
-          {title}
+      {/* Main Value */}
+      <div className="flex items-baseline justify-between gap-2">
+        <span
+          className={cn(
+            "text-xl font-bold font-mono tabular-nums tracking-tight",
+            color ?? "text-foreground"
+          )}
+        >
+          {value}
         </span>
+
         {subValue && (
-          <span className="text-[10px] font-mono text-muted-foreground/70 bg-muted px-1.5 py-0.5 rounded">
+          <span className="text-[11px] font-mono text-muted-foreground/80 font-medium">
             {subValue}
           </span>
         )}
       </div>
 
-      <span
-        className={cn(
-          "text-[22px] font-semibold font-mono tabular-nums tracking-tight leading-none",
-          color ?? "text-foreground"
-        )}
-      >
-        {value}
-      </span>
+      {/* Optional description footer */}
       {description && (
-        <span className="text-[10px] text-muted-foreground/70 leading-snug -mt-1">{description}</span>
+        <span className="text-[11px] text-muted-foreground/70 mt-1">
+          {description}
+        </span>
       )}
     </div>
   );

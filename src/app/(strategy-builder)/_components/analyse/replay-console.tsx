@@ -23,8 +23,17 @@ import {
   presentEvent,
   type PortfolioHistoryPoint,
 } from "@/lib/replay-analysis";
+import {
+  useReplayStore,
+  selectTreeForCandle,
+  selectRuntimeEventsUpTo,
+  selectPortfolioHistory,
+  selectTrades,
+  selectCandleAt,
+  selectIndicatorsAtCandle,
+} from "@/store/replay-store";
 import type { ResearchRun, BacktestSummary } from "@/types/strategy-actions";
-import type { ReplayWindow, CandleTreeGroup, ReplayEventNode } from "@/types/replay";
+import type { CandleTreeGroup, RuntimeEvent } from "@/types/replay";
 
 // The bottom console — the "Evidence" layer: every claim the Market/Decision/
 // Execution/Portfolio panels make is traceable back to a row here.
@@ -57,41 +66,42 @@ interface ReplayConsoleProps {
   runId: string;
   strategyId: string;
   run: ResearchRun | undefined;
-  window: ReplayWindow | undefined;
   currentCandleIndex: number | null;
-  /** The current bar's own timestamp — trades/orders gate against this real
-   * timestamp rather than a fictional candle-index field (trades/orders
-   * rows don't carry one; see TradesTab/OrdersTab). */
-  currentCandleTimestamp: number | undefined;
-  /** Session's first candle index — anchors the windowed runtime_events
-   * fetch used to resolve a trade's entry/exit sequence to a candle index. */
-  firstCandleIndex: number | null;
-  /** Session's last candle index — gives the Portfolio mini-curves a stable,
-   * known x-axis so a new point extends the line rather than rescaling
-   * everything already drawn. */
-  lastCandleIndex: number | null;
   onSeekToCandle: (candleIndex: number) => void;
   /** Hovering a Timeline row calls this with a candle index (or null on
    * mouse-leave) to preview the chart crosshair without seeking. */
   onPreviewCandle: (candleIndex: number | null) => void;
-  /** Real per-visited-bar PORTFOLIO_SNAPSHOT points — grows as replay
-   * advances, never includes bars ahead of the playhead. */
-  portfolioHistory: PortfolioHistoryPoint[];
 }
 
 export function ReplayConsole({
   runId,
   strategyId,
   run,
-  window,
   currentCandleIndex,
-  currentCandleTimestamp,
-  firstCandleIndex,
-  lastCandleIndex,
   onSeekToCandle,
   onPreviewCandle,
-  portfolioHistory,
 }: ReplayConsoleProps) {
+  const firstCandleIndex = useReplayStore((s) => s.sessionMeta?.first_candle_index ?? null);
+  const lastCandleIndex = useReplayStore((s) => s.sessionMeta?.last_candle_index ?? null);
+  const store = useReplayStore();
+  // The current bar's own timestamp — trades/orders gate against this real
+  // timestamp rather than a fictional candle-index field (trades/orders
+  // rows don't carry one; see TradesTab/OrdersTab).
+  const currentCandleTimestamp = useMemo(
+    () => (currentCandleIndex != null ? selectCandleAt(store, currentCandleIndex)?.timestamp : undefined),
+    [store, currentCandleIndex]
+  );
+  const tree = useMemo(
+    () => (currentCandleIndex != null ? (selectTreeForCandle(store, currentCandleIndex) ?? undefined) : undefined),
+    [store, currentCandleIndex]
+  );
+  // Real per-visited-bar PORTFOLIO_SNAPSHOT points — grows as replay
+  // advances, never includes bars ahead of the playhead.
+  const portfolioHistory = useMemo(
+    () => selectPortfolioHistory(store, currentCandleIndex ?? -1),
+    [store, currentCandleIndex]
+  );
+
   const [collapsed, setCollapsed] = useState(false);
   const [height, setHeight] = useState(() => {
     if (typeof window === "undefined") return DEFAULT_HEIGHT;
@@ -129,8 +139,6 @@ export function ReplayConsole({
     if (collapsed) setCollapsed(false);
   };
 
-  const tree: CandleTreeGroup | undefined = window?.candle_trees.find((t) => t.candle_index === currentCandleIndex);
-
   return (
     <div
       className="shrink-0 border-t border-border/60 bg-card flex flex-col"
@@ -167,19 +175,28 @@ export function ReplayConsole({
 
       {!collapsed && (
         <div className="flex-1 min-h-0 overflow-hidden">
-          {activeTab === "timeline" && <TimelineTab tree={tree} currentCandleIndex={currentCandleIndex} onSeekToCandle={onSeekToCandle} onPreviewCandle={onPreviewCandle} />}
+          {/* Keep Timeline mounted so changing tabs does not reset its scroll
+              position or briefly recreate the table while replay is running. */}
+          <div className={cn("h-full", activeTab !== "timeline" && "hidden")}>
+            <TimelineTab
+              tree={tree}
+              currentCandleIndex={currentCandleIndex}
+              onSeekToCandle={onSeekToCandle}
+              onPreviewCandle={onPreviewCandle}
+            />
+          </div>
           {activeTab === "trades" && openedTabs.has("trades") && (
             <TradesTab
-              runId={runId}
               currentCandleIndex={currentCandleIndex}
               currentCandleTimestamp={currentCandleTimestamp}
               firstCandleIndex={firstCandleIndex}
+              lastCandleIndex={lastCandleIndex}
               portfolioHistory={portfolioHistory}
               onSeekToCandle={onSeekToCandle}
             />
           )}
           {activeTab === "orders" && openedTabs.has("orders") && (
-            <OrdersTab runId={runId} firstCandleIndex={firstCandleIndex} currentCandleIndex={currentCandleIndex} onSeekToCandle={onSeekToCandle} />
+            <OrdersTab currentCandleIndex={currentCandleIndex} onSeekToCandle={onSeekToCandle} />
           )}
           {activeTab === "portfolio" && (
             <PortfolioTab
@@ -192,10 +209,10 @@ export function ReplayConsole({
             />
           )}
           {activeTab === "metrics" && (
-            <MetricsTab runId={runId} run={run} currentCandleTimestamp={currentCandleTimestamp} />
+            <MetricsTab run={run} currentCandleTimestamp={currentCandleTimestamp} />
           )}
           {activeTab === "logs" && openedTabs.has("logs") && <SystemLogsTab runId={runId} />}
-          {activeTab === "debug" && <DebugTab strategyId={strategyId} tree={tree} window={window} currentCandleIndex={currentCandleIndex} />}
+          {activeTab === "debug" && <DebugTab strategyId={strategyId} tree={tree} currentCandleIndex={currentCandleIndex} />}
         </div>
       )}
     </div>
@@ -244,66 +261,108 @@ function TimelineTab({
 }) {
   // Chronological — BAR_CLOSED first, then whatever it triggered, in order.
   const events = useMemo(() => (tree ? flattenCandleTree(tree) : []), [tree]);
-
-  if (currentCandleIndex == null) return <EmptyState title="No bar selected." />;
-  if (events.length === 0) {
-    return (
-      <EmptyState
-        title={`Nothing happened at bar ${currentCandleIndex}.`}
-        detail="No engine events were emitted for this bar — market data updated, but nothing else evaluated."
-      />
-    );
-  }
+  const hasSelectedBar = currentCandleIndex != null;
 
   return (
     <ScrollTable>
-      <table className="w-full">
-        <thead className="sticky top-0 bg-card border-b border-border/40">
-          <tr className="text-left text-muted-foreground">
-            <Th>Time (UTC)</Th>
-            <Th>Event</Th>
-            <Th>Node</Th>
-            <Th>Details</Th>
-          </tr>
-        </thead>
-        <tbody>
-          <AnimatePresence initial={false}>
-            {events.map((ev) => {
-              const category = categoryForEventType(ev.type);
-              const { label, node, details } = presentEvent(ev);
-              return (
-                <motion.tr
-                  key={`${currentCandleIndex}-${ev.sequence_number}`}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  onClick={() => onSeekToCandle(ev.candle_index)}
-                  onMouseEnter={() => onPreviewCandle(ev.candle_index)}
-                  onMouseLeave={() => onPreviewCandle(null)}
-                  className="border-b border-border/20 hover:bg-muted/30 cursor-pointer"
-                  style={{ borderLeft: `2px solid ${REPLAY_COLORS[category]}33` }}
-                >
-                  <Td className="text-muted-foreground whitespace-nowrap">
-                    {new Date(ev.timestamp).toLocaleTimeString(undefined, { hour12: false })}
-                  </Td>
-                  <Td className="whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1.5 font-bold">
-                      <span className="size-1.5 rounded-full shrink-0" style={{ backgroundColor: REPLAY_COLORS[category] }} />
-                      {label}
-                    </span>
-                  </Td>
-                  <Td className="truncate max-w-[160px]">
-                    <span className="inline-block rounded bg-muted/40 px-1.5 py-0.5 text-[9.5px] font-mono text-muted-foreground/90 truncate max-w-full align-middle">
-                      {node}
-                    </span>
-                  </Td>
-                  <Td className="text-foreground/80 truncate">{details}</Td>
-                </motion.tr>
-              );
-            })}
-          </AnimatePresence>
-        </tbody>
-      </table>
+      {/* This wrapper remains mounted while the event rows update. Clearing the
+          preview here, rather than on every row, prevents a row replacement
+          during playback from clearing/re-setting the chart crosshair. */}
+      <div className="min-w-[720px] p-3 sm:p-4" onMouseLeave={() => onPreviewCandle(null)}>
+        <div className="mb-2.5 flex items-center justify-between px-0.5">
+          <div className="flex items-center gap-2">
+            <span className="size-1.5 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.7)]" />
+            <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Timeline trace</span>
+            {hasSelectedBar && (
+              <span className="rounded border border-border/60 bg-muted/45 px-1.5 py-0.5 text-[9px] font-medium tabular-nums text-muted-foreground">
+                Bar {currentCandleIndex}
+              </span>
+            )}
+          </div>
+          <span className="rounded-full border border-border/70 bg-background/70 px-2 py-0.5 text-[9px] font-semibold tabular-nums text-muted-foreground">
+            {events.length} {events.length === 1 ? "event" : "events"}
+          </span>
+        </div>
+
+        <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+          <table className="w-full table-fixed border-separate border-spacing-0">
+            <colgroup>
+              <col className="w-[100px]" />
+              <col className="w-[200px]" />
+              <col className="w-[190px]" />
+              <col />
+            </colgroup>
+            <thead className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm">
+              <tr className="text-left text-[9px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+                <Th>Time</Th>
+                <Th>Event</Th>
+                <Th>Source node</Th>
+                <Th>Details</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {!hasSelectedBar ? (
+                <EmptyTimelineRow title="Select a bar to inspect its engine trace." />
+              ) : events.length === 0 ? (
+                <EmptyTimelineRow
+                  title={`No engine events at bar ${currentCandleIndex}.`}
+                  detail="Market data updated, but no engine rule emitted an event."
+                />
+              ) : (
+                events.map((ev, i) => {
+                  const category = categoryForEventType(ev.type);
+                  const { label, node, details } = presentEvent(ev);
+                  return (
+                    <tr
+                      key={`${ev.candle_index}-${ev.sequence_number}`}
+                      onClick={() => onSeekToCandle(ev.candle_index)}
+                      onMouseEnter={() => onPreviewCandle(ev.candle_index)}
+                      className={cn(
+                        "group cursor-pointer border-b border-border/50 last:border-b-0 hover:bg-primary/8",
+                        i % 2 === 1 && "bg-muted/4.5"
+                      )}
+                      style={{ boxShadow: `inset 3px 0 0 0 ${REPLAY_COLORS[category]}` }}
+                    >
+                      <td className="px-3 py-2.5 font-mono text-[10px] tabular-nums text-muted-foreground whitespace-nowrap">
+                        {new Date(ev.timestamp).toLocaleTimeString(undefined, { hour12: false })}
+                      </td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">
+                        <span className="inline-flex max-w-full items-center gap-2 font-semibold text-[10.5px] text-foreground">
+                          <span
+                            className="size-1.5 shrink-0 rounded-full shadow-[0_0_6px_currentColor]"
+                            style={{ color: REPLAY_COLORS[category], backgroundColor: REPLAY_COLORS[category] }}
+                          />
+                          <span className="truncate">{label}</span>
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5 truncate">
+                        <span className="inline-flex max-w-full items-center rounded-md border border-border/60 bg-muted/55 px-1.5 py-0.5 font-mono text-[9.5px] text-muted-foreground group-hover:border-primary/35 group-hover:bg-primary/8">
+                          <span className="truncate">{node}</span>
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5 text-[10.5px] leading-4 text-foreground/80">
+                        <span className="line-clamp-2">{details}</span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </ScrollTable>
+  );
+}
+
+function EmptyTimelineRow({ title, detail }: { title: string; detail?: string }) {
+  return (
+    <tr>
+      <td colSpan={4} className="px-4 py-8 text-center">
+        <p className="text-[10.5px] font-medium text-foreground/75">{title}</p>
+        {detail && <p className="mt-1 text-[9.5px] text-muted-foreground">{detail}</p>}
+      </td>
+    </tr>
   );
 }
 
@@ -314,41 +373,48 @@ function TimelineTab({
  * entry_fee, exit_fee, funding_cost, leverage, portfolio_equity_after,
  * entry_sequence, exit_sequence. There is no candle_index/pnl_pct/reason
  * field — those are resolved or derived below, never assumed. */
-function buildSequenceToCandleMap(runtimeEvents: Record<string, unknown>[] | undefined): Map<number, number> {
+function buildSequenceToCandleMap(events: RuntimeEvent[]): Map<number, number> {
   const map = new Map<number, number>();
-  for (const ev of runtimeEvents ?? []) {
-    const seq = num(ev.sequence_number);
-    const idx = num(ev.candle_index);
-    if (seq != null && idx != null) map.set(seq, idx);
+  for (const ev of events) {
+    map.set(ev.sequence_number, ev.candle_index);
   }
   return map;
 }
 
 function TradesTab({
-  runId,
   currentCandleIndex,
   currentCandleTimestamp,
   firstCandleIndex,
+  lastCandleIndex,
   portfolioHistory,
   onSeekToCandle,
 }: {
-  runId: string;
   currentCandleIndex: number | null;
   currentCandleTimestamp: number | undefined;
   firstCandleIndex: number | null;
+  lastCandleIndex: number | null;
   portfolioHistory: PortfolioHistoryPoint[];
   onSeekToCandle: (i: number) => void;
 }) {
-  const { data, isLoading } = useReplayDataset(runId, "trades", 0, PAGE_SIZE - 1);
-  // Windowed like Smart Search — resolves entry_sequence/exit_sequence to a
-  // real candle_index for click-to-seek (a known limitation: only trades
-  // whose events fall in this first page resolve; seeking on later trades
-  // is unavailable rather than wrong).
-  const { data: runtimeEvents } = useReplayDataset(runId, "runtime_events", firstCandleIndex ?? 0, (firstCandleIndex ?? 0) + PAGE_SIZE - 1);
-  const seqToCandle = useMemo(() => buildSequenceToCandleMap(runtimeEvents), [runtimeEvents]);
+  const tradesLoaded = useReplayStore((s) => s.trades != null);
+  const store = useReplayStore();
+  const data = useMemo(() => selectTrades(store), [store]);
+  // Resolves entry_sequence/exit_sequence to a real candle_index for
+  // click-to-seek, from whatever chunks of runtime_events are currently
+  // cached — every chunk ever loaded stays until LRU-evicted (unlike the old
+  // window-pinned fetch, which lost this the moment the playhead moved on).
+  // Known limitation: a trade whose entry/exit sequence falls in a chunk
+  // that's since been evicted won't resolve a seek target until revisited.
+  const seqToCandle = useMemo(
+    () =>
+      firstCandleIndex != null && lastCandleIndex != null
+        ? buildSequenceToCandleMap(selectRuntimeEventsUpTo(store, lastCandleIndex))
+        : new Map<number, number>(),
+    [store, firstCandleIndex, lastCandleIndex]
+  );
 
-  if (isLoading) return <EmptyState title="Loading trades…" />;
-  if (!data || data.length === 0) {
+  if (!tradesLoaded) return <EmptyState title="Loading trades…" />;
+  if (data.length === 0) {
     return (
       <EmptyState
         title="No trades yet."
@@ -515,28 +581,24 @@ const ORDER_STAGE_LABEL: Record<string, string> = {
 };
 
 function OrdersTab({
-  runId,
-  firstCandleIndex,
   currentCandleIndex,
   onSeekToCandle,
 }: {
-  runId: string;
-  firstCandleIndex: number | null;
   currentCandleIndex: number | null;
   onSeekToCandle: (i: number) => void;
 }) {
-  const { data, isLoading } = useReplayDataset(runId, "runtime_events", firstCandleIndex ?? 0, (firstCandleIndex ?? 0) + PAGE_SIZE - 1);
-  if (isLoading) return <EmptyState title="Loading orders…" />;
-
-  // No spoilers: each stage only shows once its own bar has been reached —
-  // an order visibly progresses Created -> Submitted -> Filled as you play
-  // forward, rather than appearing fully resolved on first view.
-  const cursor = currentCandleIndex ?? Infinity;
-  const orderEvents = (data ?? []).filter((row) => {
-    const type = String(row.type ?? "");
-    const idx = num(row.candle_index);
-    return type.startsWith("ORDER_") && idx != null && idx <= cursor;
-  });
+  // Sourced from whatever runtime_events chunks are currently cached — every
+  // chunk ever loaded stays until LRU-evicted, so this tracks wherever the
+  // playhead actually is instead of losing history once a chunk rolls off.
+  // Already gated at <= currentCandleIndex by construction (see
+  // selectRuntimeEventsUpTo) — no spoilers, an order visibly progresses
+  // Created -> Submitted -> Filled as you play forward.
+  const store = useReplayStore();
+  const allEvents = useMemo(
+    () => selectRuntimeEventsUpTo(store, currentCandleIndex ?? -1),
+    [store, currentCandleIndex]
+  );
+  const orderEvents = useMemo(() => allEvents.filter((ev) => ev.type.startsWith("ORDER_")), [allEvents]);
 
   if (orderEvents.length === 0) {
     return (
@@ -547,7 +609,7 @@ function OrdersTab({
     );
   }
 
-  const grouped = new Map<string, Record<string, unknown>[]>();
+  const grouped = new Map<string, RuntimeEvent[]>();
   for (const ev of orderEvents) {
     const orderId = String((ev.payload as Record<string, unknown> | undefined)?.order_id ?? ev.sequence_number);
     const list = grouped.get(orderId) ?? [];
@@ -555,35 +617,35 @@ function OrdersTab({
     grouped.set(orderId, list);
   }
   const orders = Array.from(grouped.values())
-    .map((events) => events.sort((a, b) => num(a.sequence_number)! - num(b.sequence_number)!))
-    .sort((a, b) => num(b[0].sequence_number)! - num(a[0].sequence_number)!); // most recent order first
+    .map((events) => events.sort((a, b) => a.sequence_number - b.sequence_number))
+    .sort((a, b) => b[0].sequence_number - a[0].sequence_number); // most recent order first
 
   return (
     <div className="h-full overflow-auto p-3 flex flex-col gap-2">
       <AnimatePresence initial={false}>
         {orders.map((events) => (
-          <OrderCard key={String(events[0].sequence_number)} events={events} onSeek={onSeekToCandle} />
+          <OrderCard key={events[0].sequence_number} events={events} onSeek={onSeekToCandle} />
         ))}
       </AnimatePresence>
     </div>
   );
 }
 
-function OrderCard({ events, onSeek }: { events: Record<string, unknown>[]; onSeek: (i: number) => void }) {
+function OrderCard({ events, onSeek }: { events: RuntimeEvent[]; onSeek: (i: number) => void }) {
   const created = events.find((e) => e.type === "ORDER_CREATED");
   const filled = events.find((e) => e.type === "ORDER_FILLED");
   const latest = events[events.length - 1];
   const basePayload = (created?.payload ?? latest.payload) as Record<string, unknown>;
   const side = String(basePayload.side ?? "").toUpperCase();
   const orderType = String(basePayload.order_type ?? "MARKET");
-  const terminalType = String(latest.type);
+  const terminalType = latest.type;
   const isFilled = terminalType === "ORDER_FILLED";
   const isTerminalStop = terminalType === "ORDER_REJECTED" || terminalType === "ORDER_CANCELLED";
 
   const filledPayload = filled?.payload as Record<string, unknown> | undefined;
   const price = isFilled ? num(filledPayload?.fill_price) : num(basePayload.price);
   const qty = isFilled ? num(filledPayload?.fill_quantity) : num(basePayload.size ?? basePayload.quantity);
-  const candleIdx = num(created?.candle_index ?? latest.candle_index);
+  const candleIdx = created?.candle_index ?? latest.candle_index;
 
   const stageTypes = ["ORDER_CREATED", "ORDER_SUBMITTED", isTerminalStop ? terminalType : "ORDER_FILLED"];
   const reachedTypes = new Set(events.map((e) => String(e.type)));
@@ -598,6 +660,7 @@ function OrderCard({ events, onSeek }: { events: Record<string, unknown>[]; onSe
     >
       <SideBadge side={side} />
       <span className="text-[10px] font-mono text-muted-foreground">{orderType}</span>
+      <span className="text-[9.5px] font-mono text-muted-foreground/70">{fmtTime(created?.timestamp ?? latest.timestamp)}</span>
       <div className="flex items-center gap-1 text-[9px] font-semibold">
         {stageTypes.map((stage, i) => {
           const reached = reachedTypes.has(stage);
@@ -873,15 +936,14 @@ function StatCard({ label, children }: { label: string; children: React.ReactNod
 // ─── Metrics: executive cards, never a flat grid ──────────────────────────────
 
 function MetricsTab({
-  runId,
   run,
   currentCandleTimestamp,
 }: {
-  runId: string;
   run: ResearchRun | undefined;
   currentCandleTimestamp: number | undefined;
 }) {
-  const { data: trades } = useReplayDataset(runId, "trades", 0, PAGE_SIZE - 1);
+  const store = useReplayStore();
+  const trades = useMemo(() => selectTrades(store), [store]);
   const s = run?.summary_json as BacktestSummary | undefined;
   if (!s) return <EmptyState title="No summary metrics available for this run yet." />;
 
@@ -1081,17 +1143,19 @@ function SystemLogsTab({ runId }: { runId: string }) {
 function DebugTab({
   strategyId,
   tree,
-  window,
   currentCandleIndex,
 }: {
   strategyId: string;
   tree: CandleTreeGroup | undefined;
-  window: ReplayWindow | undefined;
   currentCandleIndex: number | null;
 }) {
   const { data: strategy } = useStrategy(strategyId);
-  const snap = window?.indicator_snapshots.find((s) => (s.bar_index ?? -1) === currentCandleIndex);
-  const rawEvents: ReplayEventNode[] = tree ? flattenCandleTree(tree) : [];
+  const store = useReplayStore();
+  const snap = useMemo(
+    () => (currentCandleIndex != null ? selectIndicatorsAtCandle(store, currentCandleIndex)[0] : undefined),
+    [store, currentCandleIndex]
+  );
+  const rawEvents = tree ? flattenCandleTree(tree) : [];
 
   return (
     <ScrollTable>
@@ -1134,7 +1198,15 @@ function num(v: unknown): number | undefined {
 function fmtTime(v: unknown): string {
   if (v == null) return "—";
   const d = new Date(typeof v === "number" ? v : String(v));
-  return isNaN(d.getTime()) ? String(v) : d.toLocaleTimeString(undefined, { hour12: false });
+  if (isNaN(d.getTime())) return String(v);
+  return d.toLocaleString(undefined, {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 }
 function fmtDuration(entry: unknown, exit: unknown): string {
   if (entry == null || exit == null) return "—";

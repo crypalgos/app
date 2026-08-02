@@ -1,269 +1,235 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useParams } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  IconGitBranch,
-  IconGitCommit,
-  IconGitMerge,
-  IconStarFilled,
   IconHistory,
-  IconArrowBackUp,
-  IconChevronDown,
+  IconSearch,
+  IconFilter,
+  IconStarFilled,
+  IconCheck,
+  IconGitBranch,
 } from "@tabler/icons-react";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   useStrategy,
   useStrategyVersions,
   useRestoreVersion,
-  useVersionDiff,
+  useSaveVersion,
+  useSetGoldenVersion,
+  useUpdateVersionLabel,
+  useUpdateVersionApproval,
 } from "@/api-actions/hooks/strategy-hooks";
-import type { StrategyVersion } from "@/types/strategy-actions";
-
-function DiffView({ diffCode }: { diffCode: string }) {
-  if (!diffCode.trim()) {
-    return (
-      <p className="text-xs text-muted-foreground py-3 px-1">
-        No compiled-code differences from the current draft.
-      </p>
-    );
-  }
-  const lines = diffCode.split("\n");
-  return (
-    <pre className="text-[11px] leading-relaxed font-mono overflow-x-auto rounded-lg border border-border/40 bg-muted/10 p-3 max-h-80">
-      {lines.map((line, i) => {
-        const cls = line.startsWith("+") && !line.startsWith("+++")
-          ? "text-emerald-500 dark:text-emerald-400"
-          : line.startsWith("-") && !line.startsWith("---")
-            ? "text-rose-500 dark:text-rose-400"
-            : line.startsWith("@@")
-              ? "text-primary/80"
-              : "text-muted-foreground";
-        return (
-          <div key={i} className={cls}>
-            {line || " "}
-          </div>
-        );
-      })}
-    </pre>
-  );
-}
-
-function VersionRow({
-  version,
-  isCurrent,
-  strategyId,
-  onRestore,
-  isRestoring,
-}: {
-  version: StrategyVersion;
-  isCurrent: boolean;
-  strategyId: string;
-  onRestore: (version: number) => void;
-  isRestoring: boolean;
-}) {
-  const [diffOpen, setDiffOpen] = useState(false);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const { data: diff, isLoading: diffLoading } = useVersionDiff(
-    diffOpen ? strategyId : null,
-    diffOpen ? version.version : null
-  );
-
-  return (
-    <div className="border border-border/30 bg-muted/10 rounded-xl overflow-hidden">
-      <div className="flex items-center gap-3 p-4">
-        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary/10 text-primary font-bold text-sm shrink-0">
-          v{version.version}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-semibold text-foreground truncate">
-              {version.label || version.commit_message || `Version ${version.version}`}
-            </span>
-            {isCurrent && (
-              <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border border-primary/20">
-                Current
-              </Badge>
-            )}
-            {version.is_golden && (
-              <IconStarFilled className="w-3.5 h-3.5 text-amber-500" />
-            )}
-            {version.is_code_modified && (
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                Custom code
-              </Badge>
-            )}
-          </div>
-          <span className="text-xs text-muted-foreground">
-            {new Date(version.created_at).toLocaleString(undefined, {
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </span>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-xs h-8 gap-1.5"
-            onClick={() => setDiffOpen((v) => !v)}
-          >
-            <IconGitMerge className="w-3.5 h-3.5" />
-            Diff
-            <IconChevronDown className={cn("w-3.5 h-3.5 transition-transform", diffOpen && "rotate-180")} />
-          </Button>
-          {!isCurrent && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs h-8 gap-1.5"
-              onClick={() => setConfirmOpen(true)}
-              disabled={isRestoring}
-            >
-              <IconArrowBackUp className="w-3.5 h-3.5" />
-              Restore
-            </Button>
-          )}
-        </div>
-      </div>
-      {diffOpen && (
-        <div className="px-4 pb-4">
-          {diffLoading ? (
-            <Skeleton className="h-20 w-full" />
-          ) : (
-            <DiffView diffCode={diff?.diff_code ?? ""} />
-          )}
-        </div>
-      )}
-
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Restore version {version.version}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This copies version {version.version}&apos;s canvas and compiled code into your
-              current draft. Your next backtest, optimization, or other run will
-              automatically save this as a new version snapshot.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                onRestore(version.version);
-                setConfirmOpen(false);
-              }}
-            >
-              Restore
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
-  );
-}
+import {
+  VersionHeader,
+  CreateVersionDialog,
+  VersionTimelineItem,
+} from "./_components";
+import { cn } from "@/lib/utils";
 
 export default function StrategyVersionsPage() {
   const params = useParams();
   const strategyId = params?.strategyId as string;
 
-  const { data: strategy } = useStrategy(strategyId);
-  const { data: versions, isLoading } = useStrategyVersions(strategyId);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterMode, setFilterMode] = useState<"ALL" | "GOLDEN" | "APPROVED">("ALL");
+
+  const { data: strategy, isLoading: strategyLoading } = useStrategy(strategyId);
+  const { data: versions = [], isLoading: versionsLoading } = useStrategyVersions(strategyId);
+
+  const { mutateAsync: saveVersion, isPending: isSaving } = useSaveVersion(strategyId);
   const { mutateAsync: restoreVersion, isPending: isRestoring } = useRestoreVersion(strategyId);
+  const { mutateAsync: setGolden, isPending: isGoldenPending } = useSetGoldenVersion();
+  const { mutateAsync: updateLabel } = useUpdateVersionLabel(strategyId);
+  const { mutateAsync: updateApproval } = useUpdateVersionApproval(strategyId);
+
+  // Filter versions by search term and filter mode
+  const filteredVersions = versions.filter((v) => {
+    const matchesSearch =
+      !searchQuery ||
+      (v.commit_message ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (v.label ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      `v${v.version}`.includes(searchQuery.toLowerCase());
+
+    if (!matchesSearch) return false;
+
+    if (filterMode === "GOLDEN") return v.is_golden;
+    if (filterMode === "APPROVED") return (v.approval_status || "APPROVED").toUpperCase() === "APPROVED";
+
+    return true;
+  });
+
+  const handleCreateSnapshot = async (commitMessage: string) => {
+    try {
+      await saveVersion(commitMessage);
+      toast.success("Manual strategy version snapshot saved successfully.");
+    } catch {
+      toast.error("Failed to save version snapshot.");
+    }
+  };
 
   const handleRestore = async (version: number) => {
     try {
       await restoreVersion(version);
-      toast.success(`Version ${version} restored into your draft.`);
+      toast.success(`Version ${version} successfully restored into active workspace.`);
     } catch {
-      toast.error("Failed to restore version.");
+      toast.error("Failed to restore strategy version.");
     }
   };
 
+  const handleSetGolden = async (version: number) => {
+    try {
+      await setGolden({ strategyId, version });
+      toast.success(`Version ${version} set as Golden Production Candidate.`);
+    } catch {
+      toast.error("Failed to set golden version candidate.");
+    }
+  };
+
+  const handleUpdateLabel = async (version: number, label: string) => {
+    try {
+      await updateLabel({ version, label });
+      toast.success(`Version ${version} label updated to "${label}".`);
+    } catch {
+      toast.error("Failed to update version label.");
+    }
+  };
+
+  const handleUpdateApproval = async (version: number, approvalStatus: string) => {
+    try {
+      await updateApproval({ version, approvalStatus });
+      toast.success(`Version ${version} approval status set to ${approvalStatus}.`);
+    } catch {
+      toast.error("Failed to update version approval status.");
+    }
+  };
+
+  const isLoading = strategyLoading || versionsLoading;
+
   return (
-    <div className="grid gap-6 animate-in fade-in duration-300">
-      <Card className="border-border/50 bg-card/40 backdrop-blur-xs">
-        <CardHeader className="pb-2">
-          <div className="flex items-center gap-2 mb-2">
-            <IconGitBranch className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-bold">Version Control</h2>
+    <div className="w-full max-w-full min-w-0 flex flex-col gap-6 animate-in fade-in duration-300 pb-20">
+      {/* Overview Header & Metrics */}
+      <VersionHeader
+        strategy={strategy}
+        versions={versions}
+        onCreateSnapshot={() => setCreateDialogOpen(true)}
+      />
+
+      {/* Search & Filter Toolbar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+        <div className="relative flex-1 max-w-md">
+          <IconSearch className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
+          <Input
+            placeholder="Search commits, labels, version numbers..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 h-9 text-xs"
+          />
+        </div>
+
+        <div className="flex items-center gap-1 bg-muted/40 border border-border/40 p-1 rounded-lg w-fit">
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "h-7 text-xs px-2.5 rounded-md font-medium",
+              filterMode === "ALL" ? "bg-background shadow-2xs text-foreground font-semibold" : "text-muted-foreground"
+            )}
+            onClick={() => setFilterMode("ALL")}
+          >
+            All ({versions.length})
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "h-7 text-xs px-2.5 rounded-md font-medium gap-1",
+              filterMode === "GOLDEN" ? "bg-background shadow-2xs text-amber-500 font-semibold" : "text-muted-foreground"
+            )}
+            onClick={() => setFilterMode("GOLDEN")}
+          >
+            <IconStarFilled className="size-3 text-amber-500" />
+            Golden ({versions.filter((v) => v.is_golden).length})
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "h-7 text-xs px-2.5 rounded-md font-medium gap-1",
+              filterMode === "APPROVED" ? "bg-background shadow-2xs text-emerald-500 font-semibold" : "text-muted-foreground"
+            )}
+            onClick={() => setFilterMode("APPROVED")}
+          >
+            <IconCheck className="size-3 text-emerald-500" />
+            Approved ({versions.filter((v) => (v.approval_status || "APPROVED").toUpperCase() === "APPROVED").length})
+          </Button>
+        </div>
+      </div>
+
+      {/* Version Timeline Content */}
+      {isLoading ? (
+        <div className="space-y-4 pt-2">
+          <Skeleton className="h-32 w-full rounded-xl" />
+          <Skeleton className="h-32 w-full rounded-xl" />
+          <Skeleton className="h-32 w-full rounded-xl" />
+        </div>
+      ) : filteredVersions.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-border/50 rounded-2xl gap-3 bg-card/20">
+          <div className="size-10 rounded-full bg-muted/40 border border-border/40 flex items-center justify-center text-muted-foreground">
+            <IconHistory className="size-5" />
           </div>
-          <CardDescription>
-            Every backtest, optimization, walk-forward, or Monte Carlo run automatically
-            snapshots your draft as a new version, so you always know exactly which
-            configuration produced a given result.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pt-4 space-y-6">
-          <div className="grid md:grid-cols-3 gap-4">
-            <div className="border border-border/30 bg-muted/10 p-4 rounded-xl space-y-2">
-              <IconGitCommit className="w-5 h-5 text-primary/80" />
-              <h3 className="text-sm font-bold">Commit History</h3>
-              <p className="text-xs text-muted-foreground">Restore prior strategy compiles and track visual edits chronologically.</p>
-            </div>
-            <div className="border border-border/30 bg-muted/10 p-4 rounded-xl space-y-2 opacity-60">
-              <IconGitBranch className="w-5 h-5 text-primary/80" />
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold">Branching Layouts</h3>
-                <Badge variant="secondary" className="text-[9px] px-1.5 py-0">UPCOMING</Badge>
-              </div>
-              <p className="text-xs text-muted-foreground">Branch off configurations to test independent trade entry or exit criteria safely.</p>
-            </div>
-            <div className="border border-border/30 bg-muted/10 p-4 rounded-xl space-y-2">
-              <IconGitMerge className="w-5 h-5 text-primary/80" />
-              <h3 className="text-sm font-bold">Difference Engine</h3>
-              <p className="text-xs text-muted-foreground">Compare a version&apos;s compiled code against your current draft.</p>
-            </div>
+          <div className="max-w-sm">
+            <p className="text-sm font-semibold text-foreground">No versions found</p>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              {searchQuery || filterMode !== "ALL"
+                ? "No strategy version snapshots match your active search filter."
+                : "Version snapshots are saved automatically whenever you run backtests or optimizations, or manually via Create Snapshot."}
+            </p>
           </div>
 
-          {isLoading ? (
-            <div className="space-y-3">
-              <Skeleton className="h-16 w-full rounded-xl" />
-              <Skeleton className="h-16 w-full rounded-xl" />
-              <Skeleton className="h-16 w-full rounded-xl" />
-            </div>
-          ) : !versions || versions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-center border border-dashed border-border/30 rounded-xl gap-2">
-              <IconHistory className="w-6 h-6 text-muted-foreground/60" />
-              <p className="text-sm font-medium text-muted-foreground">
-                No version snapshots yet — one is created automatically the first
-                time you run a backtest, optimization, walk-forward, or Monte Carlo.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {versions.map((v) => (
-                <VersionRow
-                  key={v.id}
-                  version={v}
-                  isCurrent={v.version === strategy?.current_version}
-                  strategyId={strategyId}
-                  onRestore={handleRestore}
-                  isRestoring={isRestoring}
-                />
-              ))}
-            </div>
+          {!searchQuery && filterMode === "ALL" && (
+            <Button
+              onClick={() => setCreateDialogOpen(true)}
+              className="h-8 text-xs font-semibold gap-1.5 mt-2"
+            >
+              <IconGitBranch className="size-3.5" />
+              Create First Snapshot
+            </Button>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      ) : (
+        <div className="pt-2">
+          {filteredVersions.map((v) => (
+            <VersionTimelineItem
+              key={v.id}
+              version={v}
+              isCurrent={v.version === strategy?.current_version}
+              strategyId={strategyId}
+              currentDraftCode={strategy?.compiled_code}
+              onRestore={handleRestore}
+              onSetGolden={handleSetGolden}
+              onUpdateLabel={handleUpdateLabel}
+              onUpdateApproval={handleUpdateApproval}
+              isRestoring={isRestoring}
+              isGoldenPending={isGoldenPending}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Dialog for creating manual version snapshots */}
+      <CreateVersionDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onSubmit={handleCreateSnapshot}
+        isSaving={isSaving}
+      />
     </div>
   );
 }

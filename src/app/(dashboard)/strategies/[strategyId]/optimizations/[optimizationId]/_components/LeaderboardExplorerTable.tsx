@@ -6,12 +6,31 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { IconSearch, IconChevronUp, IconChevronDown } from "@tabler/icons-react";
+import { IconSearch, IconChevronUp, IconChevronDown, IconTrophy, IconListNumbers } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { StatCell, fmtPct, fmtNum, signClass, fmtUsd } from "@/components/shared/report-primitives";
+import { formatParamKey } from "@/components/backtest/metric-format";
 import type { OptimizationLeaderboardEntry } from "@/types/optimization";
 
 const PAGE_SIZE = 15;
+
+const MEDAL_CLASS: Record<number, string> = {
+  1: "text-amber-500 dark:text-amber-400",
+  2: "text-slate-400 dark:text-slate-300",
+  3: "text-orange-600 dark:text-orange-400",
+};
+
+function RankBadge({ rank }: { rank: number }) {
+  if (rank <= 3) {
+    return (
+      <span className="inline-flex items-center gap-1 font-mono font-bold">
+        <IconTrophy className={cn("size-3.5", MEDAL_CLASS[rank])} />
+        <span className={MEDAL_CLASS[rank]}>#{rank}</span>
+      </span>
+    );
+  }
+  return <span className="font-mono font-bold text-foreground/70">#{rank}</span>;
+}
 
 type SortKey = "rank" | "sharpe_ratio" | "sortino_ratio" | "net_profit" | "max_drawdown" | "win_rate" | "total_trades" | "profit_factor";
 
@@ -37,7 +56,9 @@ export function LeaderboardExplorerTable({ rows }: { rows: OptimizationLeaderboa
     const q = search.trim().toLowerCase();
     if (!q) return rows;
     return rows.filter((r) =>
-      Object.entries(r.parameters).some(([k, v]) => `${k}=${v}`.toLowerCase().includes(q))
+      Object.entries(r.parameters).some(
+        ([k, v]) => `${k}=${v}`.toLowerCase().includes(q) || `${formatParamKey(k)}=${v}`.toLowerCase().includes(q)
+      )
     );
   }, [rows, search]);
 
@@ -71,26 +92,31 @@ export function LeaderboardExplorerTable({ rows }: { rows: OptimizationLeaderboa
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="relative w-64">
-          <IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search parameters..."
-            className="pl-8"
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          />
+        <div className="flex items-center gap-2">
+          <div className="size-7 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
+            <IconListNumbers className="size-3.5 text-violet-500 dark:text-violet-400" />
+          </div>
+          <div className="relative w-64">
+            <IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search parameters..."
+              className="pl-8"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            />
+          </div>
         </div>
         <span className="text-xs text-muted-foreground font-mono">
           {filtered.length.toLocaleString()} / {rows.length.toLocaleString()} runs
         </span>
       </div>
 
-      <div className="rounded-xl border border-border/60 bg-card overflow-hidden">
+      <div className="rounded-xl border border-border/60 bg-card shadow-[0_1px_2px_rgba(0,0,0,0.02)] dark:shadow-none overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+          <table className="w-full text-[13px]">
             <thead>
-              <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border/40">
+              <tr className="text-xs font-semibold text-muted-foreground bg-muted/[0.04] border-b border-border/40">
                 {COLUMNS.map((c) => (
                   <th
                     key={c.key}
@@ -110,10 +136,10 @@ export function LeaderboardExplorerTable({ rows }: { rows: OptimizationLeaderboa
               {paged.map((r) => (
                 <tr
                   key={r.rank}
-                  className={cn("border-b border-border/20 hover:bg-muted/20 cursor-pointer", r.rank === 1 && "bg-emerald-500/5")}
+                  className={cn("border-b border-border/20 hover:bg-muted/20 cursor-pointer transition-colors", r.rank === 1 && "bg-amber-500/[0.04]")}
                   onClick={() => setSelected(r)}
                 >
-                  <td className="px-3 py-2.5 text-left font-mono font-bold">#{r.rank}</td>
+                  <td className="px-3 py-2.5 text-left"><RankBadge rank={r.rank} /></td>
                   <td className={cn("px-3 py-2.5 text-right font-mono", signClass(r.sharpe_ratio))}>{fmtNum(r.sharpe_ratio)}</td>
                   <td className={cn("px-3 py-2.5 text-right font-mono", signClass(r.sortino_ratio))}>{fmtNum(r.sortino_ratio)}</td>
                   <td className={cn("px-3 py-2.5 text-right font-mono font-semibold", signClass(r.net_profit))}>{fmtUsd(r.net_profit, 0)}</td>
@@ -121,8 +147,8 @@ export function LeaderboardExplorerTable({ rows }: { rows: OptimizationLeaderboa
                   <td className="px-3 py-2.5 text-right font-mono">{fmtPct(r.win_rate, 1)}</td>
                   <td className="px-3 py-2.5 text-right font-mono text-muted-foreground">{r.total_trades}</td>
                   <td className="px-3 py-2.5 text-right font-mono">{fmtNum(r.profit_factor)}</td>
-                  <td className="px-3 py-2.5 text-left font-mono text-[10px] text-muted-foreground">
-                    {Object.entries(r.parameters).map(([k, v]) => `${k}=${v}`).join(", ")}
+                  <td className="px-3 py-2.5 text-left font-mono text-[11.5px] text-muted-foreground">
+                    {Object.entries(r.parameters).map(([k, v]) => `${formatParamKey(k)}=${v}`).join(", ")}
                   </td>
                 </tr>
               ))}
@@ -133,14 +159,14 @@ export function LeaderboardExplorerTable({ rows }: { rows: OptimizationLeaderboa
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground font-mono">
+          <span className="text-[13px] text-muted-foreground font-mono">
             {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, sorted.length)} of {sorted.length} runs
           </span>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}>
               Previous
             </Button>
-            <span className="text-xs text-muted-foreground font-medium">Page {currentPage} of {totalPages}</span>
+            <span className="text-[13px] text-muted-foreground font-medium">Page {currentPage} of {totalPages}</span>
             <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
               Next
             </Button>
@@ -155,10 +181,10 @@ export function LeaderboardExplorerTable({ rows }: { rows: OptimizationLeaderboa
               <SheetHeader className="p-6 pb-4 border-b shrink-0 bg-muted/10">
                 <SheetTitle className="text-2xl font-bold tracking-tight">Rank #{selected.rank}</SheetTitle>
                 <SheetDescription>
-                  {Object.entries(selected.parameters).map(([k, v]) => `${k}=${v}`).join(", ")}
+                  {Object.entries(selected.parameters).map(([k, v]) => `${formatParamKey(k)}=${v}`).join(", ")}
                 </SheetDescription>
               </SheetHeader>
-              <ScrollArea className="flex-1">
+              <ScrollArea className="flex-1 w-full min-h-0">
                 <div className="p-6 flex flex-col gap-5">
                   <div className="grid grid-cols-2 gap-x-6 gap-y-4">
                     <StatCell label="Net Profit" value={fmtUsd(selected.net_profit, 0)} valueClass={signClass(selected.net_profit)} />
@@ -177,19 +203,19 @@ export function LeaderboardExplorerTable({ rows }: { rows: OptimizationLeaderboa
                   </div>
 
                   <div>
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Parameters</p>
+                    <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Parameters</p>
                     <div className="grid grid-cols-2 gap-2">
                       {Object.entries(selected.parameters).map(([k, v]) => (
                         <div key={k} className="rounded-lg border border-border/40 bg-muted/10 px-3 py-2">
-                          <span className="text-[9px] text-muted-foreground block">{k}</span>
-                          <span className="text-sm font-mono font-semibold">{String(v)}</span>
+                          <span className="text-[11px] text-muted-foreground block truncate" title={k}>{formatParamKey(k)}</span>
+                          <span className="text-base font-mono font-semibold">{String(v)}</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 pt-1">
-                    <Badge className="bg-muted/60 text-muted-foreground border-transparent text-[10px]">
+                    <Badge className="bg-muted/60 text-muted-foreground border-transparent text-[11px]">
                       Research Notes and Run Again/Replay actions are a follow-up item — not wired yet
                     </Badge>
                   </div>

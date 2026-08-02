@@ -6,7 +6,20 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { IconSearch, IconChevronUp, IconChevronDown } from "@tabler/icons-react";
+import {
+  IconSearch,
+  IconChevronUp,
+  IconChevronDown,
+  IconChevronsLeft,
+  IconChevronLeft,
+  IconChevronRight,
+  IconChevronsRight,
+  IconChartAreaLine,
+  IconTargetArrow,
+  IconGitCompare,
+  IconReceipt,
+  IconAdjustmentsHorizontal,
+} from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { StatCell, fmtPct, fmtNum, fmtSigned, signClass } from "@/components/shared/report-primitives";
 import {
@@ -102,11 +115,13 @@ export function SimulationExplorerTable({ rows, samplePaths, realDistributionVal
     });
   }, [filtered, sortKey, sortDir]);
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const [pageSize, setPageSize] = useState(15);
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const paged = useMemo(
-    () => sorted.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
-    [sorted, currentPage]
+    () => sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [sorted, currentPage, pageSize]
   );
 
   const toggleSort = (key: SortKey) => {
@@ -136,6 +151,16 @@ export function SimulationExplorerTable({ rows, samplePaths, realDistributionVal
     };
   }, [selected, rows]);
 
+  const parsedParams = useMemo(() => {
+    if (!selected?.scenario_parameters) return null;
+    try {
+      const obj = JSON.parse(selected.scenario_parameters);
+      return Object.keys(obj).length > 0 ? obj : null;
+    } catch {
+      return null;
+    }
+  }, [selected]);
+
   return (
     <div className="flex flex-col gap-4">
       {/* Toolbar */}
@@ -148,10 +173,10 @@ export function SimulationExplorerTable({ rows, samplePaths, realDistributionVal
               placeholder="Search simulation, scenario, seed..."
               className="pl-8"
               value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setSearch(e.target.value); setPage(1); }}
             />
           </div>
-          <span className="text-xs text-muted-foreground font-mono">{filtered.length.toLocaleString()} / {rows.length.toLocaleString()} simulations</span>
+          <span className="text-[13px] text-muted-foreground font-mono">{filtered.length.toLocaleString()} / {rows.length.toLocaleString()} simulations</span>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-0.5 bg-muted p-0.5 rounded-lg border border-border/40">
@@ -160,7 +185,7 @@ export function SimulationExplorerTable({ rows, samplePaths, realDistributionVal
                 key={f}
                 onClick={() => { setRankFilter(f); setPage(1); }}
                 className={cn(
-                  "px-2.5 py-1 rounded-md text-[10px] font-bold transition-all duration-150 whitespace-nowrap",
+                  "px-2.5 py-1 rounded-md text-[11.5px] font-bold transition-all duration-150 whitespace-nowrap",
                   rankFilter === f ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -173,7 +198,7 @@ export function SimulationExplorerTable({ rows, samplePaths, realDistributionVal
               <button
                 onClick={() => { setScenarioFilter(null); setPage(1); }}
                 className={cn(
-                  "px-2.5 py-1 rounded-md text-[10px] font-bold transition-all duration-150",
+                  "px-2.5 py-1 rounded-md text-[11.5px] font-bold transition-all duration-150",
                   scenarioFilter === null ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -184,7 +209,7 @@ export function SimulationExplorerTable({ rows, samplePaths, realDistributionVal
                   key={s}
                   onClick={() => { setScenarioFilter(s); setPage(1); }}
                   className={cn(
-                    "px-2.5 py-1 rounded-md text-[10px] font-bold transition-all duration-150 whitespace-nowrap",
+                    "px-2.5 py-1 rounded-md text-[11.5px] font-bold transition-all duration-150 whitespace-nowrap",
                     scenarioFilter === s ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
@@ -199,9 +224,9 @@ export function SimulationExplorerTable({ rows, samplePaths, realDistributionVal
       {/* Table */}
       <div className="rounded-xl border border-border/60 bg-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+          <table className="w-full text-[13px]">
             <thead>
-              <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border/40">
+              <tr className="text-xs font-semibold text-muted-foreground border-b border-border/40">
                 <th className="text-left font-medium px-5 py-2.5">Simulation</th>
                 <th className="text-left font-medium px-3 py-2.5">Scenario</th>
                 {COLUMNS.map((c) => (
@@ -230,11 +255,11 @@ export function SimulationExplorerTable({ rows, samplePaths, realDistributionVal
                 >
                   <td className="px-5 py-2.5 font-mono font-semibold">#{r.simulation_id}</td>
                   <td className="px-3 py-2.5">
-                    <Badge className="text-[9px] font-bold px-1.5 py-0 bg-muted/80 text-muted-foreground border-transparent">
+                    <Badge className="text-[10.5px] font-bold px-1.5 py-0 bg-muted/80 text-muted-foreground border-transparent">
                       {r.scenario_type}
                     </Badge>
                     {r.drawdown_ruin && (
-                      <Badge className="text-[9px] font-bold px-1.5 py-0 ml-1 bg-destructive/10 text-destructive border border-destructive/25">
+                      <Badge className="text-[10.5px] font-bold px-1.5 py-0 ml-1 bg-destructive/10 text-destructive border border-destructive/25">
                         DD RUIN
                       </Badge>
                     )}
@@ -248,7 +273,11 @@ export function SimulationExplorerTable({ rows, samplePaths, realDistributionVal
                   <td className={cn("px-3 py-2.5 text-right font-mono", signClass(r.sortino))}>{fmtNum(r.sortino)}</td>
                   <td className="px-3 py-2.5 text-right font-mono text-destructive">{fmtPct(r.max_drawdown)}</td>
                   <td className="px-3 py-2.5 text-right font-mono text-muted-foreground">
-                    {r.recovery_steps != null ? `${r.recovery_steps} steps` : "—"}
+                    {r.recovery_steps != null ? (
+                      `${r.recovery_steps} steps`
+                    ) : (
+                      <span className="text-[11px] text-amber-500/90 font-mono font-medium">Unrecovered</span>
+                    )}
                   </td>
                   <td className="px-3 py-2.5 text-right font-mono text-muted-foreground">{r.trade_count}</td>
                   <td className="px-5 py-2.5 text-right font-mono text-muted-foreground">{r.seed ?? "—"}</td>
@@ -260,89 +289,210 @@ export function SimulationExplorerTable({ rows, samplePaths, realDistributionVal
       </div>
 
       {/* Pagination controls */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground font-mono">
-            {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, sorted.length)} of {sorted.length} simulations
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-border/40 text-xs">
+        <div className="flex items-center gap-3">
+          <span className="text-muted-foreground font-mono">
+            Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, sorted.length)} of {sorted.length} simulations
           </span>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} className="cursor-pointer">
-              Previous
-            </Button>
-            <span className="text-xs text-muted-foreground font-medium">Page {currentPage} of {totalPages}</span>
-            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="cursor-pointer">
-              Next
-            </Button>
+          <div className="flex items-center gap-1.5">
+            <span className="text-muted-foreground">Rows per page:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setPage(1);
+              }}
+              className="bg-card border border-border/40 rounded px-1.5 py-0.5 text-xs font-mono font-bold text-foreground outline-none"
+            >
+              <option value={15}>15</option>
+              <option value={30}>30</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
           </div>
         </div>
-      )}
 
-      {/* Simulation detail drawer — stats only, never replay (Monte Carlo != Replay) */}
+        <div className="flex items-center gap-1.5">
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-7"
+            onClick={() => setPage(1)}
+            disabled={currentPage === 1}
+            title="First Page"
+          >
+            <IconChevronsLeft className="size-3.5" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-7"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            title="Previous Page"
+          >
+            <IconChevronLeft className="size-3.5" />
+          </Button>
+
+          {/* Page pills */}
+          <div className="flex items-center gap-1">
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let pNum = i + 1;
+              if (totalPages > 5) {
+                if (currentPage > 3 && currentPage < totalPages - 1) {
+                  pNum = currentPage - 2 + i;
+                } else if (currentPage >= totalPages - 1) {
+                  pNum = totalPages - 4 + i;
+                }
+              }
+              const isActive = pNum === currentPage;
+              return (
+                <button
+                  key={pNum}
+                  onClick={() => setPage(pNum)}
+                  className={cn(
+                    "size-7 rounded-md text-xs font-mono font-bold transition-colors cursor-pointer",
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-2xs"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  )}
+                >
+                  {pNum}
+                </button>
+              );
+            })}
+          </div>
+
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-7"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            title="Next Page"
+          >
+            <IconChevronRight className="size-3.5" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-7"
+            onClick={() => setPage(totalPages)}
+            disabled={currentPage === totalPages}
+            title="Last Page"
+          >
+            <IconChevronsRight className="size-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Simulation detail drawer — matching backtest sheet drawer design */}
       <Sheet open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
-        <SheetContent className="w-[400px] sm:w-[480px] p-0 flex flex-col h-full overflow-hidden">
+        <SheetContent className="w-[420px] sm:w-[540px] p-0 flex flex-col h-full overflow-hidden border-l border-border/60 shadow-2xl">
           {selected && (
             <>
-              <SheetHeader className="p-6 pb-4 border-b shrink-0 bg-muted/10">
-                <SheetTitle className="text-2xl font-bold tracking-tight">Simulation #{selected.simulation_id}</SheetTitle>
-                <SheetDescription>
-                  {selected.scenario_type} · Rank #{selected.simulation_rank}
-                  {distributionPosition?.return != null && ` · Top ${distributionPosition.return.toFixed(distributionPosition.return < 1 ? 1 : 0)}% Return`}
-                </SheetDescription>
+              {/* Header block with Hero Metric & Badges */}
+              <SheetHeader className="p-6 pb-5 border-b border-border/40 shrink-0 bg-muted/20 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs font-mono font-bold bg-background/80">
+                      Simulation #{selected.simulation_id}
+                    </Badge>
+                    <Badge variant="secondary" className="text-[11px] font-semibold">
+                      {selected.scenario_type}
+                    </Badge>
+                    <Badge variant="secondary" className="text-[11px] font-mono">
+                      Rank #{selected.simulation_rank}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="flex items-baseline justify-between pt-1">
+                  <div>
+                    <div className="text-xs font-medium text-muted-foreground mb-0.5">
+                      Ending Return
+                    </div>
+                    <div className={cn("text-3xl font-extrabold font-mono tracking-tight", selected.ending_return >= 0 ? "text-emerald-500" : "text-rose-500")}>
+                      {fmtSigned(selected.ending_return * 100)}%
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs font-medium text-muted-foreground mb-0.5">
+                      Ending Equity
+                    </div>
+                    <div className="text-xl font-bold font-mono text-foreground">
+                      ${fmtNum(selected.ending_equity, 0)}
+                    </div>
+                  </div>
+                </div>
               </SheetHeader>
-              <ScrollArea className="flex-1">
-                <div className="p-6 flex flex-col gap-5">
+
+              <ScrollArea className="flex-1 w-full min-h-0">
+                <div className="p-6 flex flex-col gap-6">
+                  {/* Section 1: Equity Curve Mini Chart */}
                   {selectedCurve && (
-                    <div>
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Equity Curve</p>
-                      <div className="h-[100px]">
+                    <section className="space-y-2.5">
+                      <div className="flex items-center gap-2 text-foreground text-xs font-semibold">
+                        <IconChartAreaLine className="size-4 text-primary" />
+                        <span>Simulation Equity Curve</span>
+                      </div>
+                      <div className="h-[120px] rounded-xl border border-border/50 bg-muted/20 p-2 overflow-hidden">
                         <ResponsiveContainer width="100%" height="100%">
-                          <ComposedChart data={selectedCurve} margin={{ top: 4, right: 4, left: 4, bottom: 4 }}>
+                          <ComposedChart data={selectedCurve} margin={{ top: 8, right: 8, left: 8, bottom: 4 }}>
                             <XAxis dataKey="step" hide />
                             <YAxis hide domain={["auto", "auto"]} />
-                            <Line type="monotone" dataKey="equity" stroke="var(--primary)" strokeWidth={2} dot={false} isAnimationActive={false} />
+                            <Line type="monotone" dataKey="equity" stroke="var(--primary)" strokeWidth={1.5} dot={false} isAnimationActive={false} />
                           </ComposedChart>
                         </ResponsiveContainer>
                       </div>
-                    </div>
+                    </section>
                   )}
 
+                  {/* Section 2: Distribution Position */}
                   {distributionPosition && (
-                    <div>
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Distribution Position</p>
-                      <div className="grid grid-cols-3 gap-2">
+                    <section className="space-y-2.5">
+                      <div className="flex items-center gap-2 text-foreground text-xs font-semibold">
+                        <IconTargetArrow className="size-4 text-amber-500" />
+                        <span>Distribution Position</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2.5">
                         {([
                           ["Return", distributionPosition.return],
                           ["Sharpe", distributionPosition.sharpe],
                           ["Drawdown", distributionPosition.drawdown],
                         ] as [string, number | null][]).map(([label, pct]) => (
-                          <div key={label} className="rounded-lg border border-border/40 bg-muted/20 px-2.5 py-2 text-center">
-                            <p className="text-[9px] uppercase tracking-wide text-muted-foreground">{label}</p>
-                            <p className="text-[13px] font-bold font-mono text-foreground mt-0.5">
+                          <div key={label} className="rounded-xl border border-border/40 bg-muted/20 p-3 text-center">
+                            <p className="text-xs font-medium text-muted-foreground">{label}</p>
+                            <p className="text-base font-extrabold font-mono text-foreground mt-1">
                               {pct != null ? `Top ${pct.toFixed(pct < 1 ? 1 : 0)}%` : "—"}
                             </p>
                           </div>
                         ))}
                       </div>
-                    </div>
+                    </section>
                   )}
 
+                  {/* Section 3: Compare With Original */}
                   {realDistributionValues && (
-                    <div>
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Compare With Original</p>
-                      <div className="flex flex-col gap-2">
+                    <section className="space-y-2.5">
+                      <div className="flex items-center gap-2 text-foreground text-xs font-semibold">
+                        <IconGitCompare className="size-4 text-sky-500" />
+                        <span>Compare With Original</span>
+                      </div>
+                      <div className="flex flex-col gap-2 bg-muted/20 border border-border/40 rounded-xl p-2.5">
                         {([
                           ["Return", realDistributionValues.endingReturn, selected.ending_return * 100, "%"],
                           ["Drawdown", realDistributionValues.maxDrawdown, selected.max_drawdown, "%"],
                         ] as [string, number, number, string][]).map(([label, original, sim, suffix]) => {
                           const diff = sim - original;
                           return (
-                            <div key={label} className="flex items-center justify-between rounded-lg border border-border/40 bg-muted/20 px-3 py-2 text-[11px]">
-                              <span className="text-muted-foreground">{label}</span>
+                            <div key={label} className="flex items-center justify-between rounded-lg bg-card/60 border border-border/30 px-3 py-2 text-xs">
+                              <span className="font-medium text-muted-foreground">{label}</span>
                               <div className="flex items-center gap-2 font-mono">
                                 <span className="text-muted-foreground">{fmtSigned(original)}{suffix}</span>
                                 <span className="text-muted-foreground/40">→</span>
-                                <span className="font-semibold text-foreground">{fmtSigned(sim)}{suffix}</span>
-                                <span className={cn("font-semibold", diff >= 0 ? "text-success" : "text-destructive")}>
+                                <span className="font-bold text-foreground">{fmtSigned(sim)}{suffix}</span>
+                                <span className={cn("font-bold", diff >= 0 ? "text-emerald-500" : "text-rose-500")}>
                                   ({fmtSigned(diff)}{suffix})
                                 </span>
                               </div>
@@ -350,41 +500,100 @@ export function SimulationExplorerTable({ rows, samplePaths, realDistributionVal
                           );
                         })}
                       </div>
-                      <p className="text-[9px] text-muted-foreground/50 mt-1.5">Sharpe/Trades/Expectancy comparisons need the real strategy&apos;s own per-trade metrics, not tracked in this dataset.</p>
-                    </div>
+                      <p className="text-[11px] text-muted-foreground/60 px-1">
+                        Sharpe, trade count, and expectancy comparisons require per-trade logs from original strategy run.
+                      </p>
+                    </section>
                   )}
 
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                    <StatCell label="Ending Return" value={`${fmtSigned(selected.ending_return * 100)}%`} valueClass={signClass(selected.ending_return)} />
-                    <StatCell label="Ending Equity" value={fmtNum(selected.ending_equity, 0)} />
-                    <StatCell label="Max Drawdown" value={fmtPct(selected.max_drawdown)} valueClass="text-destructive" />
-                    <StatCell label="Sharpe" value={fmtNum(selected.sharpe)} valueClass={signClass(selected.sharpe)} />
-                    <StatCell label="Sortino" value={fmtNum(selected.sortino)} valueClass={signClass(selected.sortino)} />
-                    <StatCell label="Calmar" value={fmtNum(selected.calmar)} />
-                    <StatCell label="Omega" value={fmtNum(selected.omega)} />
-                    <StatCell label="Profit Factor" value={fmtNum(selected.profit_factor)} />
-                    <StatCell label="Tail Ratio" value={fmtNum(selected.tail_ratio)} />
-                    <StatCell label="Expectancy" value={fmtNum(selected.expectancy, 1)} />
-                    <StatCell label="Win Rate" value={fmtPct(selected.win_rate * 100)} />
-                    <StatCell label="Avg Trade" value={fmtNum(selected.avg_trade, 1)} />
-                    <StatCell label="Best Trade" value={fmtNum(selected.best_trade, 1)} valueClass="text-success" />
-                    <StatCell label="Worst Trade" value={fmtNum(selected.worst_trade, 1)} valueClass="text-destructive" />
-                    <StatCell label="Longest Win Streak" value={String(selected.longest_win_streak)} />
-                    <StatCell label="Longest Loss Streak" value={String(selected.longest_loss_streak)} />
-                    <StatCell label="Recovery Time" value={selected.recovery_steps != null ? `${selected.recovery_steps} steps` : "Never"} />
-                    <StatCell label="Trade Count" value={String(selected.trade_count)} />
-                    <StatCell label="Drawdown Ruin" value={selected.drawdown_ruin ? "Yes" : "No"} valueClass={selected.drawdown_ruin ? "text-destructive" : "text-success"} />
-                    <StatCell label="Seed" value={selected.seed != null ? String(selected.seed) : "—"} />
-                  </div>
+                  {/* Section 4: Performance Ledger */}
+                  <section className="space-y-2.5">
+                    <div className="flex items-center gap-2 text-foreground text-xs font-semibold">
+                      <IconReceipt className="size-4 text-emerald-500" />
+                      <span>Performance Metrics</span>
+                    </div>
 
-                  <div>
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Scenario Parameters</p>
-                    <pre className="text-[11px] font-mono bg-muted/30 rounded-lg p-3 overflow-x-auto text-muted-foreground">
-                      {JSON.stringify(JSON.parse(selected.scenario_parameters || "{}"), null, 2)}
-                    </pre>
-                  </div>
+                    <div className="bg-card border border-border/50 rounded-xl p-4 divide-y divide-border/40 text-xs">
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-3.5 pb-3">
+                        <StatCell label="Max Drawdown" value={fmtPct(selected.max_drawdown)} valueClass="text-rose-500 font-bold" />
+                        <StatCell label="Sharpe Ratio" value={fmtNum(selected.sharpe)} valueClass={signClass(selected.sharpe)} />
+                        <StatCell label="Sortino Ratio" value={fmtNum(selected.sortino)} valueClass={signClass(selected.sortino)} />
+                        <StatCell label="Calmar Ratio" value={fmtNum(selected.calmar)} />
+                        <StatCell label="Profit Factor" value={fmtNum(selected.profit_factor)} />
+                        <StatCell label="Omega Ratio" value={fmtNum(selected.omega)} />
+                        <StatCell label="Tail Ratio" value={fmtNum(selected.tail_ratio)} />
+                        <StatCell label="Expectancy" value={fmtNum(selected.expectancy, 1)} />
+                      </div>
 
-                  <p className="text-[10px] text-muted-foreground/60 font-mono break-all">hash: {selected.scenario_hash}</p>
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-3.5 pt-3.5 pb-3">
+                        <StatCell label="Win Rate" value={fmtPct(selected.win_rate * 100)} />
+                        <StatCell label="Avg Trade" value={fmtNum(selected.avg_trade, 1)} />
+                        <StatCell label="Best Trade" value={fmtNum(selected.best_trade, 1)} valueClass="text-emerald-500 font-bold" />
+                        <StatCell label="Worst Trade" value={fmtNum(selected.worst_trade, 1)} valueClass="text-rose-500 font-bold" />
+                        <StatCell label="Win Streak" value={String(selected.longest_win_streak)} />
+                        <StatCell label="Loss Streak" value={String(selected.longest_loss_streak)} />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-3.5 pt-3.5">
+                        <StatCell label="Trade Count" value={String(selected.trade_count)} />
+                        <StatCell
+                          label="Recovery Time"
+                          value={selected.recovery_steps != null ? `${selected.recovery_steps} steps` : "Unrecovered"}
+                          valueClass={selected.recovery_steps != null ? "" : "text-amber-500 font-semibold"}
+                        />
+                        <StatCell label="Drawdown Ruin" value={selected.drawdown_ruin ? "Yes" : "No"} valueClass={selected.drawdown_ruin ? "text-rose-500 font-bold" : "text-emerald-500 font-bold"} />
+                        <StatCell label="Random Seed" value={selected.seed != null ? String(selected.seed) : "—"} />
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* Section 5: Scenario Parameters & Metadata */}
+                  <section className="space-y-2.5">
+                    <div className="flex items-center gap-2 text-foreground text-xs font-semibold">
+                      <IconAdjustmentsHorizontal className="size-4 text-purple-500" />
+                      <span>Scenario Configuration</span>
+                    </div>
+
+                    {parsedParams ? (
+                      <div className="grid grid-cols-2 gap-2 bg-muted/20 border border-border/40 rounded-xl p-3">
+                        {Object.entries(parsedParams).map(([k, v]) => (
+                          <div key={k} className="bg-card/70 border border-border/30 rounded-lg p-2 text-xs">
+                            <span className="text-[11px] text-muted-foreground font-medium block truncate">
+                              {k.replace(/_/g, " ")}
+                            </span>
+                            <span className="font-mono font-bold text-foreground">
+                              {String(v)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="bg-muted/20 border border-border/40 rounded-xl p-3.5 space-y-2.5 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Scenario Method</span>
+                          <Badge variant="outline" className="font-mono text-xs font-semibold">
+                            {selected.scenario_type}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Random Seed</span>
+                          <span className="font-mono font-bold text-foreground">{selected.seed ?? "N/A"}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Simulation Rank</span>
+                          <span className="font-mono font-bold text-foreground">#{selected.simulation_rank} (P{selected.ending_percentile.toFixed(0)})</span>
+                        </div>
+                        <div className="flex items-center justify-between pt-1 border-t border-border/30">
+                          <span className="text-muted-foreground">Scenario Hash</span>
+                          <span className="font-mono text-[10.5px] text-muted-foreground/80">{selected.scenario_hash.slice(0, 16)}...</span>
+                        </div>
+                      </div>
+                    )}
+                  </section>
+
+                  <p className="text-[10.5px] text-muted-foreground/50 font-mono break-all pt-1">
+                    hash: {selected.scenario_hash}
+                  </p>
                 </div>
               </ScrollArea>
             </>

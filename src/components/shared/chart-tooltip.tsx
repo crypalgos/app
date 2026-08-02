@@ -4,7 +4,7 @@ import React from "react";
 
 interface ChartTooltipProps {
   active?: boolean;
-  payload?: { value: number; payload: { formattedTime?: string } }[];
+  payload?: { name?: string; value: number; color?: string; payload: { formattedTime?: string; [key: string]: any } }[];
   label?: string;
   valueFormatter?: (val: number) => string;
   valueLabel?: string;
@@ -16,25 +16,44 @@ export function ChartTooltip({
   payload,
   valueFormatter,
   valueLabel = "Value",
-  accentColor = "var(--primary)",
+  accentColor = "#818cf8",
 }: ChartTooltipProps) {
   if (!active || !payload?.length) return null;
 
-  const data = payload[0].payload;
+  const firstItem = payload[0];
+  const timeLabel = firstItem?.payload?.formattedTime || firstItem?.payload?.time || "";
+
   return (
-    <div className="bg-popover/95 backdrop-blur-xl border border-border px-4 py-3 rounded-lg shadow-2xl min-w-[160px]">
-      <p className="text-[10px] font-medium text-muted-foreground mb-1.5 tracking-wide">
-        {data.formattedTime}
-      </p>
-      <div className="flex items-center gap-2">
-        <div
-          className="size-1.5 rounded-full shrink-0"
-          style={{ backgroundColor: accentColor }}
-        />
-        <span className="text-[11px] text-muted-foreground">{valueLabel}</span>
-        <span className="text-[13px] font-semibold font-mono text-foreground ml-auto tabular-nums">
-          {valueFormatter ? valueFormatter(payload[0].value) : payload[0].value}
-        </span>
+    <div className="bg-card/95 backdrop-blur-md border border-border/80 px-3.5 py-2.5 rounded-xl shadow-xl min-w-[170px] transition-all duration-200 z-50">
+      {timeLabel && (
+        <p className="text-[11px] font-semibold text-muted-foreground/80 mb-2 font-mono tracking-wider border-b border-border/40 pb-1.5">
+          {timeLabel}
+        </p>
+      )}
+      <div className="flex flex-col gap-1.5">
+        {payload.map((item, idx) => {
+          const itemColor = item.color || accentColor;
+          const displayLabel = item.name || valueLabel;
+          const formattedVal = valueFormatter ? valueFormatter(item.value) : item.value;
+
+          return (
+            <div key={idx} className="flex items-center justify-between gap-3 text-[12.5px]">
+              <div className="flex items-center gap-2">
+                <span
+                  className="size-2 rounded-full shrink-0 shadow-xs"
+                  style={{
+                    backgroundColor: itemColor,
+                    boxShadow: `0 0 8px ${itemColor}80`,
+                  }}
+                />
+                <span className="text-muted-foreground font-medium">{displayLabel}</span>
+              </div>
+              <span className="font-bold font-mono text-foreground tabular-nums">
+                {formattedVal}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

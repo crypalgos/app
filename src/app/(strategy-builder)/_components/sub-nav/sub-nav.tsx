@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import {
   IconArrowLeft,
   IconLayout,
@@ -34,10 +35,10 @@ export default function SubNav({ strategyId }: SubNavProps) {
     strategyDescription,
     isCodeModified,
     setStrategyMeta,
-    builderTab,
-    setBuilderTab,
     isRunning,
   } = useNodesStore();
+
+  const pathname = usePathname();
 
   const [isEditing, setIsEditing] = useState(false);
   const [tempName, setTempName] = useState("");
@@ -76,11 +77,13 @@ export default function SubNav({ strategyId }: SubNavProps) {
 
   const isSyncBusy = isSaving;
 
-  const tabs: { key: "build" | "analyse" | "live"; label: string; icon: typeof IconLayout }[] = [
-    { key: "build", label: "Build", icon: IconLayout },
-    { key: "analyse", label: "Analyse", icon: IconChartBar },
-    { key: "live", label: "Live", icon: IconRocket },
+  const tabs: { key: "build" | "analyse" | "live"; label: string; icon: typeof IconLayout; href: string }[] = [
+    { key: "build", label: "Build", icon: IconLayout, href: `/workflow/${strategyId}` },
+    { key: "analyse", label: "Analyse", icon: IconChartBar, href: `/workflow/${strategyId}/analyse` },
+    { key: "live", label: "Live", icon: IconRocket, href: `/workflow/${strategyId}/live` },
   ];
+  const isTabActive = (tab: (typeof tabs)[number]) =>
+    tab.key === "build" ? pathname === tab.href : pathname?.startsWith(tab.href);
 
   return (
     <>
@@ -157,12 +160,12 @@ export default function SubNav({ strategyId }: SubNavProps) {
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
           <div className="flex p-0.5 bg-muted/60 border border-border/80 rounded-full shadow-xs">
             {tabs.map((tab) => (
-              <button
+              <Link
                 key={tab.key}
-                onClick={() => setBuilderTab(tab.key)}
+                href={tab.href}
                 className={cn(
                   "relative flex items-center gap-1.5 h-8 px-4 rounded-full text-xs font-semibold transition-all duration-200 cursor-pointer select-none border border-transparent",
-                  builderTab === tab.key
+                  isTabActive(tab)
                     ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                 )}
@@ -172,7 +175,7 @@ export default function SubNav({ strategyId }: SubNavProps) {
                 {tab.key === "live" && isRunning && (
                   <span className="absolute -top-0.5 -right-0.5 flex size-2 rounded-full bg-emerald-400 animate-pulse ring-2 ring-background" />
                 )}
-              </button>
+              </Link>
             ))}
           </div>
         </div>

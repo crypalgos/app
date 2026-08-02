@@ -12,6 +12,8 @@ interface ReplaySymbolPanelProps {
   exchange?: string;
   timeframe?: string;
   leverage?: number;
+  /** Identifies the market-price definition shown to the user. */
+  priceBasis?: string;
   /** Full loaded window — needed for the Trend heuristic (close vs N bars back). */
   candles: ReplayCandle[];
   currentCandle: ReplayCandle | undefined;
@@ -32,6 +34,7 @@ export function ReplaySymbolPanel({
   exchange,
   timeframe,
   leverage,
+  priceBasis,
   candles,
   currentCandle,
   currentCandleIndex,
@@ -86,7 +89,10 @@ export function ReplaySymbolPanel({
 
       {/* Current price */}
       <div className="rounded-xl border border-border/60 bg-card px-3 py-3 flex flex-col gap-2">
-        <span className="text-[10px] font-bold tracking-wider text-muted-foreground/70 uppercase">Current Price</span>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[10px] font-bold tracking-wider text-muted-foreground/70 uppercase">Current Price</span>
+          {priceBasis && <span className="text-[9px] font-mono text-muted-foreground">{priceBasis}</span>}
+        </div>
         {close != null ? (
           <>
             <div className="flex items-baseline gap-1.5">
@@ -149,8 +155,17 @@ export function ReplaySymbolPanel({
           {indicatorsAtBar.length === 0 ? (
             <p className="text-[11px] text-muted-foreground">No indicator snapshot at this bar.</p>
           ) : (
-            indicatorsAtBar.flatMap((snap) =>
-              Object.entries(snap.values ?? {}).map(([key, entry]) => {
+            // A bar can have more than one INDICATOR_SNAPSHOT record (one per
+            // indicator node in the strategy canvas) -- merge their `values`
+            // into one map before rendering so the same key never produces
+            // two rows/React keys (later snapshot wins per key, same
+            // "later duplicates win" convention used elsewhere for merges).
+            Object.entries(
+              indicatorsAtBar.reduce<Record<string, IndicatorSnapshotRecord["values"][string]>>(
+                (merged, snap) => ({ ...merged, ...(snap.values ?? {}) }),
+                {}
+              )
+            ).map(([key, entry]) => {
                 const isHidden = hiddenIndicators.has(key);
                 const color = indicatorColors[key] ?? "#818cf8";
                 const definition = getIndicatorDefinition(entry.type);
@@ -158,7 +173,7 @@ export function ReplaySymbolPanel({
                 const effectivePeriod = periodOverrides[key] ?? entry.period ?? "";
                 return (
                   <div
-                    key={`${snap.symbol}-${key}`}
+                    key={`${symbol}-${key}`}
                     className={cn("flex items-center justify-between gap-2 group", isHidden && "opacity-40")}
                   >
                     <div className="flex items-center gap-1.5 min-w-0">
@@ -208,7 +223,6 @@ export function ReplaySymbolPanel({
                   </div>
                 );
               })
-            )
           )}
         </div>
       </div>

@@ -72,6 +72,19 @@ function SidebarProvider({
   // We use openProp and setOpenProp for control from outside the component.
   const [_open, _setOpen] = React.useState(defaultOpen)
   const open = openProp ?? _open
+
+  // Sync state from localStorage on initial render
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem(SIDEBAR_COOKIE_NAME)
+      if (saved !== null) {
+        _setOpen(saved === "true")
+      }
+    } catch {
+      // Ignore storage errors in restricted contexts
+    }
+  }, [])
+
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
       const openState = typeof value === "function" ? value(open) : value
@@ -81,8 +94,13 @@ function SidebarProvider({
         _setOpen(openState)
       }
 
-      // This sets the cookie to keep the sidebar state.
+      // Save state to cookie and localStorage
       document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
+      try {
+        localStorage.setItem(SIDEBAR_COOKIE_NAME, String(openState))
+      } catch {
+        // Ignore storage errors
+      }
     },
     [setOpenProp, open]
   )
@@ -186,7 +204,7 @@ function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar"
           data-mobile="true"
-          className="w-(--sidebar-width) bg-background p-0 text-sidebar-foreground [&>button]:hidden"
+          className="w-(--sidebar-width) bg-background/95 backdrop-blur-2xl p-0 text-sidebar-foreground border-r border-border/50 shadow-2xl [&>button]:hidden"
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
@@ -252,6 +270,7 @@ function Sidebar({
 
 function SidebarTrigger({
   className,
+  children,
   onClick,
   ...props
 }: React.ComponentProps<typeof Button>) {
@@ -270,7 +289,7 @@ function SidebarTrigger({
       }}
       {...props}
     >
-      <IconLayoutSidebar />
+      {children || <IconLayoutSidebar />}
       <span className="sr-only">Toggle Sidebar</span>
     </Button>
   )

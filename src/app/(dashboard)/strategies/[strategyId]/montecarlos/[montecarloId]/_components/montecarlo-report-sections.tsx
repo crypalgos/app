@@ -26,45 +26,36 @@ export function MonteCarloKpiStrip({ report }: { report: MonteCarloReport }) {
   const isRuinLow = (prob?.capital_ruin_probability ?? s.capital_ruin_probability ?? 0) < 0.05;
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 w-full">
       <MetricCard
-        title="Probability of Profit"
+        title="Prob of Profit"
         value={prob ? fmtPct(prob.probability_profit * 100) : "—"}
-        color="text-success"
-        icon={IconTargetArrow}
-        description="Share of simulations ending above break-even."
+        color="text-emerald-500"
       />
       <MetricCard
         title="Expected Return"
         value={fmtPct(ra.mean_return)}
-        color={signClass(ra.mean_return)}
-        icon={ra.mean_return >= 0 ? IconTrendingUp : IconTrendingDown}
-        description="Mean ending return across all simulations."
+        color={ra.mean_return >= 0 ? "text-emerald-500" : "text-rose-500"}
       />
       <MetricCard
         title="Median Return"
         value={fmtPct(s.median_return)}
-        color={signClass(s.median_return)}
-        description="The typical outcome — half of simulations did better."
+        color={s.median_return >= 0 ? "text-emerald-500" : "text-rose-500"}
       />
       <MetricCard
         title="Worst Simulation"
         value={fmtPct(s.worst_return)}
-        color="text-destructive"
-        description="Lowest ending return across every simulation run."
+        color="text-rose-500"
       />
       <MetricCard
         title="Best Simulation"
         value={fmtPct(s.best_return)}
-        color="text-success"
-        description="Highest ending return across every simulation run."
+        color="text-emerald-500"
       />
       <MetricCard
-        title="Capital Ruin Probability"
+        title="Ruin Probability"
         value={fmtPct((prob?.capital_ruin_probability ?? s.capital_ruin_probability ?? 0) * 100)}
-        color={isRuinLow ? "text-success" : "text-destructive"}
-        icon={IconSkull}
-        description="Share of simulations where equity ever fell below the capital preservation floor."
+        color={isRuinLow ? "text-emerald-500" : "text-rose-500"}
       />
     </div>
   );
@@ -201,8 +192,8 @@ export function PercentileDistribution({ report }: { report: MonteCarloReport })
                   : undefined
               }
             >
-              <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">{k.toUpperCase()}</span>
-              <span className={cn("text-[13px] font-bold font-mono", hasData ? signClass(value) : "text-muted-foreground/30")}>
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{k.toUpperCase()}</span>
+              <span className={cn("text-[13.5px] font-bold font-mono", hasData ? signClass(value) : "text-muted-foreground/30")}>
                 {hasData ? fmtSigned(value) : "—"}%
               </span>
             </div>
@@ -228,18 +219,18 @@ export function RecommendationCard({ report }: { report: MonteCarloReport }) {
   return (
     <div className={cn("rounded-xl border p-5", style.border, style.bg)}>
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-[13px] font-semibold text-foreground/80 tracking-wide">Verdict</h3>
+        <h3 className="text-[15px] font-semibold text-foreground/80 tracking-wide">Verdict</h3>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-muted-foreground font-mono">
+          <span className="text-[11.5px] text-muted-foreground font-mono">
             {(rec.confidence * 100).toFixed(0)}% confidence
           </span>
-          <Badge className={cn("text-[10px] font-bold uppercase px-2.5 py-1", style.badge)}>{rec.status}</Badge>
+          <Badge className={cn("text-[11px] font-bold uppercase px-2.5 py-1", style.badge)}>{rec.status}</Badge>
         </div>
       </div>
       {rec.reasons.length > 0 && (
         <ul className="flex flex-col gap-1.5">
           {rec.reasons.map((r, i) => (
-            <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+            <li key={i} className="text-[13px] text-muted-foreground flex items-start gap-2">
               <span className="text-muted-foreground/40 mt-0.5">•</span> {r}
             </li>
           ))}

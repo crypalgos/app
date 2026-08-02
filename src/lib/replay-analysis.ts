@@ -3,10 +3,15 @@
 // real field straight off an engine event/payload, or computes a value whose
 // formula is documented in its own comment (heuristics are labeled as such,
 // never presented as engine-provided truth).
+//
+// Tree-flattening, position/latency, and event-presentation logic have moved
+// to lib/trading/ — those pieces are generic over any RuntimeEvent[] stream
+// (no backtest-chunk-store dependency) and are now shared with the Live tab.
+// Re-exported here so no existing import site in this codebase needed to
+// change; only genuinely backtest-specific derivations stay in this file.
 
 import {
   isEvalGroup,
-  type CandleTreeGroup,
   type ConditionEvent,
   type EvalTreeNode,
   type PolicyEvent,
@@ -16,30 +21,15 @@ import {
   type ReplayEventNode,
 } from "@/types/replay";
 
-// ─── Tree flattening ───────────────────────────────────────────────────────
-
-/** Recursively flattens one candle's nested event tree (events + orphans)
- * into a flat list. Shared by the Decision Inspector, Analysis Console, and
- * chart marker logic — previously duplicated per-file. */
-export function flattenCandleTree(tree: CandleTreeGroup): ReplayEventNode[] {
-  const out: ReplayEventNode[] = [];
-  const walk = (nodes: ReplayEventNode[]) => {
-    for (const node of nodes) {
-      out.push(node);
-      if (node.children.length > 0) walk(node.children);
-    }
-  };
-  walk(tree.events);
-  walk(tree.orphans);
-  return out;
-}
-
-/** Flattens every candle tree in a window into one flat event list, sorted
- * by sequence number. Used where a component needs events across the whole
- * loaded window, not just the current bar (e.g. chart markers). */
-export function flattenAllTrees(trees: CandleTreeGroup[]): ReplayEventNode[] {
-  return trees.flatMap(flattenCandleTree).sort((a, b) => a.sequence_number - b.sequence_number);
-}
+export {
+  flattenCandleTree,
+  flattenAllTrees,
+  buildCandleTrees,
+} from "@/lib/trading/candle-tree";
+export { computeCurrentPosition, computeFillLatencyMs } from "@/lib/trading/position-and-latency";
+export type { CurrentPosition } from "@/lib/trading/position-and-latency";
+export { presentEvent } from "@/lib/trading/event-presentation";
+export type { EventPresentation } from "@/lib/trading/event-presentation";
 
 // ─── Decision quality + reason tags ───────────────────────────────────────
 
@@ -179,15 +169,6 @@ export function buildExecutionSteps(flatEvents: ReplayEventNode[]): ExecutionSte
   return steps.sort((a, b) => a.timestamp - b.timestamp);
 }
 
-/** Fill latency in ms — real timestamp delta between submit and fill, when
- * both events exist for this bar. */
-export function computeFillLatencyMs(flatEvents: ReplayEventNode[]): number | null {
-  const submitted = flatEvents.find((e) => e.type === "ORDER_SUBMITTED");
-  const filled = flatEvents.find((e) => e.type === "ORDER_FILLED");
-  if (!submitted || !filled) return null;
-  return filled.timestamp - submitted.timestamp;
-}
-
 export interface ActivePolicies {
   stopLoss?: number;
   takeProfit?: number;
@@ -210,37 +191,6 @@ export function findActivePolicies(flatEvents: ReplayEventNode[]): ActivePolicie
     }
   }
   return result;
-}
-
-export interface CurrentPosition {
-  side: "LONG" | "SHORT" | "FLAT";
-  quantity?: number;
-  entryPrice?: number;
-}
-
-/** Scans for the most recent POSITION_OPENED without a later POSITION_CLOSED,
- * up to and including the given bar's events. */
-export function computeCurrentPosition(flatEventsUpToBar: ReplayEventNode[]): CurrentPosition {
-  const sorted = [...flatEventsUpToBar].sort((a, b) => a.sequence_number - b.sequence_number);
-  let open: { side: string; quantity?: number; entryPrice?: number } | null = null;
-  for (const ev of sorted) {
-    if (ev.type === "POSITION_OPENED") {
-      const payload = ev.payload as Record<string, unknown>;
-      open = {
-        side: String(payload.side ?? "LONG"),
-        quantity: typeof payload.quantity === "number" ? payload.quantity : undefined,
-        entryPrice: typeof payload.entry_price === "number" ? payload.entry_price : undefined,
-      };
-    } else if (ev.type === "POSITION_CLOSED") {
-      open = null;
-    }
-  }
-  if (!open) return { side: "FLAT" };
-  return {
-    side: open.side.toUpperCase().includes("SHORT") || open.side.toUpperCase() === "SELL" ? "SHORT" : "LONG",
-    quantity: open.quantity,
-    entryPrice: open.entryPrice,
-  };
 }
 
 // ─── Portfolio ─────────────────────────────────────────────────────────────
@@ -273,167 +223,6 @@ export function computeDrawdownSeries(equityPreview: [number, number][]): [numbe
     const drawdown = peak > 0 ? (peak - equity) / peak : 0;
     return [t, drawdown] as [number, number];
   });
-}
-
-// ─── Event presentation registry ───────────────────────────────────────────
-//
-// One formatter per event type, each producing everything the Timeline table
-// (and anything else) needs — label / node / details — from real fields only
-// (per crypalgos_core/events/engine_events.py). A registry instead of parallel
-// switch statements: adding a new event type means adding one entry here, not
-// touching three different functions.
-
-export interface EventPresentation {
-  /** Plain-language event name, e.g. "BUY signal generated". */
-  label: string;
-  /** What the event is "about" — a condition's expression, an order's side,
-   * a position's symbol. */
-  node: string;
-  /** Human-readable outcome, e.g. "Order Filled @ 67,842.5". */
-  details: string;
-}
-
-function fmt(n: unknown, digits = 2): string {
-  return typeof n === "number" ? n.toLocaleString(undefined, { maximumFractionDigits: digits }) : String(n ?? "—");
-}
-
-type EventFormatter = (event: ReplayEventNode) => EventPresentation;
-
-const EVENT_FORMATTERS: Record<string, EventFormatter> = {
-  BAR_CLOSED: (ev) => {
-    const p = ev.payload as Record<string, unknown>;
-    return {
-      label: "Bar closed",
-      node: `${p.symbol ?? ""} ${p.timeframe ?? ""}`.trim() || "—",
-      details: `O: ${fmt(p.open)}  H: ${fmt(p.high)}  L: ${fmt(p.low)}  C: ${fmt(p.close)}  V: ${fmt(p.volume)}`,
-    };
-  },
-  INDICATOR_SNAPSHOT: (ev) => {
-    const values = (ev.payload as Record<string, unknown>).values as Record<string, unknown> | undefined;
-    return {
-      label: "Indicator updated",
-      node: values ? Object.keys(values)[0] ?? "—" : "—",
-      details: values ? Object.entries(values).map(([k, v]) => `${k}: ${fmt(v)}`).join("  ") : "—",
-    };
-  },
-  CONDITION_EVALUATED: (ev) => {
-    const p = ev.payload as Record<string, unknown>;
-    return {
-      label: "Condition evaluated",
-      node: String(p.expression ?? ev.node_id ?? "—"),
-      details: `Result: ${p.passed ? "TRUE" : "FALSE"}`,
-    };
-  },
-  ACTION_TRIGGERED: (ev) => {
-    const p = ev.payload as Record<string, unknown>;
-    const side = String(p.action_type ?? "").toUpperCase();
-    return {
-      label: side ? `${side} signal generated` : "Signal generated",
-      node: side || ev.node_id || "—",
-      details: `Signal Generated: ${side} ${fmt(p.size)} Units`,
-    };
-  },
-  ACTION_SKIPPED: (ev) => {
-    const p = ev.payload as Record<string, unknown>;
-    return { label: "Action skipped", node: String(p.action_type ?? ev.node_id ?? "—"), details: String(p.reason ?? "—") };
-  },
-  ACTION_REJECTED: (ev) => {
-    const p = ev.payload as Record<string, unknown>;
-    return { label: "Action rejected", node: String(p.action_type ?? ev.node_id ?? "—"), details: String(p.reason ?? "—") };
-  },
-  ORDER_CREATED: (ev) => {
-    const p = ev.payload as Record<string, unknown>;
-    return {
-      label: "Order created",
-      node: String(p.side ?? "—").toUpperCase(),
-      details: `${String(p.order_type ?? "Order")} order created: ${fmt(p.size)} @ ${fmt(p.price)}`,
-    };
-  },
-  ORDER_SUBMITTED: (ev) => {
-    const p = ev.payload as Record<string, unknown>;
-    return { label: "Order submitted", node: String(p.side ?? "—").toUpperCase(), details: `Order submitted: ${fmt(p.quantity)} @ ${fmt(p.price)}` };
-  },
-  ORDER_FILLED: (ev) => {
-    const p = ev.payload as Record<string, unknown>;
-    return {
-      label: "Market order filled",
-      node: String(p.side ?? "—").toUpperCase(),
-      details: `Order Filled @ ${fmt(p.fill_price)}${typeof p.fee === "number" ? ` (fee ${fmt(p.fee)})` : ""}`,
-    };
-  },
-  ORDER_CANCELLED: (ev) => {
-    const p = ev.payload as Record<string, unknown>;
-    return { label: "Order cancelled", node: String(p.side ?? "—").toUpperCase(), details: String(p.reason ?? "—") };
-  },
-  ORDER_REJECTED: (ev) => {
-    const p = ev.payload as Record<string, unknown>;
-    return { label: "Order rejected", node: String(p.side ?? "—").toUpperCase(), details: String(p.reason ?? "—") };
-  },
-  POSITION_OPENED: (ev) => {
-    const p = ev.payload as Record<string, unknown>;
-    const side = String(p.side ?? "").toUpperCase();
-    return {
-      label: side ? `${side} position opened` : "Position opened",
-      node: ev.symbol_id ?? "—",
-      details: `Position Opened: ${side} ${fmt(p.quantity)} @ ${fmt(p.entry_price)}`,
-    };
-  },
-  POSITION_REDUCED: (ev) => {
-    const p = ev.payload as Record<string, unknown>;
-    return {
-      label: "Position reduced",
-      node: ev.symbol_id ?? "—",
-      details: `Reduced ${fmt(p.quantity_reduced)}, ${fmt(p.remaining_quantity)} remaining @ ${fmt(p.fill_price)}`,
-    };
-  },
-  POSITION_CLOSED: (ev) => {
-    const p = ev.payload as Record<string, unknown>;
-    const pnl = Number(p.realized_pnl);
-    return {
-      label: "Position closed",
-      node: ev.symbol_id ?? "—",
-      details: `Position Closed @ ${fmt(p.fill_price)} | PnL: ${pnl >= 0 ? "+" : ""}${fmt(p.realized_pnl)}`,
-    };
-  },
-  POLICY_ARMED: (ev) => {
-    const p = ev.payload as Record<string, unknown>;
-    const policyType = String(p.policy_type ?? "Policy");
-    return {
-      label: policyType === "TAKE_PROFIT" ? "Take-profit armed" : "Stop-loss armed",
-      node: policyType,
-      details: `${policyType} armed @ ${fmt(p.trigger_price)}`,
-    };
-  },
-  POLICY_TRIGGERED: (ev) => {
-    const p = ev.payload as Record<string, unknown>;
-    const policyType = String(p.policy_type ?? "Policy");
-    return { label: "Policy triggered", node: policyType, details: `${policyType} triggered @ ${fmt(p.trigger_price)}` };
-  },
-  MARGIN_CALL: (ev) => {
-    const p = ev.payload as Record<string, unknown>;
-    return {
-      label: "Margin call",
-      node: ev.symbol_id ?? "—",
-      details: `Liquidation price ${fmt(p.liquidation_price)}, margin used ${fmt(p.margin_used)}`,
-    };
-  },
-  LIQUIDATION: (ev) => {
-    const p = ev.payload as Record<string, unknown>;
-    return { label: "Liquidation", node: ev.symbol_id ?? "—", details: `Liquidated @ ${fmt(p.fill_price)} | PnL: ${fmt(p.realized_pnl)}` };
-  },
-  PORTFOLIO_SNAPSHOT: (ev) => {
-    const p = ev.payload as Record<string, unknown>;
-    return { label: "Portfolio snapshot", node: "—", details: `Cash: ${fmt(p.cash)}  Equity: ${fmt(p.equity)}` };
-  },
-};
-
-/** Resolves an event's Timeline presentation. The raw `type` string always
- * stays available in the Debug tab for anyone who needs the engine's own
- * vocabulary; unregistered types fall back to it here too. */
-export function presentEvent(event: ReplayEventNode): EventPresentation {
-  const formatter = EVENT_FORMATTERS[event.type];
-  if (formatter) return formatter(event);
-  return { label: event.type, node: event.node_id ?? "—", details: "—" };
 }
 
 // ─── Metric qualitative labels ─────────────────────────────────────────────

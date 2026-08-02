@@ -62,8 +62,8 @@ function FanBandTooltip({
   ];
   return (
     <div className="bg-popover/95 backdrop-blur-xl border border-border px-4 py-3 rounded-lg shadow-2xl min-w-[170px]">
-      <p className="text-[10px] font-medium text-muted-foreground mb-1.5 tracking-wide">Step {label}</p>
-      <div className="flex flex-col gap-1 text-[11px]">
+      <p className="text-[11px] font-medium text-muted-foreground mb-1.5 tracking-wide">Step {label}</p>
+      <div className="flex flex-col gap-1 text-[12px]">
         {rows.map(([label2, val]) => (
           <div key={label2} className="flex justify-between gap-4">
             <span className="text-muted-foreground">{label2}</span>
@@ -118,9 +118,9 @@ export function PercentileFanChart({
       <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/40">
         <div className="flex items-center gap-2">
           <div className="size-2 rounded-full" style={{ backgroundColor: color }} />
-          <h3 className="text-[13px] font-semibold text-foreground/80 tracking-wide">{title}</h3>
+          <h3 className="text-[15px] font-semibold text-foreground/80 tracking-wide">{title}</h3>
         </div>
-        <div className="flex items-center gap-2.5 text-[10px] font-mono text-muted-foreground/70">
+        <div className="flex items-center gap-2.5 text-[11px] font-mono text-muted-foreground/70">
           <span className="flex items-center gap-1">
             <span className="size-2 rounded-full" style={{ backgroundColor: color, opacity: 0.18 }} /> P1–P99
           </span>
@@ -175,16 +175,16 @@ export function PercentileFanChart({
               <Area dataKey="band95" stroke="none" fill={color} fillOpacity={0.14} isAnimationActive={false} activeDot={false} />
               <Area dataKey="band90" stroke="none" fill={color} fillOpacity={0.2} isAnimationActive={false} activeDot={false} />
               <Area dataKey="band75" stroke="none" fill={color} fillOpacity={0.3} isAnimationActive={false} activeDot={false} />
-              <Line type="monotone" dataKey="median" stroke={color} strokeWidth={2} dot={false} isAnimationActive={false} />
+              <Line type="monotone" dataKey="median" stroke={color} strokeWidth={1.5} dot={false} isAnimationActive={false} />
               {realRows && (
                 <Line
                   type="monotone"
                   dataKey="real"
                   stroke={realColor}
-                  strokeWidth={2.5}
+                  strokeWidth={2}
                   dot={false}
+                  activeDot={{ r: 3.5, strokeWidth: 1.5, stroke: "var(--background)", fill: realColor }}
                   isAnimationActive={false}
-                  connectNulls
                 />
               )}
             </ComposedChart>

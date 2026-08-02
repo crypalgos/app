@@ -38,6 +38,19 @@ export interface WalkForwardRunSummary {
   max_drawdown_pct: number;
   trade_count: number;
   windows_count: number;
+  win_rate?: number | null;
+  profit_factor?: number | null;
+  /** Worst single validation window's max drawdown, not the mean. */
+  worst_max_drawdown_pct?: number | null;
+  /** 0-100. */
+  robustness_score?: number | null;
+  robustness_grade?: "A" | "B" | "C" | "D" | "F" | null;
+  /** e.g. "24M". */
+  train_period?: string;
+  /** e.g. "6M". */
+  validation_period?: string;
+  parameter_count?: number;
+  objective?: string;
 }
 
 // ─── WalkForward Report (S3 artifact) ────────────────────────────────────────
@@ -120,13 +133,3 @@ export interface WalkForwardArtifact {
   benchmark_return_pct: number | null;
 }
 
-// ─── Card-level summary ──────────────────────────────────────────────────────
-
-export interface WalkForwardCardSummary {
-  windows_count: number;
-  pass_rate: number;
-  robustness_score: number;
-  overfitting_risk: string;
-  out_of_sample_return: number;
-  in_sample_return: number;
-}

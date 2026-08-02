@@ -5,9 +5,10 @@ import { useParams, useRouter } from "next/navigation";
 import {
   useStrategyWalkforwards,
   useDeleteWalkforward,
+  useVersionNumberMap,
 } from "@/api-actions/hooks/strategy-hooks";
 import type { ResearchRun } from "@/types/strategy-actions";
-import { ResearchRunCard } from "@/components/backtest/ResearchRunCard";
+import { WalkforwardCard } from "@/components/backtest/WalkforwardCard";
 
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,6 +34,7 @@ export default function StrategyWalkforwardsPage() {
 
   const { data, isLoading } = useStrategyWalkforwards(strategyId, page, limit);
   const { mutate: deleteRun } = useDeleteWalkforward(strategyId);
+  const versionNumberMap = useVersionNumberMap(strategyId);
 
   const handleDelete = (runId: string) => {
     deleteRun(runId, {
@@ -84,9 +86,10 @@ export default function StrategyWalkforwardsPage() {
 
       <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
         {runs.map((run: ResearchRun) => (
-          <ResearchRunCard
+          <WalkforwardCard
             key={run.id}
             run={run}
+            versionNumber={run.strategy_version_id ? versionNumberMap.get(run.strategy_version_id) : undefined}
             onDelete={() => handleDelete(run.id)}
             onClick={() => router.push(`/strategies/${strategyId}/walkforwards/${run.id}`)}
           />

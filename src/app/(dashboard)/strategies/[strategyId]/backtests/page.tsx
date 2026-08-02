@@ -10,13 +10,6 @@ import {
 import type { ResearchRun } from "@/types/strategy-actions";
 import { BacktestCard } from "@/components/backtest/BacktestCard";
 
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -30,15 +23,7 @@ import {
 } from "@/components/ui/empty";
 import {
   IconChartLine,
-  IconTrendingUp,
-  IconTrendingDown,
-  IconActivity,
-  IconCalendar,
-  IconCurrencyDollar,
-  IconPercentage,
-  IconTrash,
 } from "@tabler/icons-react";
-import { cn } from "@/lib/utils";
 
 
 export default function StrategyBacktestsPage() {

@@ -226,3 +226,37 @@ export interface RunDetail {
   parent_run_id?: string | null;
   updated_at: string;
 }
+
+// ─── Execution Dataset Records (Backend Parity) ────────────────────────────────
+
+export interface OrderRecord {
+  timestamp: number;
+  order_id: string;
+  symbol_id: string;
+  side: string;
+  price: number;
+  quantity: number;
+  status: string;
+  fill_price?: number;
+  filled_quantity?: number;
+}
+
+export interface CompletedTrade {
+  trade_id?: string;
+  symbol: string;
+  side: "LONG" | "SHORT" | string;
+  entry_price: number;
+  exit_price: number;
+  amount: number;
+  entry_time: number;
+  exit_time: number;
+  gross_pnl: number;
+  net_pnl: number;
+  entry_fee: number;
+  exit_fee: number;
+  funding_cost: number;
+  leverage: number;
+  portfolio_equity_after: number;
+  entry_sequence?: number | null;
+  exit_sequence?: number | null;
+}

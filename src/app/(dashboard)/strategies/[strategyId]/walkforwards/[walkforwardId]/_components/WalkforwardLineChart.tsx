@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { ResponsiveContainer, ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from "recharts";
+import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, ReferenceLine } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 
 export interface LineSeries {
   key: string;
@@ -40,6 +41,12 @@ export function WalkforwardLineChart({
     });
   }, [series]);
 
+  const chartConfig = useMemo(() => {
+    const config: ChartConfig = {};
+    for (const s of series) config[s.key] = { label: s.label, color: s.color };
+    return config;
+  }, [series]);
+
   return (
     <div className="rounded-xl bg-card border border-border/60 overflow-hidden">
       <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/40">
@@ -59,24 +66,30 @@ export function WalkforwardLineChart({
         ) : data.length === 0 ? (
           <div className="flex h-full items-center justify-center text-[13px] text-muted-foreground">No data</div>
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
+          <ChartContainer config={chartConfig} className="h-full w-full aspect-auto">
             <ComposedChart data={data} margin={{ top: 16, right: 16, left: 8, bottom: 8 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" strokeOpacity={0.4} />
               <XAxis dataKey="step" tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} interval="preserveStartEnd" minTickGap={60} />
               <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} tickFormatter={valueFormatter} width={56} />
               {zeroBaseline && <ReferenceLine y={0} stroke="var(--muted-foreground)" strokeOpacity={0.6} />}
-              <Tooltip
-                formatter={(value, name) => {
-                  const s = series.find((s) => s.key === name);
-                  return [valueFormatter(Number(value)), s?.label ?? String(name)];
-                }}
-                labelFormatter={(l) => `Step ${l}`}
+              <ChartTooltip
+                content={
+                  <ChartTooltipContent
+                    labelFormatter={(l) => `Step ${l}`}
+                    formatter={(value, name) => (
+                      <div className="flex flex-1 items-center justify-between gap-3">
+                        <span className="text-muted-foreground">{chartConfig[name as string]?.label ?? String(name)}</span>
+                        <span className="font-mono font-medium text-foreground tabular-nums">{valueFormatter(Number(value))}</span>
+                      </div>
+                    )}
+                  />
+                }
               />
               {series.map((s) => (
-                <Line key={s.key} type="monotone" dataKey={s.key} stroke={s.color} strokeWidth={2} dot={false} isAnimationActive={false} />
+                <Line key={s.key} type="monotone" dataKey={s.key} stroke={`var(--color-${s.key})`} strokeWidth={2} dot={false} isAnimationActive={false} />
               ))}
             </ComposedChart>
-          </ResponsiveContainer>
+          </ChartContainer>
         )}
       </div>
     </div>

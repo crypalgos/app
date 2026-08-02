@@ -47,7 +47,7 @@ import type { Strategy, StrategyActions } from "./types";
 import { useRenameStrategy, useTriggerBacktest, useSetGoldenVersion } from "@/api-actions/hooks/strategy-hooks";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { AreaChart, Area, ResponsiveContainer } from "recharts";
+import { AreaChart, Area, YAxis, ResponsiveContainer } from "recharts";
 
 interface StrategyCardProps extends StrategyActions {
   strategy: Strategy;
@@ -233,7 +233,7 @@ export function StrategyCard({
         {/* Tags / Meta Info */}
         <div className="flex flex-wrap items-center gap-1.5 px-5 pt-3">
           <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-primary/10 text-primary dark:bg-blue-500/15 dark:text-blue-400 text-[9px] font-bold tracking-wide font-mono">
-            v1.0
+            v{(strat.current_version && strat.current_version > 0 ? strat.current_version : 1).toFixed(1)}
           </span>
           {strat.is_golden && (
             <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20 text-[9px] font-bold tracking-wider uppercase">
@@ -254,19 +254,19 @@ export function StrategyCard({
             <div className="text-xl font-bold tracking-tight" style={{ color: strat.latest_metrics?.return_pct !== undefined ? accent : undefined }}>
               {strat.latest_metrics?.return_pct !== undefined ? `${strat.latest_metrics.return_pct > 0 ? "+" : ""}${strat.latest_metrics.return_pct.toFixed(1)}%` : "--"}
             </div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold mt-0.5">Return</div>
+            <div className="text-[10px] text-muted-foreground font-medium mt-0.5">Return</div>
           </div>
           <div>
             <div className="text-xl font-bold tracking-tight text-foreground">
               {strat.latest_metrics?.sharpe !== undefined && strat.latest_metrics.sharpe !== null ? strat.latest_metrics.sharpe.toFixed(2) : "--"}
             </div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold mt-0.5">Sharpe</div>
+            <div className="text-[10px] text-muted-foreground font-medium mt-0.5">Sharpe</div>
           </div>
           <div>
             <div className="text-xl font-bold tracking-tight text-rose-500 dark:text-rose-400">
               {strat.latest_metrics?.drawdown !== undefined ? `${strat.latest_metrics.drawdown.toFixed(1)}%` : "--"}
             </div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold mt-0.5">Max DD</div>
+            <div className="text-[10px] text-muted-foreground font-medium mt-0.5">Max DD</div>
           </div>
         </div>
 
@@ -281,6 +281,7 @@ export function StrategyCard({
                     <stop offset="100%" stopColor={accent} stopOpacity={0} />
                   </linearGradient>
                 </defs>
+                <YAxis domain={["auto", "auto"]} hide />
                 <Area
                   type="monotone"
                   dataKey="value"

@@ -4,15 +4,12 @@ import * as React from "react"
 import { Search } from "lucide-react"
 
 import {
-  Command,
   CommandDialog,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
-  CommandSeparator,
-  CommandShortcut,
 } from "@/components/ui/command"
 
 import { COIN_ID_MAP, getCoinLogoUrl, COIN_NAMES } from "@/lib/instruments"
@@ -49,25 +46,23 @@ export function GlobalSearch() {
       </div>
 
       <CommandDialog open={open} onOpenChange={setOpen}>
-        <Command>
-          <CommandInput placeholder="Type a command or search..." />
-          <CommandList>
-            <CommandEmpty>No results found.</CommandEmpty>
-            <CommandGroup heading="Coins">
-              {Object.entries(COIN_ID_MAP).map(([symbol]) => (
-                <CommandItem key={symbol} value={`${COIN_NAMES[symbol]} ${symbol}`} className="flex items-center gap-3 py-2 cursor-pointer">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black/5 dark:bg-white/10">
-                    <img src={getCoinLogoUrl(symbol)} alt={symbol} className="h-5 w-5" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-medium text-sm">{COIN_NAMES[symbol]}</span>
-                    <span className="text-xs text-muted-foreground uppercase">{symbol}</span>
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
+        <CommandInput placeholder="Type a command or search..." />
+        <CommandList>
+          <CommandEmpty>No results found.</CommandEmpty>
+          <CommandGroup heading="Coins">
+            {Object.entries(COIN_ID_MAP).map(([symbol]) => (
+              <CommandItem key={symbol} value={`${COIN_NAMES[symbol]} ${symbol}`} className="flex items-center gap-3 py-2 cursor-pointer">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black/5 dark:bg-white/10">
+                  <img src={getCoinLogoUrl(symbol)} alt={symbol} className="h-5 w-5" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-medium text-sm">{COIN_NAMES[symbol]}</span>
+                  <span className="text-xs text-muted-foreground uppercase">{symbol}</span>
+                </div>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </CommandList>
       </CommandDialog>
     </>
   )

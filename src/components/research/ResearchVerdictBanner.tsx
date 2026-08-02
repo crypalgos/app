@@ -70,17 +70,17 @@ export function ResearchVerdictBanner({
         <div className="flex items-center gap-3">
           <span className={cn("size-2.5 rounded-full", dot)} />
           <div>
-            <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground/70">
+            <span className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground/70">
               Research Verdict
             </span>
-            <h2 className="text-xl font-bold text-foreground leading-tight">{verdict}</h2>
+            <h2 className="text-2xl font-bold text-foreground leading-tight">{verdict}</h2>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
           <div className="text-right">
-            <div className={cn("text-lg font-bold leading-none", className)}>{label}</div>
-            <div className="text-[10px] text-muted-foreground/70 mt-0.5">
+            <div className={cn("text-xl font-bold leading-none", className)}>{label}</div>
+            <div className="text-[11.5px] text-muted-foreground/70 mt-1">
               Confidence &middot; {confidence.toFixed(0)}%
             </div>
           </div>
@@ -98,15 +98,15 @@ export function ResearchVerdictBanner({
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="flex items-center gap-1 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center gap-1 text-[13px] font-semibold text-muted-foreground hover:text-foreground transition-colors"
           >
             Why?
             {expanded ? <IconChevronUp className="size-3.5" /> : <IconChevronDown className="size-3.5" />}
           </button>
           {expanded && (
-            <ul className="mt-2 space-y-1.5">
+            <ul className="mt-2.5 space-y-2">
               {reasons.map((r, i) => (
-                <li key={i} className="text-xs text-muted-foreground flex items-baseline gap-1.5">
+                <li key={i} className="text-[13px] text-muted-foreground flex items-baseline gap-1.5">
                   <span className="text-muted-foreground/40">&bull;</span>
                   <span>
                     {r.label}
@@ -136,12 +136,12 @@ export function ResearchVerdictBanner({
             <IconAlertTriangle className="size-4 text-amber-400 shrink-0 mt-0.5" />
           )}
           <div>
-            <div className="text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground/70">
+            <div className="text-[11px] font-bold tracking-[0.12em] uppercase text-muted-foreground/70">
               Next Step
             </div>
-            <div className="text-sm font-semibold text-foreground">{nextStep.action}</div>
+            <div className="text-[15px] font-semibold text-foreground">{nextStep.action}</div>
             {nextStep.detail && (
-              <div className="text-xs text-muted-foreground mt-0.5">{nextStep.detail}</div>
+              <div className="text-[13px] text-muted-foreground mt-0.5">{nextStep.detail}</div>
             )}
           </div>
         </div>

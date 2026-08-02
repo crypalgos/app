@@ -1,5 +1,6 @@
 "use client";
 
+import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -12,17 +13,13 @@ import {
   useToggleRunFavorite,
   useDeleteBacktest,
 } from "@/api-actions/hooks/strategy-hooks";
-import { BacktestConfigDialog, type BacktestConfigParams } from "../shared/backtest-config-dialog";
+import { BacktestConfigDialog, type BacktestConfigParams } from "../../../_components/shared/backtest-config-dialog";
 import { BacktestCard } from "@/components/backtest/BacktestCard";
-import { ReplayViewer } from "./replay-viewer";
 
-interface AnalyseTabProps {
-  strategyId: string;
-}
-
-export default function AnalyseTab({ strategyId }: AnalyseTabProps) {
+export default function AnalysePage() {
+  const { workflowid: strategyId } = useParams<{ workflowid: string }>();
+  const router = useRouter();
   const [configOpen, setConfigOpen] = useState(false);
-  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [savingRunId, setSavingRunId] = useState<string | null>(null);
 
   const { data, isLoading } = useTemporaryBacktests(strategyId, 1, 20);
@@ -63,22 +60,9 @@ export default function AnalyseTab({ strategyId }: AnalyseTabProps) {
     }
   };
 
-  const selectedRun = selectedRunId ? runs.find((r) => r.id === selectedRunId) : undefined;
-
-  if (selectedRunId) {
-    return (
-      <ReplayViewer
-        runId={selectedRunId}
-        strategyId={strategyId}
-        run={selectedRun}
-        onBack={() => setSelectedRunId(null)}
-      />
-    );
-  }
-
   return (
     <div className="fixed inset-0 top-[68px] overflow-y-auto bg-background">
-      <div className="max-w-5xl mx-auto px-6 py-8 flex flex-col gap-6">
+      <div className="w-full max-w-[1600px] mx-auto px-8 py-8 flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
@@ -105,7 +89,7 @@ export default function AnalyseTab({ strategyId }: AnalyseTabProps) {
         </div>
 
         {isLoading ? (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
             {Array.from({ length: 3 }).map((_, i) => (
               <div key={i} className="h-32 rounded-xl bg-muted/30 animate-pulse" />
             ))}
@@ -118,14 +102,14 @@ export default function AnalyseTab({ strategyId }: AnalyseTabProps) {
             </p>
           </div>
         ) : (
-          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
             {runs.map((run) => (
               <BacktestCard
                 key={run.id}
                 run={run}
                 isSaving={savingRunId === run.id}
                 isFavorite={run.is_favorite}
-                onClick={() => setSelectedRunId(run.id)}
+                onClick={() => router.push(`/workflow/${strategyId}/analyse/${run.id}`)}
                 onSave={() => handleSave(run.id)}
                 onTogglePin={() =>
                   toggleFavorite({ runId: run.id, isFavorite: !run.is_favorite })

@@ -218,6 +218,8 @@ export interface ReplaySession {
   datasets: string[];
   markers: ReplayMarker[];
   max_window_candles: number;
+  /** Candles per Arrow-IPC replay chunk — see /replay/chunks/{dataset}/{chunk_id}. */
+  chunk_size: number;
 }
 
 export interface ReplayCandle {
@@ -239,16 +241,6 @@ export interface CandleTreeGroup {
   bar: ReplayEventNode | null;
   events: ReplayEventNode[];
   orphans: ReplayEventNode[];
-}
-
-export interface ReplayWindow {
-  schema_version: number;
-  from_candle: number;
-  to_candle: number;
-  candles: ReplayCandle[];
-  candle_trees: CandleTreeGroup[];
-  decision_traces: ConditionEvent[];
-  indicator_snapshots: IndicatorSnapshotRecord[];
 }
 
 export interface ReplayTradeDetail {

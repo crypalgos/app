@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import type { ResearchRun } from "@/types/strategy-actions";
-import type { BacktestSummary, OptimizationRunSummary, WalkForwardRunSummary, MonteCarloRunSummary } from "@/types/strategy-actions";
+import type { MonteCarloRunSummary } from "@/types/strategy-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -12,9 +12,6 @@ import {
   IconX,
   IconDotsVertical,
   IconTrash,
-  IconChartBar,
-  IconArrowUpRight,
-  IconArrowDownRight,
 } from "@tabler/icons-react";
 import {
   DropdownMenu,
@@ -73,22 +70,21 @@ function useNowTick(): number | null {
   return now;
 }
 
+/**
+ * Monte Carlo run card. The only run type left on this shared component --
+ * Backtest/Optimization/Walkforward moved to their own dedicated cards
+ * (BacktestCard, OptimizationCard, WalkforwardCard).
+ */
 export function ResearchRunCard({ run, onDelete, onClick }: ResearchRunCardProps) {
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const now = useNowTick();
 
   const status = run.status;
-  const s = run.summary_json ?? {};
   const runType = run.run_type;
+  const m = (run.summary_json ?? {}) as MonteCarloRunSummary;
 
   const fmt = (d?: string | null) =>
     d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
-
-  let runtime = "–";
-  if (run.started_at && run.completed_at) {
-    const seconds = Math.round((new Date(run.completed_at).getTime() - new Date(run.started_at).getTime()) / 1000);
-    runtime = `${seconds}s`;
-  }
 
   // ─── FAILED ──────────────────────────────────────────────────────────────────
   if (status === "FAILED") {
@@ -99,9 +95,7 @@ export function ResearchRunCard({ run, onDelete, onClick }: ResearchRunCardProps
           {statusBadge(status)}
         </div>
         <p className="text-xs text-destructive/80 bg-destructive/10 rounded-xl p-3 border border-destructive/15 line-clamp-3">
-          {runType === "MONTECARLO"
-            ? "Monte Carlo simulation failed."
-            : "Simulation failed during execution."}
+          Monte Carlo simulation failed.
         </p>
         <div className="flex justify-end">
           <Button variant="outline" size="sm" onClick={onDelete} className="text-xs h-7 border-destructive/30 text-destructive hover:bg-destructive/10">
@@ -173,152 +167,16 @@ export function ResearchRunCard({ run, onDelete, onClick }: ResearchRunCardProps
     );
   }
 
-  // ─── COMPLETED — per-type metrics ───────────────────────────────────────────
-
-  const profitPct = (s as any).total_return_pct ?? 0;
-  const isProfit = profitPct >= 0;
-  const accent = isProfit ? "#22C55E" : "#F43F5E";
-
-  const isMonteCarlo = runType === "MONTECARLO";
-
-  const hoverBorderClass = isMonteCarlo 
-    ? "hover:border-violet-500/30 hover:shadow-[0_12px_40px_-15px_rgba(139,92,246,0.2)] dark:hover:shadow-[0_12px_40px_-15px_rgba(139,92,246,0.15)]"
-    : isProfit
-      ? "hover:border-emerald-500/30 hover:shadow-[0_12px_40px_-15px_rgba(34,197,94,0.2)] dark:hover:shadow-[0_12px_40px_-15px_rgba(34,197,94,0.15)]"
-      : "hover:border-rose-500/30 hover:shadow-[0_12px_40px_-15px_rgba(244,63,94,0.2)] dark:hover:shadow-[0_12px_40px_-15px_rgba(244,63,94,0.15)]";
-
-  const gradientFromClass = isMonteCarlo 
-    ? "from-violet-500/5"
-    : isProfit ? "from-emerald-500/5" : "from-rose-500/5";
-
-  const renderMetrics = () => {
-    switch (runType) {
-      case "BACKTEST": {
-        const b = s as BacktestSummary;
-        return (
-          <>
-            <div className="px-5 pt-6 pb-2 flex items-center gap-6 flex-wrap relative z-10">
-              <div className="flex flex-col gap-1">
-                <span className="text-[9.5px] font-bold tracking-widest uppercase text-muted-foreground">Total Return</span>
-                <div className="flex items-center gap-1">
-                  {isProfit ? <IconArrowUpRight className="size-4" style={{ color: accent }} /> : <IconArrowDownRight className="size-4" style={{ color: accent }} />}
-                  <span className="text-2xl lg:text-3xl font-black tabular-nums tracking-tight" style={{ color: accent }}>{isProfit ? "+" : ""}{profitPct.toFixed(2)}%</span>
-                </div>
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-[9.5px] font-bold tracking-widest uppercase text-muted-foreground">Net Profit</span>
-                <span className="text-lg lg:text-xl font-extrabold tabular-nums tracking-tight" style={{ color: accent }}>
-                  {isProfit ? "+" : "-"}${Math.abs(b.net_profit ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                </span>
-              </div>
-              <div className="w-px h-10 bg-border/50 ml-auto hidden sm:block" />
-              <div className="flex flex-col gap-1 text-right ml-auto sm:ml-0">
-                <span className="text-[10px] text-muted-foreground font-medium"><span className="text-foreground/70 font-semibold">{(b.initial_capital ?? 0).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}</span> cap</span>
-                <span className="text-[10px] text-muted-foreground font-medium"><span className="text-foreground/70 font-semibold">{b.leverage ?? 1}×</span> lev · <span className="text-foreground/70 font-semibold">{runtime}</span></span>
-              </div>
-            </div>
-            <div className="px-5 pt-3 pb-4 grid grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-4 relative z-10">
-              <Metric label="Trades" value={String(b.trade_count ?? 0)} />
-              <Metric label="Win Rate" value={`${((b.win_rate ?? 0) * 100).toFixed(1)}%`} />
-              <Metric label="Sharpe" value={(b.sharpe_ratio ?? 0).toFixed(2)} />
-              <Metric label="Max Drawdown" value={`${(b.max_drawdown_pct ?? 0).toFixed(2)}%`} className="text-rose-500 dark:text-rose-400" />
-            </div>
-          </>
-        );
-      }
-      case "OPTIMIZATION": {
-        const o = s as OptimizationRunSummary;
-        return (
-          <>
-            <div className="px-5 pt-6 pb-2 flex items-center gap-6 flex-wrap relative z-10">
-              <div className="flex flex-col gap-1">
-                <span className="text-[9.5px] font-bold tracking-widest uppercase text-muted-foreground">Total Return</span>
-                <div className="flex items-center gap-1">
-                  {isProfit ? <IconArrowUpRight className="size-4" style={{ color: accent }} /> : <IconArrowDownRight className="size-4" style={{ color: accent }} />}
-                  <span className="text-2xl lg:text-3xl font-black tabular-nums tracking-tight" style={{ color: accent }}>{isProfit ? "+" : ""}{profitPct.toFixed(2)}%</span>
-                </div>
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-[9.5px] font-bold tracking-widest uppercase text-muted-foreground">Net Profit</span>
-                <span className="text-lg lg:text-xl font-extrabold tabular-nums tracking-tight" style={{ color: accent }}>
-                  {isProfit ? "+" : "-"}${Math.abs(o.net_profit ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                </span>
-              </div>
-              <div className="w-px h-10 bg-border/50 ml-auto hidden sm:block" />
-              <div className="flex flex-col gap-1 text-right ml-auto sm:ml-0">
-                <span className="text-[10px] text-muted-foreground font-medium"><span className="text-foreground/70 font-semibold">{o.total_results ?? 0}</span> iterations</span>
-                <span className="text-[10px] text-muted-foreground font-medium"><span className="text-foreground/70 font-semibold">{runtime}</span> compute</span>
-              </div>
-            </div>
-            <div className="px-5 pt-3 pb-4 grid grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-4 relative z-10">
-              <Metric label="Trades" value={String(o.trade_count ?? 0)} />
-              <Metric label="Sharpe" value={(o.sharpe_ratio ?? 0).toFixed(2)} />
-              <Metric label="Max Drawdown" value={`${(o.max_drawdown_pct ?? 0).toFixed(2)}%`} className="text-rose-500 dark:text-rose-400" />
-              <Metric label="Calmar" value={(o.calmar_ratio ?? 0).toFixed(2)} />
-            </div>
-          </>
-        );
-      }
-      case "WALKFORWARD": {
-        const w = s as WalkForwardRunSummary;
-        return (
-          <>
-            <div className="px-5 pt-6 pb-2 flex items-center gap-6 flex-wrap relative z-10">
-              <div className="flex flex-col gap-1">
-                <span className="text-[9.5px] font-bold tracking-widest uppercase text-muted-foreground">Total Return</span>
-                <div className="flex items-center gap-1">
-                  {isProfit ? <IconArrowUpRight className="size-4" style={{ color: accent }} /> : <IconArrowDownRight className="size-4" style={{ color: accent }} />}
-                  <span className="text-2xl lg:text-3xl font-black tabular-nums tracking-tight" style={{ color: accent }}>{isProfit ? "+" : ""}{profitPct.toFixed(2)}%</span>
-                </div>
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-[9.5px] font-bold tracking-widest uppercase text-muted-foreground">Net Profit</span>
-                <span className="text-lg lg:text-xl font-extrabold tabular-nums tracking-tight" style={{ color: accent }}>
-                  {isProfit ? "+" : "-"}${Math.abs(w.net_profit ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                </span>
-              </div>
-              <div className="w-px h-10 bg-border/50 ml-auto hidden sm:block" />
-              <div className="flex flex-col gap-1 text-right ml-auto sm:ml-0">
-                <span className="text-[10px] text-muted-foreground font-medium"><span className="text-foreground/70 font-semibold">{w.windows_count ?? 0}</span> windows</span>
-                <span className="text-[10px] text-muted-foreground font-medium"><span className="text-foreground/70 font-semibold">{runtime}</span> compute</span>
-              </div>
-            </div>
-            <div className="px-5 pt-3 pb-4 grid grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-4 relative z-10">
-              <Metric label="Trades" value={String(w.trade_count ?? 0)} />
-              <Metric label="Sharpe" value={(w.sharpe_ratio ?? 0).toFixed(2)} />
-              <Metric label="Max Drawdown" value={`${(w.max_drawdown_pct ?? 0).toFixed(2)}%`} className="text-rose-500 dark:text-rose-400" />
-              <Metric label="Calmar" value={(w.calmar_ratio ?? 0).toFixed(2)} />
-            </div>
-          </>
-        );
-      }
-      case "MONTECARLO": {
-        const m = s as MonteCarloRunSummary;
-        return (
-          <div className="px-5 pt-6 pb-4 grid grid-cols-3 gap-x-5 gap-y-4 relative z-10">
-            <Metric label="Median DD" value={`${(m.median_drawdown ?? 0).toFixed(2)}%`} className="text-rose-500 dark:text-rose-400" />
-            <Metric label="Worst DD" value={`${(m.worst_drawdown ?? 0).toFixed(2)}%`} className="text-rose-500 dark:text-rose-400" />
-            <Metric label="Capital Ruin Prob." value={`${((m.capital_ruin_probability ?? 0) * 100).toFixed(2)}%`} className="text-amber-500 dark:text-amber-400" />
-          </div>
-        );
-      }
-      default:
-        return null;
-    }
-  };
-
+  // ─── COMPLETED — Monte Carlo metrics ─────────────────────────────────────────
   return (
     <>
       <div onClick={onClick} className={cn(
         "group relative rounded-[20px] bg-card dark:bg-[#0a0a0a] backdrop-blur-xl border transition-all duration-500 ease-out cursor-pointer flex flex-col overflow-hidden font-sans min-h-[200px]",
         "border-black/5 dark:border-[#1e1e1e]",
         "shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] dark:shadow-none hover:-translate-y-1",
-        hoverBorderClass
+        "hover:border-violet-500/30 hover:shadow-[0_12px_40px_-15px_rgba(139,92,246,0.2)] dark:hover:shadow-[0_12px_40px_-15px_rgba(139,92,246,0.15)]"
       )}>
-        <div className={cn(
-          "absolute inset-0 bg-gradient-to-br via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 pointer-events-none",
-          gradientFromClass
-        )} />
+        <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 pointer-events-none" />
         {/* Header */}
         <div className="px-5 pt-5 pb-2 flex items-start justify-between gap-3 relative z-10">
           <div className="flex flex-col gap-1 min-w-0">
@@ -348,7 +206,11 @@ export function ResearchRunCard({ run, onDelete, onClick }: ResearchRunCardProps
           </div>
         </div>
 
-        {renderMetrics()}
+        <div className="px-5 pt-6 pb-4 grid grid-cols-3 gap-x-5 gap-y-4 relative z-10">
+          <Metric label="Median DD" value={`${(m.median_drawdown ?? 0).toFixed(2)}%`} className="text-rose-500 dark:text-rose-400" />
+          <Metric label="Worst DD" value={`${(m.worst_drawdown ?? 0).toFixed(2)}%`} className="text-rose-500 dark:text-rose-400" />
+          <Metric label="Capital Ruin Prob." value={`${((m.capital_ruin_probability ?? 0) * 100).toFixed(2)}%`} className="text-amber-500 dark:text-amber-400" />
+        </div>
       </div>
 
       <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>

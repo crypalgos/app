@@ -54,14 +54,14 @@ function HistogramTooltip({
   const bin = payload[0].payload;
   return (
     <div className="bg-popover/95 backdrop-blur-xl border border-border px-4 py-3 rounded-lg shadow-2xl min-w-[170px]">
-      <p className="text-[10px] font-medium text-muted-foreground mb-1.5 tracking-wide">
+      <p className="text-[11px] font-medium text-muted-foreground mb-1.5 tracking-wide">
         {valueFormatter(bin.bin_start)} – {valueFormatter(bin.bin_end)}
       </p>
       <div className="flex items-center gap-2">
-        <span className="text-[11px] text-muted-foreground">Simulations</span>
+        <span className="text-[12px] text-muted-foreground">Simulations</span>
         <span className="text-[13px] font-semibold font-mono text-foreground ml-auto tabular-nums">{bin.count}</span>
       </div>
-      <div className="flex flex-col gap-0.5 mt-2 pt-2 border-t border-border/40 text-[10px] text-muted-foreground font-mono">
+      <div className="flex flex-col gap-0.5 mt-2 pt-2 border-t border-border/40 text-[11px] text-muted-foreground font-mono">
         <div className="flex justify-between"><span>Mean</span><span>{valueFormatter(bin.mean)}</span></div>
         <div className="flex justify-between"><span>Median</span><span>{valueFormatter(bin.median)}</span></div>
         <div className="flex justify-between"><span>Std</span><span>{valueFormatter(bin.std)}</span></div>
@@ -119,14 +119,14 @@ export function HistogramChart({
       <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/40">
         <div className="flex items-center gap-2">
           <div className="size-2 rounded-full" style={{ backgroundColor: headerColor }} />
-          <h3 className="text-[13px] font-semibold text-foreground/80 tracking-wide">{title}</h3>
+          <h3 className="text-[15px] font-semibold text-foreground/80 tracking-wide">{title}</h3>
         </div>
         {totalCount > 0 && (
-          <span className="text-[11px] font-mono text-muted-foreground/60">{totalCount.toLocaleString()} sims</span>
+          <span className="text-[12.5px] font-mono text-muted-foreground/60">{totalCount.toLocaleString()} sims</span>
         )}
       </div>
 
-      <div className="h-[220px] px-2 pb-2 pt-2">
+      <div className="h-[240px] px-2 pb-2 pt-2">
         {isLoading ? (
           <div className="flex h-full items-end px-4 pb-4">
             <Skeleton className="h-full w-full rounded-lg" />
@@ -147,7 +147,7 @@ export function HistogramChart({
             <span className="text-[26px] font-bold font-mono" style={{ color: signAware ? headerColor : color }}>
               {valueFormatter(sorted[0].mean)}
             </span>
-            <span className="text-[10px] text-muted-foreground/60">
+            <span className="text-[11px] text-muted-foreground/60">
               all {sorted[0].count.toLocaleString()} simulations landed on this value
             </span>
           </div>

@@ -3,64 +3,84 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 import type { StabilityRegion } from "@/types/optimization";
+import { IconShieldCheck, IconInfoCircle } from "@tabler/icons-react";
+import { OptimizationSectionCard } from "./OptimizationSectionCard";
+import { formatParamKey } from "@/components/backtest/metric-format";
 
-function confidenceBadge(confidence: number): { label: string; className: string } {
-  if (confidence >= 0.5) return { label: "High", className: "text-emerald-400" };
-  if (confidence >= 0.2) return { label: "Moderate", className: "text-amber-400" };
-  return { label: "Low", className: "text-red-400" };
+function confidenceTone(confidence: number): { label: string; text: string; bar: string } {
+  if (confidence >= 0.5) return { label: "High", text: "text-emerald-500 dark:text-emerald-400", bar: "bg-emerald-500" };
+  if (confidence >= 0.2) return { label: "Moderate", text: "text-amber-500 dark:text-amber-400", bar: "bg-amber-500" };
+  return { label: "Low", text: "text-rose-500 dark:text-rose-400", bar: "bg-rose-500" };
 }
 
 export function StabilityRegionCard({ stability }: { stability: StabilityRegion }) {
   if (!stability.available || !stability.regions) {
     return (
-      <div className="rounded-xl border border-border/60 bg-card p-5">
-        <h3 className="text-[13px] font-semibold text-foreground/80 tracking-wide mb-1">Stability Region</h3>
-        <p className="text-xs text-muted-foreground">
-          {stability.reason ?? "Not available for this run."}
-        </p>
-      </div>
+      <OptimizationSectionCard title="Stability Region" icon={IconShieldCheck}>
+        <div className="flex items-start gap-1.5">
+          <IconInfoCircle className="size-3.5 text-muted-foreground/50 shrink-0 mt-0.5" />
+          <p className="text-[13px] text-muted-foreground">{stability.reason ?? "Not available for this run."}</p>
+        </div>
+      </OptimizationSectionCard>
     );
   }
 
-  const overall = confidenceBadge(stability.confidence ?? 0);
+  const overall = confidenceTone(stability.confidence ?? 0);
 
   return (
-    <div className="rounded-xl border border-border/60 bg-card p-5">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-[13px] font-semibold text-foreground/80 tracking-wide">Stability Region</h3>
+    <OptimizationSectionCard
+      title="Stability Region"
+      subtitle="Is the winning combination a broad plateau, or a lucky single-point spike?"
+      icon={IconShieldCheck}
+      badge={
         <div className="text-right">
-          <span className={cn("text-sm font-bold", overall.className)}>{overall.label}</span>
-          <span className="text-[10px] text-muted-foreground/70 ml-1.5">
-            confidence &middot; {((stability.confidence ?? 0) * 100).toFixed(0)}%
+          <span className={cn("text-base font-bold", overall.text)}>{overall.label}</span>
+          <span className="text-[12px] text-muted-foreground/70 ml-1.5">
+            {((stability.confidence ?? 0) * 100).toFixed(0)}% confidence
           </span>
         </div>
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      }
+    >
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {Object.entries(stability.regions).map(([param, region]) => {
-          const badge = confidenceBadge(region.confidence);
+          const tone = confidenceTone(region.confidence);
           const isPoint = region.low === region.high;
+          // Position the winner + region within the tested [low, high] span for a quick visual read.
+          const span = region.high - region.low || 1;
+          const winnerPct = isPoint ? 50 : ((region.winning_value - region.low) / span) * 100;
           return (
-            <div key={param} className="rounded-lg border border-border/40 bg-muted/5 p-3">
-              <span className="text-[9px] font-semibold tracking-widest uppercase text-muted-foreground/60">
-                {param}
-              </span>
-              <div className="text-lg font-bold font-mono tabular-nums mt-1">
-                {isPoint ? region.low : `${region.low}–${region.high}`}
+            <div key={param} className="rounded-lg border border-border/40 bg-muted/[0.03] p-3.5">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="text-[13px] font-semibold text-foreground/80 truncate" title={param}>{formatParamKey(param)}</span>
+                <span className={cn("text-[12px] font-semibold shrink-0", tone.text)}>
+                  {tone.label} &middot; {(region.confidence * 100).toFixed(0)}%
+                </span>
               </div>
-              <div className="text-[10px] text-muted-foreground mt-0.5">
-                winner: <span className="font-mono">{region.winning_value}</span>
+              <div className="flex items-baseline gap-1.5 mb-2">
+                <span className="text-lg font-bold font-mono tabular-nums text-foreground">
+                  {isPoint ? region.low : `${region.low}–${region.high}`}
+                </span>
+                <span className="text-[12px] text-muted-foreground">
+                  winner <span className="font-mono text-foreground/80">{region.winning_value}</span>
+                </span>
               </div>
-              <div className={cn("text-[10px] font-semibold mt-1", badge.className)}>
-                {badge.label} confidence ({(region.confidence * 100).toFixed(0)}%)
-              </div>
+              {!isPoint && (
+                <div className="relative h-1.5 rounded-full bg-muted/60 overflow-hidden">
+                  <div className={cn("absolute inset-y-0 left-0 right-0 opacity-25", tone.bar)} />
+                  <div
+                    className={cn("absolute top-1/2 -translate-y-1/2 -translate-x-1/2 size-2.5 rounded-full ring-2 ring-card", tone.bar)}
+                    style={{ left: `${Math.min(100, Math.max(0, winnerPct))}%` }}
+                  />
+                </div>
+              )}
             </div>
           );
         })}
       </div>
-      <p className="text-[10px] text-muted-foreground/60 mt-3">
-        Range = contiguous tested values around the winner that stay within 10% of the best score.
-        A wide range means the result is a broad plateau, not a lucky single-point spike.
+      <p className="text-[12px] text-muted-foreground/50 mt-4 pt-3 border-t border-border/30">
+        Range = contiguous tested values around the winner (dot) that stay within 10% of the best score.
+        A wide range means a broad, robust plateau; a narrow one means a lucky single-point spike.
       </p>
-    </div>
+    </OptimizationSectionCard>
   );
 }

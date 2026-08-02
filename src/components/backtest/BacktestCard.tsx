@@ -65,11 +65,11 @@ function Metric({
   className?: string;
 }) {
   return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-[9px] font-semibold tracking-widest uppercase text-muted-foreground/60">
+    <div className="flex flex-col gap-0.5 min-w-0">
+      <span className="text-[10px] font-medium text-muted-foreground/70 whitespace-nowrap">
         {label}
       </span>
-      <span className={cn("text-[13px] font-semibold tabular-nums text-foreground", className)}>
+      <span className={cn("text-[14px] font-semibold tabular-nums text-foreground", className)}>
         {value}
       </span>
     </div>
@@ -232,7 +232,7 @@ export function BacktestCard({
                 {run.name || "Backtest Run"}
               </span>
               <div className="h-3 w-px bg-border/60 mx-1" />
-              <span className="text-muted-foreground/60 text-[9.5px] uppercase font-mono font-bold tracking-widest">
+              <span className="text-muted-foreground/60 text-[9.5px] font-mono font-bold">
                 {versionNumber != null ? `v${versionNumber}` : "v–"}
               </span>
             </div>
@@ -247,21 +247,33 @@ export function BacktestCard({
                        (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${s.symbol}&background=random`;
                     }}
                   />
-                  <span className="text-[9.5px] font-bold text-foreground font-mono uppercase tracking-wider pr-0.5">
+                  <span className="text-[9.5px] font-bold text-foreground font-mono pr-0.5">
                     {s.symbol}
                   </span>
                 </div>
               )}
               {s.exchange && (
                 <div className="flex items-center gap-1 border border-border/60 rounded-md px-2 py-0.5 bg-muted/20 shadow-sm">
-                  <span className="text-[9.5px] font-bold text-muted-foreground font-mono uppercase tracking-wider">
+                  <span className="text-[9.5px] font-bold text-muted-foreground font-mono capitalize">
                     {s.exchange}
                   </span>
                 </div>
               )}
               <div className="h-3 w-px bg-border/60 mx-0.5" />
-              <span className="text-[9.5px] text-muted-foreground font-mono tracking-tight font-medium">
+              <span className="text-[9.5px] text-muted-foreground font-mono tracking-tight font-medium whitespace-nowrap">
                 {fmt(s.start_date)} → {fmt(s.end_date)}
+              </span>
+              <div className="h-3 w-px bg-border/60 mx-0.5" />
+              <span className="text-[9.5px] text-muted-foreground font-mono font-medium whitespace-nowrap">
+                <span className="text-foreground/70 font-bold">{(s.initial_capital ?? 0).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}</span> cap
+              </span>
+              <div className="h-3 w-px bg-border/60 mx-0.5" />
+              <span className="text-[9.5px] text-muted-foreground font-mono font-medium whitespace-nowrap">
+                <span className="text-foreground/70 font-bold">{s.leverage ?? 1}×</span> lev
+              </span>
+              <div className="h-3 w-px bg-border/60 mx-0.5" />
+              <span className="text-[9.5px] text-muted-foreground font-mono font-medium whitespace-nowrap">
+                <span className="text-foreground/70 font-bold">{runtime}</span>
               </span>
             </div>
           </div>
@@ -340,7 +352,7 @@ export function BacktestCard({
         {/* ── HERO NUMBERS ── */}
         <div className="px-5 pt-6 pb-2 flex items-center gap-6 flex-wrap relative z-10">
           <div className="flex flex-col gap-1">
-            <span className="text-[9.5px] font-bold tracking-widest uppercase text-muted-foreground">
+            <span className="text-[10px] font-semibold text-muted-foreground">
               Total Return
             </span>
             <div className="flex items-center gap-1">
@@ -355,7 +367,7 @@ export function BacktestCard({
           </div>
 
           <div className="flex flex-col gap-1">
-            <span className="text-[9.5px] font-bold tracking-widest uppercase text-muted-foreground">
+            <span className="text-[10px] font-semibold text-muted-foreground">
               Net Profit
             </span>
             <span className="text-lg lg:text-xl font-extrabold tabular-nums tracking-tight" style={{ color: accent }}>
@@ -363,16 +375,6 @@ export function BacktestCard({
             </span>
           </div>
 
-          <div className="w-px h-10 bg-border/50 ml-auto hidden sm:block" />
-
-          <div className="flex flex-col gap-1 text-right ml-auto sm:ml-0">
-            <span className="text-[10px] text-muted-foreground font-medium">
-              <span className="text-foreground/70 font-semibold">{(s.initial_capital ?? 0).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}</span> cap
-            </span>
-            <span className="text-[10px] text-muted-foreground font-medium">
-              <span className="text-foreground/70 font-semibold">{s.leverage ?? 1}×</span> lev · <span className="text-foreground/70 font-semibold">{runtime}</span>
-            </span>
-          </div>
         </div>
 
         {/* ── METRICS GRID ── */}

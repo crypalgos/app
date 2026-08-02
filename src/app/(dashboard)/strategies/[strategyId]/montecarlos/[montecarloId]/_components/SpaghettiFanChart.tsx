@@ -65,11 +65,11 @@ function FanTooltip({
   const median = payload.find((p) => p.dataKey === "median");
   return (
     <div className="bg-popover/95 backdrop-blur-xl border border-border px-4 py-3 rounded-lg shadow-2xl min-w-[170px]">
-      <p className="text-[10px] font-medium text-muted-foreground mb-1.5 tracking-wide">Step {label}</p>
+      <p className="text-[11px] font-medium text-muted-foreground mb-1.5 tracking-wide">Step {label}</p>
       {real && (
         <div className="flex items-center gap-2">
           <div className="size-1.5 rounded-full shrink-0 bg-primary" />
-          <span className="text-[11px] text-muted-foreground">{realLabel}</span>
+          <span className="text-[12px] text-muted-foreground">{realLabel}</span>
           <span className="text-[13px] font-semibold font-mono text-foreground ml-auto tabular-nums">
             {valueFormatter(real.value)}
           </span>
@@ -78,13 +78,13 @@ function FanTooltip({
       {median && (
         <div className="flex items-center gap-2 mt-1">
           <div className="size-1.5 rounded-full shrink-0" style={{ backgroundColor: MEDIAN_COLOR }} />
-          <span className="text-[11px] text-muted-foreground">Median</span>
+          <span className="text-[12px] text-muted-foreground">Median</span>
           <span className="text-[13px] font-semibold font-mono text-foreground ml-auto tabular-nums">
             {valueFormatter(median.value)}
           </span>
         </div>
       )}
-      <p className="text-[9px] text-muted-foreground/60 mt-1.5">
+      <p className="text-[10.5px] text-muted-foreground/60 mt-1.5">
         {payload.length - (real ? 1 : 0) - (median ? 1 : 0)} simulated paths
       </p>
     </div>
@@ -101,7 +101,7 @@ function ToggleChip({ active, onClick, color, label }: { active: boolean; onClic
       )}
     >
       <span className="size-2 rounded-full" style={{ backgroundColor: color }} />
-      <span className="text-[10px] font-mono text-muted-foreground/70">{label}</span>
+      <span className="text-[11px] font-mono text-muted-foreground/70">{label}</span>
     </button>
   );
 }
@@ -169,7 +169,7 @@ export function SpaghettiFanChart({
       <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/40">
         <div className="flex items-center gap-2">
           <div className="size-2 rounded-full" style={{ backgroundColor: realColor }} />
-          <h3 className="text-[13px] font-semibold text-foreground/80 tracking-wide">{title}</h3>
+          <h3 className="text-[15px] font-semibold text-foreground/80 tracking-wide">{title}</h3>
         </div>
         <div className="flex items-center gap-1">
           <ToggleChip active={showSamples} onClick={() => setShowSamples((v) => !v)} color={SAMPLE_PALETTE[2]} label="Simulations" />
@@ -245,7 +245,7 @@ export function SpaghettiFanChart({
                   type="monotone"
                   dataKey="median"
                   stroke={MEDIAN_COLOR}
-                  strokeWidth={2}
+                  strokeWidth={1.5}
                   dot={false}
                   isAnimationActive={false}
                 />
@@ -255,9 +255,9 @@ export function SpaghettiFanChart({
                   type="monotone"
                   dataKey="real"
                   stroke={realColor}
-                  strokeWidth={3}
+                  strokeWidth={2}
                   dot={false}
-                  activeDot={{ r: 4, strokeWidth: 0, fill: realColor }}
+                  activeDot={{ r: 3.5, strokeWidth: 1.5, stroke: "var(--background)", fill: realColor }}
                   isAnimationActive={false}
                 />
               )}

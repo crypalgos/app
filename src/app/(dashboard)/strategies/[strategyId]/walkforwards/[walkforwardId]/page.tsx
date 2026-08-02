@@ -1,16 +1,27 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useStrategyWalkforward, useRunArtifact, useWalkforwardDataset } from "@/api-actions/hooks/strategy-hooks";
+import { useStrategyWalkforward, useWalkforwardDataset, useStrategy, useRunArtifact } from "@/api-actions/hooks/strategy-hooks";
 import type { WalkForwardArtifact } from "@/types/walkforward";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { IconArrowLeft } from "@tabler/icons-react";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { ReportTabsList } from "@/components/shared/report-tabs";
+import {
+  IconArrowLeft,
+  IconGauge,
+  IconPercentage,
+  IconAward,
+  IconWindow,
+  IconLayoutDashboard,
+  IconChartAreaLine,
+  IconCloud,
+} from "@tabler/icons-react";
 import { statusBadge } from "@/components/shared/report-primitives";
 import { MetricCard } from "@/components/shared/metric-card";
+import { getCoinLogoUrl } from "@/lib/instruments";
 import { ResearchVerdictBanner, type VerdictReason, type NextStep } from "@/components/research/ResearchVerdictBanner";
 import { ResearchScoreCard, type ResearchSubScore } from "@/components/research/ResearchScoreCard";
 import { SuggestedExperiments, type SuggestedExperiment } from "@/components/research/SuggestedExperiments";
@@ -29,11 +40,20 @@ export default function WalkforwardDetailPage() {
   const router = useRouter();
   const strategyId = params?.strategyId as string;
   const runId = params?.walkforwardId as string;
+  const [activeTab, setActiveTab] = useState("overview");
 
   const { data: run, isLoading: runLoading } = useStrategyWalkforward(strategyId, runId);
   const { data: reportData, isLoading: reportLoading } = useRunArtifact(runId, "report");
   const { data: equityRows, isLoading: equityLoading } = useWalkforwardDataset(runId, "equity");
   const { data: rollingRows, isLoading: rollingLoading } = useWalkforwardDataset(runId, "rolling");
+  const { data: strategy } = useStrategy(strategyId);
+
+  const { symbol, exchange } = useMemo(() => {
+    const dataNode = strategy?.canvas_json?.nodes?.find((n: { type: string }) => n.type === "dataNode") as
+      | { data?: { symbol?: string; source?: string } }
+      | undefined;
+    return { symbol: dataNode?.data?.symbol, exchange: dataNode?.data?.source };
+  }, [strategy]);
 
   const artifact = reportData as unknown as WalkForwardArtifact | undefined;
   const report = artifact?.report;
@@ -153,8 +173,28 @@ export default function WalkforwardDetailPage() {
             <IconArrowLeft className="size-4" />
           </Button>
           <div>
-            <h1 className="text-xl font-bold text-foreground">{run?.name || "Walkforward Run"}</h1>
-            <p className="text-xs text-muted-foreground">{run?.description}</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-xl font-bold text-foreground">{run?.name || "Walkforward Run"}</h1>
+              {symbol && (
+                <div className="flex items-center gap-1.5 border border-border/60 rounded-md px-1.5 py-0.5 bg-muted/20 shadow-sm">
+                  <img
+                    src={getCoinLogoUrl(symbol.replace(/USD[T]?|PERP/i, ""))}
+                    alt={symbol}
+                    className="w-3.5 h-3.5 rounded-full"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${symbol}&background=random`;
+                    }}
+                  />
+                  <span className="text-[11.5px] font-bold text-foreground font-mono pr-0.5">{symbol}</span>
+                </div>
+              )}
+              {exchange && (
+                <div className="flex items-center gap-1 border border-border/60 rounded-md px-2 py-0.5 bg-muted/20 shadow-sm">
+                  <span className="text-[11.5px] font-bold text-muted-foreground font-mono capitalize">{exchange}</span>
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">{run?.description}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -170,13 +210,17 @@ export default function WalkforwardDetailPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="equity">Equity</TabsTrigger>
-          <TabsTrigger value="windows">Windows</TabsTrigger>
-          <TabsTrigger value="regime">Regime</TabsTrigger>
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <ReportTabsList
+          layoutId="walkforwardReportTab"
+          activeValue={activeTab}
+          tabs={[
+            { value: "overview", label: "Overview", icon: IconLayoutDashboard },
+            { value: "equity", label: "Equity", icon: IconChartAreaLine },
+            { value: "windows", label: "Windows", icon: IconWindow },
+            { value: "regime", label: "Regime", icon: IconCloud },
+          ]}
+        />
 
         <TabsContent value="overview" className="space-y-6 mt-4">
           {verdictProps && (
@@ -191,10 +235,10 @@ export default function WalkforwardDetailPage() {
 
           {report && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <MetricCard title="Robustness" value={`${report.robustness.score.toFixed(0)}/100`} subValue={report.robustness.grade} />
-              <MetricCard title="Pass Rate" value={`${report.summary.pass_rate.toFixed(0)}%`} />
-              <MetricCard title="Avg Sharpe" value={report.summary.average_sharpe.toFixed(3)} />
-              <MetricCard title="Total Windows" value={String(report.summary.total_windows)} />
+              <MetricCard title="Robustness" value={`${report.robustness.score.toFixed(0)}/100`} subValue={report.robustness.grade} icon={IconGauge} />
+              <MetricCard title="Pass Rate" value={`${report.summary.pass_rate.toFixed(0)}%`} icon={IconPercentage} />
+              <MetricCard title="Avg Sharpe" value={report.summary.average_sharpe.toFixed(3)} icon={IconAward} />
+              <MetricCard title="Total Windows" value={String(report.summary.total_windows)} icon={IconWindow} />
             </div>
           )}
 

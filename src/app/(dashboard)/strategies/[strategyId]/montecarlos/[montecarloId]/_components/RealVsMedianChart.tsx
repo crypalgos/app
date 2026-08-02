@@ -42,9 +42,9 @@ function DiffTooltip({ active, payload, label, valueFormatter }: {
   const p = payload[0].payload;
   return (
     <div className="bg-popover/95 backdrop-blur-xl border border-border px-4 py-3 rounded-lg shadow-2xl min-w-[160px]">
-      <p className="text-[10px] font-medium text-muted-foreground mb-1.5 tracking-wide">Step {label}</p>
+      <p className="text-[11px] font-medium text-muted-foreground mb-1.5 tracking-wide">Step {label}</p>
       <div className="flex items-center gap-2">
-        <span className="text-[11px] text-muted-foreground">Real − Median</span>
+        <span className="text-[12px] text-muted-foreground">Real − Median</span>
         <span className={`text-[13px] font-semibold font-mono ml-auto tabular-nums ${p.diff >= 0 ? "text-success" : "text-destructive"}`}>
           {p.diff >= 0 ? "+" : ""}{valueFormatter(p.diff)}
         </span>
@@ -82,16 +82,16 @@ export function RealVsMedianChart({ medianRows, realRows, field, valueFormatter 
       <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/40">
         <div className="flex items-center gap-2">
           <div className="size-2 rounded-full" style={{ backgroundColor: outperforming ? POSITIVE_COLOR : NEGATIVE_COLOR }} />
-          <h3 className="text-[13px] font-semibold text-foreground/80 tracking-wide">Real vs. Median</h3>
+          <h3 className="text-[15px] font-semibold text-foreground/80 tracking-wide">Real vs. Median</h3>
         </div>
         {data.length > 0 && (
-          <span className={`text-[10px] font-mono font-semibold ${outperforming ? "text-success" : "text-destructive"}`}>
+          <span className={`text-[11.5px] font-mono font-semibold ${outperforming ? "text-success" : "text-destructive"}`}>
             Real {outperforming ? "outperforming" : "underperforming"}
           </span>
         )}
       </div>
 
-      <div className="h-[180px] px-2 pb-2 pt-2">
+      <div className="h-[240px] px-2 pb-2 pt-2">
         {isLoading ? (
           <div className="flex h-full items-end px-4 pb-4">
             <Skeleton className="h-full w-full rounded-lg" />

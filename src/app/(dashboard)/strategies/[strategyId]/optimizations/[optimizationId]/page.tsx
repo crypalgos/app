@@ -1,14 +1,25 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useStrategyOptimization, useRunArtifact } from "@/api-actions/hooks/strategy-hooks";
+import { useStrategyOptimization, useStrategy, useRunArtifact } from "@/api-actions/hooks/strategy-hooks";
 import type { OptimizationArtifact, OptimizationHealth } from "@/types/optimization";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { IconArrowLeft } from "@tabler/icons-react";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { ReportTabsList } from "@/components/shared/report-tabs";
+import {
+  IconArrowLeft,
+  IconTrendingUp,
+  IconTrendingDown,
+  IconGridDots,
+  IconAward,
+  IconLayoutDashboard,
+  IconListNumbers,
+  IconChartScatter,
+  IconSettings,
+} from "@tabler/icons-react";
 import { statusBadge } from "@/components/shared/report-primitives";
 import { MetricCard } from "@/components/shared/metric-card";
 import { ResearchVerdictBanner, type VerdictReason, type NextStep } from "@/components/research/ResearchVerdictBanner";
@@ -16,12 +27,15 @@ import { ResearchScoreCard, type ResearchSubScore } from "@/components/research/
 import { SuggestedExperiments, type SuggestedExperiment } from "@/components/research/SuggestedExperiments";
 import { ComparisonDialog, type ComparisonMetric } from "@/components/research/ComparisonDialog";
 import { StrategyActions } from "@/api-actions/strategy-actions";
+import { getCoinLogoUrl } from "@/lib/instruments";
+import { formatParamKey } from "@/components/backtest/metric-format";
 import { LeaderboardExplorerTable } from "./_components/LeaderboardExplorerTable";
 import { ParameterHeatmap } from "./_components/ParameterHeatmap";
 import { StabilityRegionCard } from "./_components/StabilityRegionCard";
 import { SensitivityScatter } from "./_components/SensitivityScatter";
 import { OptimizationHealthTiles } from "./_components/OptimizationHealthTiles";
 import { ConfigurationPanel } from "./_components/ConfigurationPanel";
+import { OptimizationSectionCard } from "./_components/OptimizationSectionCard";
 
 const HEALTH_LABELS: Record<OptimizationHealth, string> = {
   OPTIMIZATION_HEALTHY: "Healthy",
@@ -34,10 +48,19 @@ export default function OptimizationDetailPage() {
   const router = useRouter();
   const strategyId = params?.strategyId as string;
   const runId = params?.optimizationId as string;
+  const [activeTab, setActiveTab] = useState("overview");
 
   const { data: run, isLoading: runLoading } = useStrategyOptimization(strategyId, runId);
   const { data: reportData, isLoading: reportLoading } = useRunArtifact(runId, "report");
   const { data: metadataData } = useRunArtifact(runId, "metadata");
+  const { data: strategy } = useStrategy(strategyId);
+
+  const { symbol, exchange } = useMemo(() => {
+    const dataNode = strategy?.canvas_json?.nodes?.find((n: { type: string }) => n.type === "dataNode") as
+      | { data?: { symbol?: string; source?: string } }
+      | undefined;
+    return { symbol: dataNode?.data?.symbol, exchange: dataNode?.data?.source };
+  }, [strategy]);
 
   const a = reportData as unknown as OptimizationArtifact | undefined;
   const metadata = metadataData as
@@ -213,8 +236,28 @@ export default function OptimizationDetailPage() {
             <IconArrowLeft className="size-4" />
           </Button>
           <div>
-            <h1 className="text-xl font-bold text-foreground">{run?.name || "Optimization Run"}</h1>
-            <p className="text-xs text-muted-foreground">{run?.description}</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-xl font-bold text-foreground">{run?.name || "Optimization Run"}</h1>
+              {symbol && (
+                <div className="flex items-center gap-1.5 border border-border/60 rounded-md px-1.5 py-0.5 bg-muted/20 shadow-sm">
+                  <img
+                    src={getCoinLogoUrl(symbol.replace(/USD[T]?|PERP/i, ""))}
+                    alt={symbol}
+                    className="w-3.5 h-3.5 rounded-full"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${symbol}&background=random`;
+                    }}
+                  />
+                  <span className="text-[11.5px] font-bold text-foreground font-mono pr-0.5">{symbol}</span>
+                </div>
+              )}
+              {exchange && (
+                <div className="flex items-center gap-1 border border-border/60 rounded-md px-2 py-0.5 bg-muted/20 shadow-sm">
+                  <span className="text-[11.5px] font-bold text-muted-foreground font-mono capitalize">{exchange}</span>
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">{run?.description}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -230,13 +273,17 @@ export default function OptimizationDetailPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
-          <TabsTrigger value="parameters">Parameter Analysis</TabsTrigger>
-          <TabsTrigger value="configuration">Configuration</TabsTrigger>
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <ReportTabsList
+          layoutId="optimizationReportTab"
+          activeValue={activeTab}
+          tabs={[
+            { value: "overview", label: "Overview", icon: IconLayoutDashboard },
+            { value: "leaderboard", label: "Leaderboard", icon: IconListNumbers },
+            { value: "parameters", label: "Parameter Analysis", icon: IconChartScatter },
+            { value: "configuration", label: "Configuration", icon: IconSettings },
+          ]}
+        />
 
         <TabsContent value="overview" className="space-y-6 mt-4">
           {verdictProps && (
@@ -250,10 +297,15 @@ export default function OptimizationDetailPage() {
           )}
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <MetricCard title="Net Profit" value={`$${(bestResult?.metrics.net_profit ?? 0).toLocaleString()}`} color="text-emerald-400" />
-            <MetricCard title="Sharpe" value={(bestResult?.metrics.sharpe_ratio ?? 0).toFixed(3)} />
-            <MetricCard title="Max Drawdown" value={`${(bestResult?.metrics.max_drawdown_pct ?? 0).toFixed(2)}%`} color="text-red-400" />
-            <MetricCard title="Total Runs" value={String(totalRuns)} />
+            <MetricCard
+              title="Net Profit"
+              value={`$${(bestResult?.metrics.net_profit ?? 0).toLocaleString()}`}
+              color={(bestResult?.metrics.net_profit ?? 0) >= 0 ? "text-emerald-400" : "text-red-400"}
+              icon={(bestResult?.metrics.net_profit ?? 0) >= 0 ? IconTrendingUp : IconTrendingDown}
+            />
+            <MetricCard title="Best Sharpe" value={(bestResult?.metrics.sharpe_ratio ?? 0).toFixed(3)} icon={IconAward} />
+            <MetricCard title="Max Drawdown" value={`${(bestResult?.metrics.max_drawdown_pct ?? 0).toFixed(2)}%`} color="text-red-400" icon={IconTrendingDown} />
+            <MetricCard title="Total Runs" value={String(totalRuns)} icon={IconGridDots} />
           </div>
 
           {verdictProps && (
@@ -274,17 +326,16 @@ export default function OptimizationDetailPage() {
           )}
 
           {bestResult && (
-            <Card className="p-5 border-border/40">
-              <h2 className="text-sm font-bold text-foreground mb-3">Best Parameters</h2>
-              <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
+            <OptimizationSectionCard title="Best Parameters" subtitle="The winning combination from this sweep" icon={IconAward}>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
                 {Object.entries(bestResult.params ?? {}).map(([key, val]) => (
-                  <div key={key} className="bg-muted/10 border border-border/30 rounded-lg px-3 py-2">
-                    <span className="text-[9px] text-muted-foreground block">{key}</span>
-                    <span className="text-sm font-mono font-semibold">{String(val)}</span>
+                  <div key={key} className="rounded-lg border border-violet-500/20 bg-violet-500/[0.04] px-3 py-2.5">
+                    <span className="text-[11.5px] font-medium text-muted-foreground/70 block truncate" title={key}>{formatParamKey(key)}</span>
+                    <span className="text-base font-mono font-bold text-foreground">{String(val)}</span>
                   </div>
                 ))}
               </div>
-            </Card>
+            </OptimizationSectionCard>
           )}
         </TabsContent>
 

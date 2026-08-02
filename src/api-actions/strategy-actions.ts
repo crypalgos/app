@@ -110,6 +110,44 @@ export const StrategyActions = {
     return response.data.data;
   },
 
+  /** Manually save a snapshot version of the strategy draft. */
+  saveVersion: async (
+    strategyId: string,
+    commitMessage?: string
+  ): Promise<StrategyVersion> => {
+    const response = await axiosInstance.post<ApiResponse<StrategyVersion>>(
+      `/strategies/${strategyId}/versions`,
+      { commit_message: commitMessage }
+    );
+    return response.data.data;
+  },
+
+  /** Update label/tag of a specific strategy version snapshot. */
+  updateVersionLabel: async (
+    strategyId: string,
+    version: number,
+    label: string
+  ): Promise<StrategyVersion> => {
+    const response = await axiosInstance.put<ApiResponse<StrategyVersion>>(
+      `/strategies/${strategyId}/versions/${version}/label`,
+      { label }
+    );
+    return response.data.data;
+  },
+
+  /** Update approval status of a specific strategy version snapshot. */
+  updateVersionApproval: async (
+    strategyId: string,
+    version: number,
+    approvalStatus: string
+  ): Promise<StrategyVersion> => {
+    const response = await axiosInstance.put<ApiResponse<StrategyVersion>>(
+      `/strategies/${strategyId}/versions/${version}/approval`,
+      { approval_status: approvalStatus }
+    );
+    return response.data.data;
+  },
+
   /** Create a new visual strategy canvas. */
   createStrategy: async (
     data: CreateStrategyRequest
@@ -375,17 +413,18 @@ export const StrategyActions = {
     return response.data.data;
   },
 
-  /** List all Monte Carlo runs. */
+  /** List all Monte Carlo runs, optionally scoped to one source backtest. */
   listMonteCarloRuns: async (
     strategyId: string,
     page = 1,
     limit = 8,
-    search = ""
+    search = "",
+    parentRunId?: string
   ): Promise<PaginatedMonteCarloRunsResponse> => {
     const response = await axiosInstance.get<
       ApiResponse<PaginatedMonteCarloRunsResponse>
     >(`/strategies/${strategyId}/montecarlos`, {
-      params: { page, limit, search },
+      params: { page, limit, search, parent_run_id: parentRunId },
     });
     return response.data.data;
   },

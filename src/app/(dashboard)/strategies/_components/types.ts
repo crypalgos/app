@@ -79,7 +79,7 @@ export function toUiStrategy(api: ApiStrategy): Strategy {
     description: api.description ?? "No description provided.",
     canvas_json: api.canvas_json as CanvasPayload,
     is_golden: api.is_golden,
-    current_version: api.current_version,
+    current_version: api.current_version ?? (api as any).version ?? 1,
     is_archived: api.is_archived,
     latest_metrics: api.latest_metrics,
     equity_preview: api.equity_preview,

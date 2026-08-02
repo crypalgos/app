@@ -1,7 +1,6 @@
 import axiosInstance from "@/lib/axios-interceptor";
 import type {
   ReplaySession,
-  ReplayWindow,
   ReplayTradeDetail,
 } from "@/types/replay";
 
@@ -10,20 +9,6 @@ export const ReplayActions = {
   getSession: async (runId: string): Promise<ReplaySession> => {
     const response = await axiosInstance.get<ApiResponse<ReplaySession>>(
       `/research-runs/${runId}/replay/session`
-    );
-    return response.data.data;
-  },
-
-  /** One replay window: candles + pre-nested event trees + traces + indicators.
-   * Capped server-side at session.max_window_candles (500) candles per call. */
-  getWindow: async (
-    runId: string,
-    fromCandle: number,
-    toCandle: number
-  ): Promise<ReplayWindow> => {
-    const response = await axiosInstance.get<ApiResponse<ReplayWindow>>(
-      `/research-runs/${runId}/replay/window`,
-      { params: { from_candle: fromCandle, to_candle: toCandle } }
     );
     return response.data.data;
   },
